@@ -680,6 +680,31 @@ def handle_incoming_message(chat_id: str, message_text: str, telegram_config: di
     # Load full brain and respond
     brain = load_agent_brain(agent_name)
 
+    # PREP (strategic-advisor) gets all agent states injected -- it sees the full picture
+    if agent_name == "strategic-advisor":
+        agent_states = []
+        for other_agent in ("global-events", "dbh-marketing", "pure-pets", "new-business",
+                            "health-fitness", "social", "creative-projects", "daily-briefing"):
+            state_file = AGENTS_DIR / other_agent / "state" / "CONTEXT.md"
+            if state_file.exists():
+                content = state_file.read_text(encoding='utf-8')
+                agent_states.append(f"--- {other_agent} STATE ---\n{content}")
+        if agent_states:
+            brain += f"\n\n=== ALL AGENT STATES (you see the full picture) ===\n" + "\n\n".join(agent_states)
+
+        # Also inject live performance data for financial context
+        try:
+            from core.data_fetcher import fetch_all_performance_data
+            perf = fetch_all_performance_data()
+            brain += f"\n\n=== LIVE PERFORMANCE DATA ===\n{perf}"
+        except Exception:
+            pass
+
+        # Use Opus for PREP -- strategic thinking needs the best model
+        task_type = "deep_analysis"
+    else:
+        task_type = "chat"
+
     user_prompt = f"""Tom says: {message_text}
 
 Respond as your agent character. You have your full context loaded above.
@@ -687,7 +712,7 @@ If this message contains information that updates your current state,
 note what should be saved at the end of your response with:
 [STATE UPDATE: <info to save>]"""
 
-    response = call_claude(brain, user_prompt)
+    response = call_claude(brain, user_prompt, task_type=task_type)
 
     # Extract and save state updates if present
     if "[STATE UPDATE:" in response:
