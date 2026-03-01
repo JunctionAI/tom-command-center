@@ -1,74 +1,94 @@
 # Business State -- Current Position
+## Last Updated: March 2026
 
-## Last Updated: March 2026 (needs Tom's latest update)
-
-### Deep Blue Health (Primary Income)
+### Deep Blue Health (Primary Vehicle)
 - Role: CMO-level, 20hrs/week (~4hrs/day)
-- Pay: $50/hr + commission on certain products
-- Company revenue: ~$4M (goal to scale significantly)
-- Products: DTC supplements (NZ-based, Shopify store)
-- Owner: Tony (CEO/advisor figure)
+- Pay: $50/hr + commission (commission underperforming)
+- Company revenue: ~$4M annually (Shopify DTC, NZ-based)
+- Products: Natural health supplements -- works for people with genuine
+  medical issues and chronic pain. Natural long-term relief vs instant painkillers.
+- Owner: Tony (CEO). Family business, 20+ years. Respectable operation.
 - Team: Tony, Roie (designer), Dan(?), Tom (marketing/ops)
-- Tom's relationship with Tony: Complex. Respects the opportunity but
-  questions product authenticity. "Phoney vibes" during presentations.
-  Keeping quiet about potential future plans.
-- Current marketing stack: Shopify, Klaviyo, Meta Ads, email marketing
-- Performance: ~$15-20K/month DTC revenue, 5.42x blended ROAS proven
-- Key insight: "The products work for sub sectors of people and that's great.
-  Focus on those products. Grow the business."
-- Tom's real view: Income source, learning ground, skill builder. Not his life's work.
+- Tom's relationship with Tony: Evolved to genuine respect. Tony doesn't know
+  the full extent of the AI integration. This is strategic leverage.
+- Tom's view: DBH is THE vehicle now, not just income. Health industry is the lane.
+- AI capability: World-class operational intelligence system that Tony
+  hasn't fully grasped yet. 20hrs/week output will be undeniable.
+- Marketing stack: Shopify + Klaviyo + Meta Ads + Google (setting up)
+- Current performance: ~$15-20K/month DTC, 5.42x blended ROAS proven
 
-### Junction AI (Agency / Brand)
-- Status: Active agency, ~10 clients
+### Junction AI (Agency)
+- Status: Active, ~10 clients
 - Focus: Email marketing (Klaviyo specialist)
-- Built from Vietnam monk mode experience
-- Has broader vision but currently focused on client delivery
-- Key question: What role does this play long-term?
+- Role: Revenue stream while building the bigger vision
+- Not the long-term play but generates income
 
-### Curiosity App (Passion Project)
-- Status: In development / early testing
-- What: Learning/exploration tool built from Tom's own learning process
-- "The Curiosity App is me" -- authentically represents his thinking
-- Market: 450M+ podcast listeners globally
-- Business model thinking: Free trial, $5/month after 2 podcasts, ads later
-- Key insight: Built organically from his own curiosity process
-- Target: "Send to Tyler, his Irish mate, get 10 people testing"
+### Alternate (AI Films -- OVERSPEND WARNING)
+- Status: Passion project, actively creating AI-generated films
+- Revenue: ZERO. Purely exploratory.
+- Problem: WAY overspending. Has gone too far.
+- Action needed: Cut spending immediately. Treat as hobby, not business.
+- Value: Built AI proficiency. Creative thinking outlet.
 
-### Financial Position
-- Income: DBH salary ($50/hr x 20hrs = ~$1K/week base)
-- Commission: Not delivering much yet
-- Agency: Revenue from ~10 clients (variable)
-- Expenses: Living in Ponsonby, Auckland (not cheap)
-- Capital: Limited. No external funding.
-- Debt history: Was in debt after London lease situation
-- Philosophy: Bootstrap everything. Don't spend on ambition without ROI thesis.
+### Curiosity App
+- Status: On hold / back burner
+- Was a passion project but ~20 projects explored in the past year
 
-### The Blood Testing / New Business Model
-- Vision: Move from selling supplements (questionable value) to solving
-  real health problems through blood testing + targeted supplementation
-- What: Blood test reveals deficiencies -> recommend specific supplements
-  backed by science -> track improvement over time
-- Why: Bridges supplements (current expertise) and healthcare (long-term vision)
-- Connection to DBH: Could be proposed to Tony at some point, or built independently
-- Status: Conceptual. Feeding knowledge into Venture (New Business) agent.
-- Key question: Partnership with Tony, or independent venture?
+### Personal Brand / TikTok (NEW)
+- Status: Just started
+- Platform: TikTok initially
+- Niche: AI education, leadership during AGI transition
+- Vision: "Beacon in the tunnel" during mass unemployment and upheaval
+- Needs: Daily performance reports, strategy, content insights
+- Potential: Major -- authentic to who Tom is becoming
+
+### Financial Position (CRITICAL)
+- Income: ~$1K/week base from DBH + variable agency income
+- Spending: OVER budget. Alternate project draining resources.
+- Status: "Down bad financially" -- Tom's own words.
+- Debt: Unknown current level (needs Tom's specific numbers)
+- Ponsonby rent: High (Auckland's most expensive suburb)
+- Action required: IMMEDIATE financial rebalancing.
+  1. Cut Alternate spending to zero
+  2. Maximise DBH revenue (automation + efficiency)
+  3. Track every dollar in and out
+  4. Build 3-month runway before any discretionary spending
+
+### The Greater Vision
+- Build from DBH into a $100M+ health/supplement business
+- Blood testing model: Test -> Identify deficiencies -> Targeted supplements
+  -> Track improvement over time
+- Inspired by US company worth ~$500M doing blood testing without
+  supplement fulfillment. Tom wants to do BOTH.
+- Challenge pharmaceuticals: better solutions at cheaper cost
+- Scale internationally
+- Personal brand feeds into credibility and thought leadership
+- Education component: teach people about AI and health
 
 ### Strategic Assets
-1. AI leverage (Claude Code primary tool, ahead of competitors)
-2. Marketing expertise across channels (email, Meta, content)
-3. Complete creative intelligence database (133 campaigns analysed)
-4. Real-world DTC operating experience
-5. KP Doyle healthcare industry connection (UK)
-6. Network: Brad (business), Ollie (MMA/content), Tyler (testing/feedback)
+1. AI proficiency (top 0.01% by own estimation, verifiable by output)
+2. Operational intelligence system (this command center -- nobody else has this)
+3. Marketing expertise across all DTC channels
+4. Health industry positioning via DBH
+5. Creative capability (Alternate, content creation since age 14)
+6. Personal brand potential (AI thought leader niche emerging)
+7. KP Doyle healthcare connection (UK, unused)
+8. Brad Matthews (business partner/advisor, longstanding relationship)
 
-### Key Decisions Pending
-1. Healthcare: When/how to approach KP Doyle about opportunities
-2. Tony: When/if to propose the blood testing model
-3. UK Move: Timing, feasibility, relationship to healthcare pivot
-4. Curiosity App: How much time to allocate vs DBH responsibilities
-5. Agency: Scale it, maintain it, or wind it down for focus?
+### Key Decisions Needed
+1. **Alternate**: How much to cut? Cold turkey or controlled wind-down?
+2. **Finances**: What are the actual numbers? Income vs expenses monthly.
+3. **DBH growth**: What's the 90-day revenue acceleration plan?
+4. **Personal brand**: How much time/week to allocate? Which platforms?
+5. **Blood testing**: When to start researching seriously? When to propose to Tony?
+6. **Living situation**: Is the current flat sustainable? Drug influence, open study.
+7. **Health**: What's the realistic daily routine? Training, diet, sleep.
+8. **Social**: How to build friendships and find a partner without sacrificing work?
 
----
-NOTE: This file needs updating with Tom's latest thinking and numbers.
-Tom mentioned "more has happened since" this background dump.
-PREP should ask about current financials and latest strategic shifts.
+### PREP's Standing Orders
+- Every interaction: look for automation opportunities for DBH
+- Track financial decisions and flag overspending
+- Challenge passion project spending without clear ROI
+- Push for specific numbers, dates, and actions
+- Track the 20+ project exploration pattern -- help Tom COMMIT to a lane
+- Balance ambition with practical constraints

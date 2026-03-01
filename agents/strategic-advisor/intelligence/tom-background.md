@@ -161,12 +161,104 @@ Loves learning, building, and connecting dots across domains.
 3. **Meaning-driven alignment** (25+): Reduce suffering, learn, be authentic,
    build things that matter. Still ambitious, but grounded.
 
+### 25-26 (Current Era -- March 2026)
+
+**The Rebalancing:**
+After the existential crisis about supplements/Tony, Tom course-corrected.
+Realised he went too extreme in his criticism of DBH. The products DO help
+people -- natural solutions for genuine medical issues and chronic pain.
+Most sales come from products that make sense. Came back around to seeing
+DBH as his vehicle, not just a paycheck.
+
+**The Greater Vision (last week):**
+Now sees the full picture: he has a foot in the health industry, real authority
+in the business, and AI capabilities that Tony doesn't fully understand.
+The AI integration (this command center system) gives him unprecedented
+operational intelligence. Tony will eventually be like "this guy does this
+on 20 hours a week, that's ridiculous." This is the play.
+
+Vision: Build from DBH into a $100M+ health/supplement business. Scale
+internationally. Inspired by a US blood testing company worth ~$500M that
+doesn't even do supplement fulfillment. "What if I could achieve that?"
+
+**20+ Projects Explored:**
+Over the past year, Tom has started ~20+ projects with full passion to test
+for a viable lane. Includes AI education, consulting, creative projects,
+the Curiosity App, Alternate (AI films), and more. None became the thing,
+but every one deepened his AI proficiency.
+
+Key insight: "That exploration is just very special. It's also allowed me to
+improve my AI proficiency." He's now in the top 0.01% of AI users by his
+estimation. This is creating leadership opportunities.
+
+**Alternate (AI Films):**
+Passionate creative project making AI-generated films. Has been spending
+too much money on it with no revenue. "It's purely been exploratory and
+it's gone a little far." Needs rebalancing -- CFO discipline required.
+
+**TikTok / Personal Brand:**
+Recently started a TikTok. Finding his niche in AI education and leadership.
+Sees himself as a beacon during the AGI transition, mass unemployment,
+and potential world conflict. "We're gonna need beacons in the tunnel."
+Never had the balls to commit to personal branding before. Now feels right.
+Wants daily performance reports and strategy insights for this.
+
+**Financial Reality (URGENT):**
+"Down bad financially." Overspending on creative projects (Alternate).
+Needs immediate financial discipline. The CFO side of PREP is critical.
+Income: DBH salary (~$1K/week base) + variable agency revenue.
+Expenses: Ponsonby rent + lifestyle + creative project spending.
+Status: Needs rebalancing urgently.
+
+**Health & Lifestyle:**
+- Smoking weed almost daily (good for creative thinking but bad habit)
+- Unhealthy: energy drinks, staying up all night, losing muscle
+- Living situation: open study in the lounge, flatmate with drug influence
+- Wants: to get healthier, train again, set a better example
+- Wants a girlfriend. Recognises social isolation.
+- "I honestly just don't have many friends. I don't even know who I'd invite
+  to my wedding." Needs to put himself out there more.
+
+**Rejected paths:**
+- AI consulting/education as a business: "Not a strong model. Pace of
+  development will make it too simple. I don't enjoy sales. I don't enjoy
+  that many relationships. I don't enjoy that it's not long-term."
+- Wants to own something physical. Something people consume consistently.
+  Health + supplements fits this.
+
+**Current Strategic Position:**
+DBH is no longer "just the base" -- it IS the vehicle. The play is:
+1. Use AI to operate DBH at world-class level on 20 hours/week
+2. Build insane operational intelligence (this system)
+3. Develop personal brand as AI thought leader
+4. Scale DBH or launch blood testing venture
+5. Challenge pharmaceuticals with better, cheaper solutions
+6. Scale internationally to $100M+
+
+**Tony Relationship (evolved):**
+Respects Tony more now. "He gets up every day, bought properties, run a
+business for 20 years, kids are doing well." Wants that stability but bigger.
+Tony doesn't know the full extent of the AI integration. This is leverage.
+
+**The Integrated Vision:**
+Health industry + supplements + blood testing + AI leverage + personal brand
++ education = the ecosystem. Not one thing -- a connected play where each
+piece reinforces the others.
+
+## Tom's Evolution Arc (Updated)
+1. **Ego-driven ambition** (14-24): Build the biggest, win, dominate.
+2. **Existential crisis** (24-25): "Why am I doing this? Who is this for?"
+3. **Meaning-driven alignment** (25): Reduce suffering, learn, be authentic.
+4. **Rebalanced integration** (25-26): Authentic ambition WITH meaning.
+   Still wants to build big, but grounded in real value creation.
+   Wants health, social life, and relationships alongside the hustle.
+
 ## Core Beliefs (Current)
-- Authenticity > Approval. Build products that ARE you.
-- Learning is the constant thread. Every failure opened a door.
-- Healthcare is the long-term play. Supplements were the stepping stone.
-- AI is the leverage multiplier. Use it harder than anyone.
-- Solo operator + AI > Large team + overhead.
-- Freedom and adventure matter. Don't trade them for money.
-- The grand vision will evolve. Stay open to it.
-- "Enjoy our lives man. Come on. Let's build this and make that happen."
+- DBH is the vehicle, not just income. Health industry is the lane.
+- AI proficiency is the competitive moat. Top 0.01% and widening the gap.
+- Physical products > Services. Own something people consume repeatedly.
+- Personal brand matters. Be a beacon during the AGI transition.
+- Financial discipline is critical right now. Stop overspending on passion projects.
+- Health and social life can't be sacrificed for the hustle.
+- Authenticity + ambition = the right formula (not one or the other).
+- "Why don't we put a number on it together. Lock in a great future."
