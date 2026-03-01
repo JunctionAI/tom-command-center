@@ -425,14 +425,16 @@ def run_scheduled_task(agent_name: str, task_name: str, telegram_config: dict):
 
     task_prompt = task_prompts.get(task_name, f"Execute task: {task_name}")
 
-    # For scan/briefing tasks, fetch live news and inject into the prompt
+    # --- Inject live data into task prompts ---
+
+    # 1. Live news for scan/briefing tasks
     live_news_tasks = ("scan", "model_scan", "morning_brief", "morning_briefing", "weekly_review", "weekly_deep_dive")
     if task_name in live_news_tasks:
         try:
             from news_fetcher import fetch_news_for_agent
             live_news = fetch_news_for_agent(agent_name)
             if live_news:
-                task_prompt = f"""{task_prompt}
+                task_prompt += f"""
 
 IMPORTANT: Below are LIVE news headlines fetched just now. Use these as your primary source
 of current information. Your training data may be outdated -- trust these headlines for
@@ -445,6 +447,62 @@ Cross-reference with your state/CONTEXT.md to identify changes since your last b
                 logger.info(f"Injected {len(live_news)} chars of live news for {agent_name}/{task_name}")
         except Exception as e:
             logger.warning(f"News fetch failed (non-fatal): {e}")
+
+    # 2. Performance data for business briefings
+    perf_data_tasks = ("morning_briefing", "morning_brief", "weekly_review")
+    if task_name in perf_data_tasks and agent_name in ("daily-briefing", "dbh-marketing"):
+        try:
+            from data_fetcher import fetch_all_performance_data, fetch_weekly_performance_data
+            days = 7 if task_name == "weekly_review" else 1
+            perf_data = fetch_weekly_performance_data() if days == 7 else fetch_all_performance_data()
+            task_prompt += f"""
+
+{perf_data}
+
+Use this real performance data in your briefing. Show actual numbers. Identify attribution
+patterns -- what's driving sales? Compare to benchmarks in your playbooks."""
+            logger.info(f"Injected performance data for {agent_name}/{task_name}")
+        except Exception as e:
+            logger.warning(f"Performance data fetch failed (non-fatal): {e}")
+
+    # 3. Asana task data for briefings
+    asana_tasks = ("morning_briefing", "morning_brief")
+    if task_name in asana_tasks:
+        try:
+            from asana_client import AsanaClient
+            asana = AsanaClient()
+            if asana.available:
+                task_summary = asana.format_task_summary()
+                task_prompt += f"""
+
+{task_summary}
+
+Include task status in the briefing. Flag overdue tasks as urgent. List today's planned tasks."""
+                logger.info(f"Injected Asana data for {agent_name}/{task_name}")
+        except Exception as e:
+            logger.warning(f"Asana fetch failed (non-fatal): {e}")
+
+    # 4. Cross-agent state for Oracle master briefing
+    if agent_name == "daily-briefing" and task_name == "morning_briefing":
+        try:
+            agent_states = []
+            for other_agent in ("global-events", "dbh-marketing", "new-business",
+                                "health-fitness", "social", "creative-projects"):
+                state_file = AGENTS_DIR / other_agent / "state" / "CONTEXT.md"
+                if state_file.exists():
+                    content = state_file.read_text(encoding='utf-8')
+                    agent_states.append(f"--- {other_agent} STATE ---\n{content}")
+            if agent_states:
+                task_prompt += f"""
+
+=== ALL AGENT STATES (read these to build your cross-domain briefing) ===
+{chr(10).join(agent_states)}
+
+Synthesise the above into your unified briefing. Find cross-domain connections.
+The daily plan should reference the 90-day execution map from Meridian's intelligence."""
+                logger.info(f"Injected {len(agent_states)} agent states for Oracle briefing")
+        except Exception as e:
+            logger.warning(f"Agent state loading failed (non-fatal): {e}")
 
     # Call Claude with full brain + task
     response = call_claude(brain, task_prompt, task_type=task_name)
