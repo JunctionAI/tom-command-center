@@ -223,16 +223,19 @@ def call_claude(system_prompt: str, user_message: str, task_type: str = "chat") 
     if task_type in ("weekly_review", "weekly_deep_dive", "deep_analysis", "evening_reading"):
         model = "claude-opus-4-6"
 
+    logger.info(f"Calling Claude API: model={model}, system_len={len(system_prompt)}, user_len={len(user_message)}")
     try:
         response = client.messages.create(
             model=model,
             max_tokens=4096,
             system=system_prompt,
-            messages=[{"role": "user", "content": user_message}]
+            messages=[{"role": "user", "content": user_message}],
+            timeout=120.0,
         )
+        logger.info(f"Claude API responded: {len(response.content[0].text)} chars, stop={response.stop_reason}")
         return response.content[0].text
     except Exception as e:
-        logger.error(f"Claude API error: {e}")
+        logger.error(f"Claude API error ({model}): {e}")
         return f"API Error: {str(e)}"
 
 
@@ -1288,7 +1291,9 @@ def handle_incoming_message(chat_id: str, message_text: str, telegram_config: di
 
         # PREP (strategic-advisor) gets all agent states + data injected
         if agent_name == "strategic-advisor":
+            logger.info("PREP: injecting cross-agent context...")
             brain = _inject_prep_context(brain)
+            logger.info(f"PREP: brain size after injection: ~{len(brain)//4} tokens")
             task_type = "deep_analysis"  # Uses Opus
         else:
             task_type = "chat"
