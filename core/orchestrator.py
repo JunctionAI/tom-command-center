@@ -38,11 +38,34 @@ logger = logging.getLogger(__name__)
 
 
 def load_config():
-    """Load telegram and schedule configs."""
+    """
+    Load telegram and schedule configs.
+    Secrets come from environment variables (never from git-tracked files).
+    Config files only hold non-sensitive data (chat IDs, agent names, schedules).
+    """
     with open(CONFIG_DIR / "telegram.json", encoding='utf-8') as f:
         telegram_config = json.load(f)
     with open(CONFIG_DIR / "schedules.json", encoding='utf-8') as f:
         schedule_config = json.load(f)
+
+    # Override secrets from environment variables (required for deployment)
+    bot_token = os.environ.get("TELEGRAM_BOT_TOKEN")
+    owner_id = os.environ.get("TELEGRAM_OWNER_ID")
+
+    if bot_token:
+        telegram_config["bot_token"] = bot_token
+    if owner_id:
+        telegram_config["owner_user_id"] = owner_id
+
+    # Validate: bot_token must exist from either source
+    if not telegram_config.get("bot_token") or telegram_config["bot_token"] == "SET_VIA_ENV_VAR":
+        logger.error("TELEGRAM_BOT_TOKEN environment variable not set!")
+        raise ValueError("Missing TELEGRAM_BOT_TOKEN. Set it as an environment variable.")
+
+    if not telegram_config.get("owner_user_id") or telegram_config["owner_user_id"] == "SET_VIA_ENV_VAR":
+        logger.error("TELEGRAM_OWNER_ID environment variable not set!")
+        raise ValueError("Missing TELEGRAM_OWNER_ID. Set it as an environment variable.")
+
     return telegram_config, schedule_config
 
 

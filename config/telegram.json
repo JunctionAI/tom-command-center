@@ -1,6 +1,6 @@
 {
-  "bot_token": "8685132837:AAEDVTNAwRmObKs1Zo0sHHJenpPpq8FIft0",
-  "owner_user_id": "825333001",
+  "bot_token": "SET_VIA_ENV_VAR",
+  "owner_user_id": "SET_VIA_ENV_VAR",
   "chat_ids": {
     "global-events": "-5239319932",
     "dbh-marketing": "-5106475679",
