@@ -32,6 +32,7 @@ When a message arrives or a scheduled task fires, the system:
 | 🎬 Creative Projects | Lens | creative-projects | Model release alerts + on-demand |
 | 📊 Daily Briefing | Oracle | daily-briefing | Daily 7am master summary |
 | 🤖 Command Center | Nexus | command-center | On-demand, admin commands |
+| 📚 Evening Reading | Sage | evening-reading | Daily 8:30pm reading |
 
 ## KNOWLEDGE HIERARCHY (same as AIOS)
 When information conflicts, follow this priority:

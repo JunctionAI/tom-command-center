@@ -96,6 +96,12 @@
       "task": "thought_leader_extract",
       "cron": "30 5 * * *",
       "description": "Extract insights from new thought leader content (5:30am)"
+    },
+    {
+      "agent": "evening-reading",
+      "task": "evening_reading",
+      "cron": "30 20 * * *",
+      "description": "Sage evening reading -- foundational knowledge lesson (8:30pm)"
     }
   ]
 }

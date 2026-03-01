@@ -10,7 +10,8 @@
     "creative-projects": "-5176660998",
     "daily-briefing": "-5237099586",
     "command-center": "-5111519939",
-    "strategic-advisor": "-5253584815"
+    "strategic-advisor": "-5253584815",
+    "evening-reading": "SET_CHAT_ID"
   },
   "agent_names": {
     "global-events": "Atlas",
@@ -21,6 +22,7 @@
     "creative-projects": "Lens",
     "daily-briefing": "Oracle",
     "command-center": "Nexus",
-    "strategic-advisor": "PREP"
+    "strategic-advisor": "PREP",
+    "evening-reading": "Sage"
   }
 }

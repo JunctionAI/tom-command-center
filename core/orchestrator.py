@@ -815,9 +815,21 @@ def run_scheduled_task(agent_name: str, task_name: str, telegram_config: dict):
         "midweek_checkin": "Mid-week social check-in. Review what was planned, what happened, anything coming up this weekend.",
         "weekly_review": "Execute your weekly performance review. Full data pull, compare to targets, identify patterns, recommend optimisations. Use the format specified in your AGENT.md.",
         "weekly_deep_dive": "Execute your weekly deep analysis. Pick the most important developing story and provide in-depth analysis. Use the format specified in your AGENT.md.",
+        "evening_reading": "",  # Placeholder -- replaced below with knowledge engine output
     }
 
     task_prompt = task_prompts.get(task_name, f"Execute task: {task_name}")
+
+    # Evening reading: knowledge engine builds the full prompt
+    if task_name == "evening_reading":
+        try:
+            from core.knowledge_engine import get_tonight_reading
+            reading = get_tonight_reading()
+            task_prompt = reading["prompt"]
+            logger.info(f"Evening reading: {reading['primary_concept']} (score: {reading['primary_score']})")
+        except Exception as e:
+            logger.error(f"Knowledge engine failed: {e}")
+            task_prompt = "Deliver a foundational knowledge lesson for Tom's evening reading. Pick a mental model or strategic concept and connect it to running a DTC health supplement business. 500-800 words, practical, Telegram-friendly."
 
     # Add formatting rules + cross-agent event and task markers to all scheduled prompts
     task_prompt += """
