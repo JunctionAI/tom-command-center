@@ -15,7 +15,8 @@ from pathlib import Path
 from datetime import datetime, timedelta
 from typing import Optional
 
-BASE_DIR = Path.home() / "tom-command-center"
+# Resolve BASE_DIR relative to this file's location (works in Docker + local)
+BASE_DIR = Path(__file__).resolve().parent.parent
 DB_PATH = BASE_DIR / "data" / "learning.db"
 
 

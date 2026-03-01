@@ -4,4 +4,6 @@ dockerfilePath = "Dockerfile"
 
 [deploy]
 restartPolicyType = "ON_FAILURE"
-restartPolicyMaxRetries = 5
+restartPolicyMaxRetries = 10
+# No health check -- this is a worker process (Telegram poller), not a web server
+healthcheckPath = ""

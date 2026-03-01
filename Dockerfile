@@ -9,9 +9,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application code (no secrets -- they come from env vars)
 COPY . .
 
-# Create data directory for SQLite
+# Create data directory for SQLite (writable at runtime)
 RUN mkdir -p /app/data
 
-# Run both the scheduler and the Telegram poller
-# Using a simple entrypoint script
+# No port exposed -- this is a worker (Telegram poller + scheduler)
+# Secrets come from Railway env vars: ANTHROPIC_API_KEY, TELEGRAM_BOT_TOKEN, TELEGRAM_OWNER_ID
+
 CMD ["python", "entrypoint.py"]

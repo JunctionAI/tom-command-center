@@ -20,7 +20,7 @@ from orchestrator import load_config, run_scheduled_task
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger(__name__)
 
-BASE_DIR = Path.home() / "tom-command-center"
+BASE_DIR = Path(__file__).resolve().parent.parent
 CONFIG_DIR = BASE_DIR / "config"
 
 
