@@ -359,6 +359,95 @@ def transcribe_voice(file_id: str, bot_token: str) -> str:
         return f"[Voice transcription error: {str(e)}]"
 
 
+def download_telegram_photo(photo_sizes: list, bot_token: str) -> tuple:
+    """
+    Download a photo from Telegram. Takes the photo array (multiple sizes),
+    picks the largest, downloads it, returns (base64_data, media_type).
+    """
+    import requests
+    import base64
+
+    # Telegram sends multiple sizes -- last one is highest resolution
+    best = photo_sizes[-1]
+    file_id = best.get("file_id")
+
+    try:
+        # Get file path
+        file_info = requests.get(
+            f"https://api.telegram.org/bot{bot_token}/getFile",
+            params={"file_id": file_id},
+            timeout=10
+        ).json()
+
+        if not file_info.get("ok"):
+            return None, None
+
+        file_path = file_info["result"]["file_path"]
+
+        # Download
+        file_url = f"https://api.telegram.org/file/bot{bot_token}/{file_path}"
+        image_data = requests.get(file_url, timeout=30).content
+
+        # Determine media type from file extension
+        ext = file_path.rsplit(".", 1)[-1].lower() if "." in file_path else "jpg"
+        media_types = {
+            "jpg": "image/jpeg", "jpeg": "image/jpeg",
+            "png": "image/png", "gif": "image/gif",
+            "webp": "image/webp"
+        }
+        media_type = media_types.get(ext, "image/jpeg")
+
+        b64 = base64.standard_b64encode(image_data).decode("utf-8")
+        logger.info(f"Downloaded photo: {len(image_data)} bytes, {media_type}")
+        return b64, media_type
+
+    except Exception as e:
+        logger.error(f"Photo download error: {e}")
+        return None, None
+
+
+def call_claude_vision(system_prompt: str, image_b64: str, media_type: str,
+                       caption: str = None, task_type: str = "chat") -> str:
+    """
+    Call Claude API with an image (vision). Used for photos sent via Telegram.
+    """
+    import anthropic
+
+    client = anthropic.Anthropic()
+
+    model = "claude-sonnet-4-6"
+    if task_type in ("weekly_review", "weekly_deep_dive", "deep_analysis"):
+        model = "claude-opus-4-6"
+
+    # Build content blocks: image first, then caption text if present
+    content = [
+        {
+            "type": "image",
+            "source": {
+                "type": "base64",
+                "media_type": media_type,
+                "data": image_b64
+            }
+        }
+    ]
+    if caption:
+        content.append({"type": "text", "text": caption})
+    else:
+        content.append({"type": "text", "text": "What's in this image? Analyse it in the context of your role."})
+
+    try:
+        response = client.messages.create(
+            model=model,
+            max_tokens=4096,
+            system=system_prompt,
+            messages=[{"role": "user", "content": content}]
+        )
+        return response.content[0].text
+    except Exception as e:
+        logger.error(f"Claude Vision API error: {e}")
+        return f"API Error: {str(e)}"
+
+
 # --- Telegram Handler ---
 
 def send_telegram(chat_id: str, text: str, bot_token: str):
@@ -602,6 +691,54 @@ note what should be saved at the end of your response with:
     send_telegram(chat_id, clean_response, telegram_config["bot_token"])
 
 
+def handle_photo_message(chat_id: str, photo_sizes: list, caption: str,
+                         bot_token: str, telegram_config: dict):
+    """
+    Handle a photo sent by Tom.
+    Downloads the image, sends it to Claude Vision with the agent's full brain.
+    """
+    agent_name = identify_agent_from_chat(chat_id, telegram_config)
+    if not agent_name:
+        logger.warning(f"Photo from unknown chat ID: {chat_id}")
+        return
+
+    # Download the photo
+    image_b64, media_type = download_telegram_photo(photo_sizes, bot_token)
+    if not image_b64:
+        send_telegram(chat_id, "[Could not download photo]", bot_token)
+        return
+
+    # Load agent brain
+    brain = load_agent_brain(agent_name)
+
+    # Build caption prompt
+    if caption:
+        user_text = f"Tom sent a photo with caption: {caption}"
+    else:
+        user_text = "Tom sent a photo. Analyse it in the context of your role and expertise."
+
+    # Call Claude with vision
+    response = call_claude_vision(brain, image_b64, media_type, user_text)
+
+    # Extract and save state updates if present
+    if "[STATE UPDATE:" in response:
+        parts = response.split("[STATE UPDATE:")
+        clean_response = parts[0].strip()
+        state_info = parts[1].rstrip("]").strip()
+        update_agent_state(agent_name, state_info)
+    else:
+        clean_response = response
+
+    # Process through learning loop
+    clean_response = process_response_learning(
+        agent_name, clean_response,
+        trigger="photo",
+        input_summary=f"[Photo] {caption}" if caption else "[Photo]"
+    )
+
+    send_telegram(chat_id, clean_response, bot_token)
+
+
 def handle_command(command: str, telegram_config: dict):
     """Handle Nexus command center commands."""
     cmd = command.strip().lower()
@@ -804,6 +941,25 @@ def start_polling(telegram_config: dict):
                             if text and not text.startswith("["):
                                 # Prefix so the agent knows it was voice
                                 text = f"[Voice message] {text}"
+
+                    # Handle photo messages
+                    photo = message.get("photo")
+                    if photo:
+                        caption = message.get("caption", "")
+                        logger.info(f"Photo received (caption: {caption[:50] if caption else 'none'})")
+                        handle_photo_message(chat_id, photo, caption, bot_token, telegram_config)
+                        continue
+
+                    # Handle image documents (screenshots sent as files)
+                    doc = message.get("document")
+                    if doc and not text:
+                        mime = doc.get("mime_type", "")
+                        if mime.startswith("image/"):
+                            caption = message.get("caption", "")
+                            # Wrap as photo-like structure for reuse
+                            logger.info(f"Image document received: {doc.get('file_name', 'unknown')}")
+                            handle_photo_message(chat_id, [doc], caption, bot_token, telegram_config)
+                            continue
 
                     if text:
                         handle_incoming_message(chat_id, text, telegram_config)
