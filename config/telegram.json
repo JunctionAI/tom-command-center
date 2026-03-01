@@ -1,0 +1,24 @@
+{
+  "bot_token": "8685132837:AAEDVTNAwRmObKs1Zo0sHHJenpPpq8FIft0",
+  "owner_user_id": "825333001",
+  "chat_ids": {
+    "global-events": "-5239319932",
+    "dbh-marketing": "-5106475679",
+    "new-business": "-5163495386",
+    "health-fitness": "-5293529356",
+    "social": "-4987072358",
+    "creative-projects": "-5176660998",
+    "daily-briefing": "-5237099586",
+    "command-center": "-5111519939"
+  },
+  "agent_names": {
+    "global-events": "Atlas",
+    "dbh-marketing": "Meridian",
+    "new-business": "Venture",
+    "health-fitness": "Titan",
+    "social": "Compass",
+    "creative-projects": "Lens",
+    "daily-briefing": "Oracle",
+    "command-center": "Nexus"
+  }
+}
