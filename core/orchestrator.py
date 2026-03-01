@@ -832,6 +832,24 @@ Analyse: Are we catching exceptions fast enough? What patterns repeat? What shou
         except Exception as e:
             logger.warning(f"Exception brief failed (non-fatal): {e}")
 
+    # 2e. Creative pipeline status for Meridian/PREP
+    if task_name in ("morning_brief", "morning_briefing", "weekly_review") and agent_name in ("dbh-marketing", "strategic-advisor", "creative-projects"):
+        try:
+            from core.design_pipeline import DesignPipeline
+            dp = DesignPipeline()
+            pipeline_status = dp.format_for_briefing()
+            if pipeline_status:
+                task_prompt += f"""
+
+{pipeline_status}
+
+Review creative pipeline: flag overdue tasks, recommend which briefs should go to AI tools
+vs Roie, and identify campaigns that need fresh creative based on performance data."""
+                logger.info(f"Injected design pipeline status for {agent_name}/{task_name}")
+            dp.close()
+        except Exception as e:
+            logger.warning(f"Design pipeline status failed (non-fatal): {e}")
+
     # 3. Asana task data for briefings
     asana_tasks = ("morning_briefing", "morning_brief")
     if task_name in asana_tasks:
