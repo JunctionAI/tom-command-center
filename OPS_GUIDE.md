@@ -1,7 +1,7 @@
 # OPS GUIDE -- Tom's Command Center
 **Last updated: March 2, 2026**
 
-Your system is live. 9 agents, 14 scheduled tasks, 4 databases, and a learning loop that gets smarter every day. This is how to use it all.
+Your system is live. 9 agents, 16 scheduled tasks, 6 databases, and a learning loop that gets smarter every day. This is how to use it all.
 
 ---
 
@@ -196,7 +196,7 @@ Severity levels for events: CRITICAL, IMPORTANT, NOTABLE, INFO.
 - **Notification router** -- Built and tested. Needs to replace direct `send_telegram()` calls in the orchestrator. Once wired: CRITICAL messages bypass DND, INFO messages get batched hourly.
 - **Write-back clients (Shopify, Klaviyo, Meta, Asana, Xero)** -- The API clients exist and are fully coded. But agents currently advise you to take action; they don't take action themselves. Wiring these means agents could auto-tag customers, auto-pause low-ROAS ads, auto-trigger Klaviyo flows. Each has clear guardrails: safe operations (tagging, notes) run autonomously; risky operations (spending money, creating discounts) require your approval.
 - **Xero OAuth** -- Client is built but needs a one-time manual OAuth flow to authenticate.
-- **Thought leader scraper** -- Planned, not yet built. Would auto-scrape AI thought leaders and inject summaries into relevant agents.
+- **Thought leader scraper** -- Built and wired. Scrapes 10 AI thought leaders (Liam Ottley, Greg Isenberg, Hormozi, Pieter Levels, Karpathy, Naval, etc.) via RSS at 5am daily. Extracts insights via Claude at 5:30am. Insights injected into Oracle, PREP, and Venture morning briefings. PREP also gets system improvement suggestions.
 
 ---
 
