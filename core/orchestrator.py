@@ -296,6 +296,69 @@ def _clean_markers(response: str) -> str:
     return response.strip()
 
 
+# --- Voice Transcription (OpenAI Whisper) ---
+
+def transcribe_voice(file_id: str, bot_token: str) -> str:
+    """
+    Download a Telegram voice message and transcribe it with OpenAI Whisper.
+    Returns the transcribed text, or an error message.
+    """
+    import requests
+    import tempfile
+
+    openai_key = os.environ.get("OPENAI_API_KEY")
+    if not openai_key:
+        return "[Voice message received but OPENAI_API_KEY not set -- cannot transcribe]"
+
+    try:
+        # Step 1: Get file path from Telegram
+        file_info = requests.get(
+            f"https://api.telegram.org/bot{bot_token}/getFile",
+            params={"file_id": file_id},
+            timeout=10
+        ).json()
+
+        if not file_info.get("ok"):
+            return "[Could not retrieve voice file from Telegram]"
+
+        file_path = file_info["result"]["file_path"]
+
+        # Step 2: Download the voice file
+        file_url = f"https://api.telegram.org/file/bot{bot_token}/{file_path}"
+        audio_data = requests.get(file_url, timeout=30).content
+
+        # Step 3: Save to temp file (Whisper needs a file with extension)
+        suffix = ".ogg" if file_path.endswith(".oga") or file_path.endswith(".ogg") else ".mp3"
+        with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
+            tmp.write(audio_data)
+            tmp_path = tmp.name
+
+        # Step 4: Transcribe with OpenAI Whisper API
+        with open(tmp_path, "rb") as audio_file:
+            response = requests.post(
+                "https://api.openai.com/v1/audio/transcriptions",
+                headers={"Authorization": f"Bearer {openai_key}"},
+                files={"file": (f"voice{suffix}", audio_file)},
+                data={"model": "whisper-1"},
+                timeout=60
+            )
+
+        # Clean up temp file
+        os.unlink(tmp_path)
+
+        if response.status_code == 200:
+            transcript = response.json().get("text", "")
+            logger.info(f"Transcribed voice message: {len(transcript)} chars")
+            return transcript
+        else:
+            logger.error(f"Whisper API error: {response.status_code} {response.text}")
+            return f"[Transcription failed: {response.status_code}]"
+
+    except Exception as e:
+        logger.error(f"Voice transcription error: {e}")
+        return f"[Voice transcription error: {str(e)}]"
+
+
 # --- Telegram Handler ---
 
 def send_telegram(chat_id: str, text: str, bot_token: str):
@@ -572,6 +635,17 @@ def start_polling(telegram_config: dict):
                     if user_id != str(owner_id):
                         logger.warning(f"Ignoring message from unknown user: {user_id}")
                         continue
+
+                    # Handle voice messages
+                    voice = message.get("voice") or message.get("audio")
+                    if voice and not text:
+                        file_id = voice.get("file_id")
+                        if file_id:
+                            logger.info(f"Voice message received, transcribing...")
+                            text = transcribe_voice(file_id, bot_token)
+                            if text and not text.startswith("["):
+                                # Prefix so the agent knows it was voice
+                                text = f"[Voice message] {text}"
 
                     if text:
                         handle_incoming_message(chat_id, text, telegram_config)
