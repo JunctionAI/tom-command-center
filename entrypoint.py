@@ -9,8 +9,8 @@ import os
 import threading
 import logging
 
-# Ensure we can import from core/
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'core'))
+# Ensure project root is on Python path so 'from core.xxx import' works
+sys.path.insert(0, os.path.dirname(__file__))
 
 logging.basicConfig(
     level=logging.INFO,
@@ -24,7 +24,7 @@ def run_scheduler(telegram_config, schedule_config):
     """Run APScheduler in a background thread."""
     from apscheduler.schedulers.background import BackgroundScheduler
     from apscheduler.triggers.cron import CronTrigger
-    from orchestrator import run_scheduled_task
+    from core.orchestrator import run_scheduled_task
 
     timezone = schedule_config.get("timezone", "Pacific/Auckland")
     scheduler = BackgroundScheduler(timezone=timezone)
@@ -74,7 +74,7 @@ def main():
     logger.info("Tom's Command Center -- Starting")
     logger.info("=" * 50)
 
-    from orchestrator import load_config, start_polling, get_learning_db
+    from core.orchestrator import load_config, start_polling, get_learning_db
 
     telegram_config, schedule_config = load_config()
 

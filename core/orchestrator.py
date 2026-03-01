@@ -78,7 +78,7 @@ def get_learning_db():
     global _learning_db
     if _learning_db is None:
         try:
-            from learning_db import LearningDB
+            from core.learning_db import LearningDB
             _learning_db = LearningDB()
             logger.info("Learning database connected")
         except Exception as e:
@@ -265,7 +265,7 @@ def process_response_learning(agent_name: str, response: str, trigger: str = "ch
         return _clean_markers(response)
 
     try:
-        from learning_db import InsightExtractor
+        from core.learning_db import InsightExtractor
 
         # Extract and log structured data
         InsightExtractor.extract_from_response(agent_name, response, db)
@@ -520,7 +520,7 @@ def run_scheduled_task(agent_name: str, task_name: str, telegram_config: dict):
     live_news_tasks = ("scan", "model_scan", "morning_brief", "morning_briefing", "weekly_review", "weekly_deep_dive")
     if task_name in live_news_tasks:
         try:
-            from news_fetcher import fetch_news_for_agent
+            from core.news_fetcher import fetch_news_for_agent
             live_news = fetch_news_for_agent(agent_name)
             if live_news:
                 task_prompt += f"""
@@ -541,7 +541,7 @@ Cross-reference with your state/CONTEXT.md to identify changes since your last b
     perf_data_tasks = ("morning_briefing", "morning_brief", "weekly_review")
     if task_name in perf_data_tasks and agent_name in ("daily-briefing", "dbh-marketing"):
         try:
-            from data_fetcher import fetch_all_performance_data, fetch_weekly_performance_data
+            from core.data_fetcher import fetch_all_performance_data, fetch_weekly_performance_data
             days = 7 if task_name == "weekly_review" else 1
             perf_data = fetch_weekly_performance_data() if days == 7 else fetch_all_performance_data()
             task_prompt += f"""
@@ -558,7 +558,7 @@ patterns -- what's driving sales? Compare to benchmarks in your playbooks."""
     asana_tasks = ("morning_briefing", "morning_brief")
     if task_name in asana_tasks:
         try:
-            from asana_client import AsanaClient
+            from core.asana_client import AsanaClient
             asana = AsanaClient()
             if asana.available:
                 task_summary = asana.format_task_summary()
@@ -574,7 +574,7 @@ Include task status in the briefing. Flag overdue tasks as urgent. List today's 
     # 4. Slack activity for briefings
     if task_name in asana_tasks:
         try:
-            from slack_client import SlackClient
+            from core.slack_client import SlackClient
             slack = SlackClient()
             if slack.available:
                 slack_summary = slack.format_briefing_summary()

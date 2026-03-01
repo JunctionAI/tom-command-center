@@ -19,14 +19,14 @@ logger = logging.getLogger(__name__)
 
 FEEDS = {
     # Geopolitics & World News
-    "reuters_world": "https://www.reutersagency.com/feed/?best-topics=political-general",
     "bbc_world": "https://feeds.bbci.co.uk/news/world/rss.xml",
     "aljazeera": "https://www.aljazeera.com/xml/rss/all.xml",
     "guardian_world": "https://www.theguardian.com/world/rss",
+    "ap_news": "https://feedx.net/rss/ap.xml",
 
     # Middle East specific
     "bbc_middle_east": "https://feeds.bbci.co.uk/news/world/middle_east/rss.xml",
-    "reuters_middle_east": "https://www.reutersagency.com/feed/?best-regions=middle-east",
+    "guardian_middle_east": "https://www.theguardian.com/world/middleeast/rss",
 
     # Technology & AI
     "techcrunch": "https://techcrunch.com/feed/",
@@ -34,9 +34,9 @@ FEEDS = {
     "verge": "https://www.theverge.com/rss/index.xml",
 
     # Business & Markets
-    "reuters_business": "https://www.reutersagency.com/feed/?best-topics=business-finance",
     "cnbc": "https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=100003114",
     "bbc_business": "https://feeds.bbci.co.uk/news/business/rss.xml",
+    "ft_world": "https://www.ft.com/rss/home/uk",
 
     # NZ specific
     "rnz_news": "https://www.rnz.co.nz/rss/national.xml",
@@ -47,24 +47,24 @@ FEEDS = {
 # Which feeds each agent should use for scans
 AGENT_FEEDS = {
     "global-events": [
-        "reuters_world", "bbc_world", "aljazeera", "guardian_world",
-        "bbc_middle_east", "reuters_middle_east",
-        "reuters_business",
+        "bbc_world", "aljazeera", "guardian_world", "ap_news",
+        "bbc_middle_east", "guardian_middle_east",
+        "bbc_business",
     ],
     "dbh-marketing": [
-        "reuters_business", "bbc_business", "cnbc",
+        "bbc_business", "cnbc",
         "rnz_news",
     ],
     "new-business": [
         "techcrunch", "ars_technica",
-        "reuters_business", "cnbc",
+        "cnbc",
     ],
     "creative-projects": [
         "techcrunch", "ars_technica", "verge",
     ],
     "daily-briefing": [
-        "reuters_world", "bbc_world",
-        "reuters_business",
+        "bbc_world", "ap_news",
+        "bbc_business",
         "rnz_news",
         "techcrunch",
     ],

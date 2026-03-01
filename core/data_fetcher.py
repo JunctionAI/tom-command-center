@@ -31,7 +31,7 @@ def fetch_shopify_data(days: int = 1) -> str:
 
     try:
         # Fetch orders
-        orders_url = f"https://{store_url}/admin/api/2024-01/orders.json"
+        orders_url = f"https://{store_url}/admin/api/2025-01/orders.json"
         resp = requests.get(orders_url, headers=headers, params={
             "created_at_min": since,
             "status": "any",
@@ -108,7 +108,7 @@ def fetch_klaviyo_data(days: int = 1) -> str:
     headers = {
         "Authorization": f"Klaviyo-API-Key {api_key}",
         "Accept": "application/json",
-        "revision": "2024-02-15"
+        "revision": "2025-07-15"
     }
 
     try:
@@ -169,7 +169,7 @@ def fetch_meta_ads_data(days: int = 1) -> str:
 
     try:
         # Account-level insights
-        url = f"https://graph.facebook.com/v19.0/act_{ad_account_id}/insights"
+        url = f"https://graph.facebook.com/v21.0/act_{ad_account_id}/insights"
         resp = requests.get(url, params={
             "access_token": access_token,
             "time_range": json.dumps({"since": since, "until": until}),
@@ -210,7 +210,7 @@ def fetch_meta_ads_data(days: int = 1) -> str:
         ]
 
         # Campaign-level breakdown
-        camp_url = f"https://graph.facebook.com/v19.0/act_{ad_account_id}/insights"
+        camp_url = f"https://graph.facebook.com/v21.0/act_{ad_account_id}/insights"
         camp_resp = requests.get(camp_url, params={
             "access_token": access_token,
             "time_range": json.dumps({"since": since, "until": until}),
