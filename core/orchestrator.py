@@ -659,6 +659,89 @@ def handle_command(command: str, telegram_config: dict):
         else:
             send_telegram(chat_id, "Learning DB not available", bot_token)
 
+    elif cmd == "test feeds":
+        # Diagnostic: test all data feed connections
+        lines = ["NEXUS -- Data Feed Diagnostics\n"]
+
+        # 1. News RSS
+        try:
+            from core.news_fetcher import fetch_news_for_agent
+            headlines = fetch_news_for_agent("global-events")
+            count = headlines.count("\n") if headlines else 0
+            lines.append(f"[OK] News RSS: {count} headlines fetched")
+        except Exception as e:
+            lines.append(f"[FAIL] News RSS: {e}")
+
+        # 2. Shopify
+        try:
+            from core.data_fetcher import fetch_shopify_data
+            data = fetch_shopify_data()
+            if "unavailable" in data.lower() or "error" in data.lower():
+                lines.append(f"[--] Shopify: {data[:80]}")
+            else:
+                lines.append(f"[OK] Shopify: connected")
+        except Exception as e:
+            lines.append(f"[FAIL] Shopify: {e}")
+
+        # 3. Klaviyo
+        try:
+            from core.data_fetcher import fetch_klaviyo_data
+            data = fetch_klaviyo_data()
+            if "unavailable" in data.lower() or "error" in data.lower():
+                lines.append(f"[--] Klaviyo: {data[:80]}")
+            else:
+                lines.append(f"[OK] Klaviyo: connected")
+        except Exception as e:
+            lines.append(f"[FAIL] Klaviyo: {e}")
+
+        # 4. Meta Ads
+        try:
+            from core.data_fetcher import fetch_meta_ads_data
+            data = fetch_meta_ads_data()
+            if "unavailable" in data.lower() or "error" in data.lower():
+                lines.append(f"[--] Meta Ads: {data[:80]}")
+            else:
+                lines.append(f"[OK] Meta Ads: connected")
+        except Exception as e:
+            lines.append(f"[FAIL] Meta Ads: {e}")
+
+        # 5. Asana
+        try:
+            from core.asana_client import AsanaClient
+            asana = AsanaClient()
+            if not asana.available:
+                lines.append("[--] Asana: ASANA_ACCESS_TOKEN not set")
+            elif not asana.project_id:
+                lines.append("[--] Asana: ASANA_PROJECT_ID not set")
+            else:
+                tasks = asana.get_incomplete_tasks()
+                lines.append(f"[OK] Asana: connected ({len(tasks)} open tasks)")
+        except Exception as e:
+            lines.append(f"[FAIL] Asana: {e}")
+
+        # 6. Slack
+        try:
+            from core.slack_client import SlackClient
+            slack = SlackClient()
+            if not slack.available:
+                lines.append("[--] Slack: SLACK_BOT_TOKEN not set")
+            elif not slack.channel_ids:
+                lines.append("[--] Slack: SLACK_CHANNEL_IDS not set")
+            else:
+                # Quick test: list channels
+                channels = slack.list_channels()
+                lines.append(f"[OK] Slack: connected ({len(channels)} channels visible)")
+        except Exception as e:
+            lines.append(f"[FAIL] Slack: {e}")
+
+        # Summary
+        ok_count = sum(1 for l in lines if "[OK]" in l)
+        fail_count = sum(1 for l in lines if "[FAIL]" in l)
+        skip_count = sum(1 for l in lines if "[--]" in l)
+        lines.append(f"\nSummary: {ok_count} connected, {skip_count} not configured, {fail_count} errors")
+
+        send_telegram(chat_id, "\n".join(lines), bot_token)
+
     else:
         # Pass to Claude for natural language command handling
         brain = load_agent_brain("command-center")
