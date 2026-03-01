@@ -590,24 +590,56 @@ def send_telegram(chat_id: str, text: str, bot_token: str):
     """Send a message to a Telegram chat."""
     import requests
 
+    if not bot_token:
+        logger.error(f"Cannot send to {chat_id}: no bot token")
+        return False
+
+    if not text or not text.strip():
+        logger.warning(f"Empty message for {chat_id}, skipping")
+        return False
+
     url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
 
-    # Telegram has a 4096 char limit per message
-    if len(text) > 4000:
-        # Split into chunks
-        chunks = [text[i:i+4000] for i in range(0, len(text), 4000)]
-        for chunk in chunks:
-            requests.post(url, json={
+    def _post(chunk: str) -> bool:
+        """Post a single chunk, retry once without Markdown on parse failure."""
+        try:
+            resp = requests.post(url, json={
                 "chat_id": chat_id,
                 "text": chunk,
                 "parse_mode": "Markdown"
-            })
+            }, timeout=30)
+            data = resp.json()
+            if data.get("ok"):
+                return True
+            # Markdown parse errors -- retry without parse_mode
+            if "can't parse" in str(data.get("description", "")).lower():
+                logger.warning(f"Markdown parse failed for {chat_id}, retrying plain text")
+                resp2 = requests.post(url, json={
+                    "chat_id": chat_id,
+                    "text": chunk,
+                }, timeout=30)
+                data2 = resp2.json()
+                if data2.get("ok"):
+                    return True
+            logger.error(f"Telegram send failed for {chat_id}: {data.get('description', 'unknown')}")
+            return False
+        except requests.exceptions.Timeout:
+            logger.error(f"Telegram timeout sending to {chat_id}")
+            return False
+        except Exception as e:
+            logger.error(f"Telegram send exception for {chat_id}: {e}")
+            return False
+
+    # Telegram has a 4096 char limit per message
+    if len(text) > 4000:
+        chunks = [text[i:i+4000] for i in range(0, len(text), 4000)]
+        success = all(_post(chunk) for chunk in chunks)
     else:
-        requests.post(url, json={
-            "chat_id": chat_id,
-            "text": text,
-            "parse_mode": "Markdown"
-        })
+        success = _post(text)
+
+    if success:
+        logger.info(f"Message sent to {chat_id} ({len(text)} chars)")
+    return success
 
 
 def identify_agent_from_chat(chat_id: str, telegram_config: dict) -> str:
@@ -981,7 +1013,7 @@ def handle_incoming_message(chat_id: str, message_text: str, telegram_config: di
     # PREP (strategic-advisor) gets all agent states injected -- it sees the full picture
     if agent_name == "strategic-advisor":
         agent_states = []
-        for other_agent in ("global-events", "dbh-marketing", "pure-pets", "new-business",
+        for other_agent in ("global-events", "dbh-marketing", "new-business",
                             "health-fitness", "social", "creative-projects", "daily-briefing"):
             state_file = AGENTS_DIR / other_agent / "state" / "CONTEXT.md"
             if state_file.exists():
@@ -992,11 +1024,20 @@ def handle_incoming_message(chat_id: str, message_text: str, telegram_config: di
 
         # Also inject live performance data for financial context
         try:
+            import signal
+
+            def _timeout_handler(signum, frame):
+                raise TimeoutError("Performance data fetch timed out")
+
+            signal.signal(signal.SIGALRM, _timeout_handler)
+            signal.alarm(30)  # 30 second timeout
             from core.data_fetcher import fetch_all_performance_data
             perf = fetch_all_performance_data()
+            signal.alarm(0)  # Cancel alarm
             brain += f"\n\n=== LIVE PERFORMANCE DATA ===\n{perf}"
-        except Exception:
-            pass
+        except Exception as e:
+            signal.alarm(0)  # Cancel alarm on failure
+            logger.warning(f"Performance data fetch failed for PREP (non-fatal): {e}")
 
         # Use Opus for PREP -- strategic thinking needs the best model
         task_type = "deep_analysis"
@@ -1020,6 +1061,12 @@ If something needs to be done, emit:
 
     response = call_claude(brain, user_prompt, task_type=task_type)
 
+    # Check for API errors before processing
+    if response.startswith("API Error:"):
+        logger.error(f"Claude API failed for {agent_name}: {response}")
+        send_telegram(chat_id, f"PREP is having trouble right now -- API returned an error. Try again in a moment.", telegram_config["bot_token"])
+        return
+
     # Extract and save state updates if present
     if "[STATE UPDATE:" in response:
         parts = response.split("[STATE UPDATE:")
@@ -1037,7 +1084,11 @@ If something needs to be done, emit:
     )
 
     # Send response
-    send_telegram(chat_id, clean_response, telegram_config["bot_token"])
+    sent = send_telegram(chat_id, clean_response, telegram_config["bot_token"])
+    if sent:
+        logger.info(f"Response from {agent_name} delivered to {chat_id}")
+    else:
+        logger.error(f"FAILED to deliver {agent_name} response to {chat_id}")
 
 
 def handle_photo_message(chat_id: str, photo_sizes: list, caption: str,
