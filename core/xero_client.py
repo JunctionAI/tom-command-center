@@ -194,24 +194,39 @@ class XeroClient:
                 raise Exception("Failed to refresh Xero token. Re-authorize.")
 
     def _load_tokens(self):
-        """Load tokens from file."""
+        """Load tokens from file or XERO_TOKENS env var (for Railway deployment)."""
+        # Try env var first (Railway: set XERO_TOKENS to the JSON string)
+        env_tokens = os.environ.get("XERO_TOKENS")
+        if env_tokens:
+            try:
+                self._tokens = json.loads(env_tokens)
+                logger.info("Xero tokens loaded from XERO_TOKENS env var")
+                return
+            except Exception as e:
+                logger.warning(f"Could not parse XERO_TOKENS env var: {e}")
+
+        # Fall back to file
         try:
             if self.token_file.exists():
                 with open(self.token_file) as f:
                     self._tokens = json.load(f)
+                logger.info("Xero tokens loaded from file")
         except Exception as e:
             logger.warning(f"Could not load Xero tokens: {e}")
             self._tokens = None
 
     def _save_tokens(self):
-        """Save tokens to file."""
+        """Save tokens to file (also logs for Railway env var update)."""
         try:
             with open(self.token_file, "w") as f:
                 json.dump(self._tokens, f, indent=2)
-            # Restrict file permissions
             self.token_file.chmod(0o600)
         except Exception as e:
-            logger.error(f"Could not save Xero tokens: {e}")
+            # On Railway, file write may fail -- that's ok if using env var
+            logger.warning(f"Could not save Xero tokens to file (ok on Railway): {e}")
+        # Log token refresh so it can be updated in Railway env vars if needed
+        if self._tokens and self._tokens.get("refresh_token"):
+            logger.info(f"Xero tokens refreshed, expires_at={self._tokens.get('expires_at')}")
 
     def _fetch_tenant_id(self):
         """Fetch the Xero tenant (organisation) ID."""
