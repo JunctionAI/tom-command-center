@@ -220,7 +220,7 @@ def call_claude(system_prompt: str, user_message: str, task_type: str = "chat") 
     # Choose model based on task complexity
     # Use Sonnet for routine tasks, Opus for deep analysis
     model = "claude-sonnet-4-6"
-    if task_type in ("weekly_review", "weekly_deep_dive", "deep_analysis"):
+    if task_type in ("weekly_review", "weekly_deep_dive", "deep_analysis", "evening_reading"):
         model = "claude-opus-4-6"
 
     try:
@@ -566,7 +566,7 @@ def call_claude_vision(system_prompt: str, image_b64: str, media_type: str,
     client = anthropic.Anthropic()
 
     model = "claude-sonnet-4-6"
-    if task_type in ("weekly_review", "weekly_deep_dive", "deep_analysis"):
+    if task_type in ("weekly_review", "weekly_deep_dive", "deep_analysis", "evening_reading"):
         model = "claude-opus-4-6"
 
     # Build content blocks: image first, then caption text if present
