@@ -101,7 +101,7 @@
       "agent": "evening-reading",
       "task": "evening_reading",
       "cron": "30 20 * * *",
-      "description": "Sage evening reading -- foundational knowledge lesson (8:30pm)"
+      "description": "ASI evening reading -- life mentor lesson (8:30pm)"
     }
   ]
 }
