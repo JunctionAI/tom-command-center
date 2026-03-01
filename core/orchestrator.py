@@ -26,6 +26,20 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 AGENTS_DIR = BASE_DIR / "agents"
 CONFIG_DIR = BASE_DIR / "config"
 
+# Human-readable agent names for error messages and display
+AGENT_DISPLAY = {
+    "global-events":     "Atlas",
+    "dbh-marketing":     "Meridian",
+    "new-business":      "Venture",
+    "health-fitness":    "Titan",
+    "social":            "Compass",
+    "creative-projects": "Lens",
+    "daily-briefing":    "Oracle",
+    "command-center":    "Nexus",
+    "strategic-advisor": "PREP",
+    "evening-reading":   "ASI",
+}
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s",
@@ -1170,6 +1184,74 @@ The daily plan should reference the 90-day execution map from Meridian's intelli
 
 # --- Message Handler (for two-way chat) ---
 
+def _extract_state_updates(response: str) -> tuple:
+    """
+    Extract all [STATE UPDATE: ...] markers from a response.
+    Returns (clean_response, list_of_state_updates).
+    Handles multiple markers and nested brackets properly.
+    """
+    import re
+    state_updates = []
+    # Match [STATE UPDATE: ...] -- non-greedy, handles most cases
+    pattern = r'\[STATE UPDATE:\s*(.*?)\]'
+    matches = re.findall(pattern, response, re.DOTALL)
+    for m in matches:
+        state_updates.append(m.strip())
+    clean = re.sub(pattern, '', response, flags=re.DOTALL).strip()
+    return clean, state_updates
+
+
+def _inject_prep_context(brain: str) -> str:
+    """Inject all agent states + performance data + financial data for PREP.
+    Returns the augmented brain. All fetches are individually wrapped."""
+
+    # 1. Agent states
+    agent_states = []
+    for other_agent in ("global-events", "dbh-marketing", "new-business",
+                        "health-fitness", "social", "creative-projects", "daily-briefing"):
+        state_file = AGENTS_DIR / other_agent / "state" / "CONTEXT.md"
+        if state_file.exists():
+            try:
+                content = state_file.read_text(encoding='utf-8')
+                agent_states.append(f"--- {other_agent} STATE ---\n{content}")
+            except Exception:
+                pass
+    if agent_states:
+        brain += f"\n\n=== ALL AGENT STATES (you see the full picture) ===\n" + "\n\n".join(agent_states)
+
+    # 2. Live performance data (with timeout, no signal.alarm -- use requests timeout instead)
+    try:
+        from core.data_fetcher import fetch_all_performance_data
+        perf = fetch_all_performance_data()
+        brain += f"\n\n=== LIVE PERFORMANCE DATA ===\n{perf}"
+    except Exception as e:
+        logger.warning(f"Performance data fetch failed for PREP (non-fatal): {e}")
+
+    # 3. Xero financial data
+    try:
+        from core.xero_client import XeroClient
+        xero = XeroClient()
+        if xero.available:
+            fin_snapshot = xero.get_financial_health_snapshot()
+            if fin_snapshot:
+                brain += f"\n\n=== XERO FINANCIAL DATA ===\n{fin_snapshot}"
+    except Exception as e:
+        logger.warning(f"Xero data for PREP chat failed (non-fatal): {e}")
+
+    # 4. Wise multi-currency data
+    try:
+        from core.wise_client import WiseClient
+        wise = WiseClient()
+        if wise.available:
+            wise_snapshot = wise.get_financial_snapshot()
+            if wise_snapshot:
+                brain += f"\n\n=== WISE BALANCES & FX ===\n{wise_snapshot}"
+    except Exception as e:
+        logger.warning(f"Wise data for PREP chat failed (non-fatal): {e}")
+
+    return brain
+
+
 def handle_incoming_message(chat_id: str, message_text: str, telegram_config: dict):
     """
     Handle an incoming message from Tom.
@@ -1178,6 +1260,9 @@ def handle_incoming_message(chat_id: str, message_text: str, telegram_config: di
     3. Call Claude with brain + Tom's message
     4. Run through learning loop
     5. Respond in the same chat
+
+    CRITICAL: Entire handler is wrapped in try/except so Tom ALWAYS gets a reply,
+    even if something fails internally. Silent failures = no response = bad.
     """
     agent_name = identify_agent_from_chat(chat_id, telegram_config)
 
@@ -1192,113 +1277,83 @@ def handle_incoming_message(chat_id: str, message_text: str, telegram_config: di
 
     logger.info(f"Message from Tom to {agent_name}: {message_text[:50]}...")
 
-    # Load full brain and respond
-    brain = load_agent_brain(agent_name)
+    try:
+        # Load full brain and respond
+        brain = load_agent_brain(agent_name)
 
-    # PREP (strategic-advisor) gets all agent states injected -- it sees the full picture
-    if agent_name == "strategic-advisor":
-        agent_states = []
-        for other_agent in ("global-events", "dbh-marketing", "new-business",
-                            "health-fitness", "social", "creative-projects", "daily-briefing"):
-            state_file = AGENTS_DIR / other_agent / "state" / "CONTEXT.md"
-            if state_file.exists():
-                content = state_file.read_text(encoding='utf-8')
-                agent_states.append(f"--- {other_agent} STATE ---\n{content}")
-        if agent_states:
-            brain += f"\n\n=== ALL AGENT STATES (you see the full picture) ===\n" + "\n\n".join(agent_states)
+        if not brain:
+            send_telegram(chat_id, f"[{agent_name}] Brain failed to load. Check AGENT.md exists.",
+                          telegram_config["bot_token"])
+            return
 
-        # Also inject live performance data for financial context
-        try:
-            import signal
+        # PREP (strategic-advisor) gets all agent states + data injected
+        if agent_name == "strategic-advisor":
+            brain = _inject_prep_context(brain)
+            task_type = "deep_analysis"  # Uses Opus
+        else:
+            task_type = "chat"
 
-            def _timeout_handler(signum, frame):
-                raise TimeoutError("Performance data fetch timed out")
+        # Inject any pending cross-agent events
+        pending_events = get_pending_events_for_agent(agent_name)
+        events_section = f"\n\n{pending_events}" if pending_events else ""
 
-            signal.signal(signal.SIGALRM, _timeout_handler)
-            signal.alarm(30)  # 30 second timeout
-            from core.data_fetcher import fetch_all_performance_data
-            perf = fetch_all_performance_data()
-            signal.alarm(0)  # Cancel alarm
-            brain += f"\n\n=== LIVE PERFORMANCE DATA ===\n{perf}"
-        except Exception as e:
-            signal.alarm(0)  # Cancel alarm on failure
-            logger.warning(f"Performance data fetch failed for PREP (non-fatal): {e}")
-
-        # Inject Xero + Wise financial data for PREP
-        try:
-            from core.xero_client import XeroClient
-            xero = XeroClient()
-            if xero.available:
-                fin_snapshot = xero.get_financial_health_snapshot()
-                if fin_snapshot:
-                    brain += f"\n\n=== XERO FINANCIAL DATA ===\n{fin_snapshot}"
-        except Exception as e:
-            logger.warning(f"Xero data for PREP chat failed (non-fatal): {e}")
-
-        try:
-            from core.wise_client import WiseClient
-            wise = WiseClient()
-            if wise.available:
-                wise_snapshot = wise.get_financial_snapshot()
-                if wise_snapshot:
-                    brain += f"\n\n=== WISE BALANCES & FX ===\n{wise_snapshot}"
-        except Exception as e:
-            logger.warning(f"Wise data for PREP chat failed (non-fatal): {e}")
-
-        # Use Opus for PREP -- strategic thinking needs the best model
-        task_type = "deep_analysis"
-    else:
-        task_type = "chat"
-
-    # Inject any pending cross-agent events
-    pending_events = get_pending_events_for_agent(agent_name)
-    events_section = f"\n\n{pending_events}" if pending_events else ""
-
-    user_prompt = f"""Tom says: {message_text}
+        user_prompt = f"""Tom says: {message_text}
 {events_section}
 Respond as your agent character. You have your full context loaded above.
 
 FORMATTING: This goes to Telegram. NEVER use markdown tables. Use bullet points,
 numbered lists, or "Label: Value" format instead. Bold with *single asterisks*.
 
-If this message contains information that updates your current state,
-note what should be saved at the end of your response with:
-[STATE UPDATE: <info to save>]
+IMPORTANT: After EVERY meaningful exchange, you MUST save key learnings.
+At the end of your response, emit [STATE UPDATE: <what to remember>].
+This is your ONLY long-term memory. If you don't save it, you forget it.
+Save: decisions made, preferences learned, context shared, strategy shifts.
 If you discover something another agent should know, emit:
 [EVENT: event.type|SEVERITY|description or json payload]
 If something needs to be done, emit:
 [TASK: title|priority|description]"""
 
-    response = call_claude(brain, user_prompt, task_type=task_type)
+        response = call_claude(brain, user_prompt, task_type=task_type)
 
-    # Check for API errors before processing
-    if response.startswith("API Error:"):
-        logger.error(f"Claude API failed for {agent_name}: {response}")
-        send_telegram(chat_id, f"PREP is having trouble right now -- API returned an error. Try again in a moment.", telegram_config["bot_token"])
-        return
+        # Check for API errors before processing
+        if response.startswith("API Error:"):
+            logger.error(f"Claude API failed for {agent_name}: {response}")
+            agent_display = AGENT_DISPLAY.get(agent_name, agent_name)
+            send_telegram(chat_id,
+                          f"{agent_display} is having trouble right now -- API returned an error. Try again in a moment.",
+                          telegram_config["bot_token"])
+            return
 
-    # Extract and save state updates if present
-    if "[STATE UPDATE:" in response:
-        parts = response.split("[STATE UPDATE:")
-        clean_response = parts[0].strip()
-        state_info = parts[1].rstrip("]").strip()
-        update_agent_state(agent_name, state_info)
-    else:
-        clean_response = response
+        # Extract and save ALL state updates (handles multiple markers properly)
+        clean_response, state_updates = _extract_state_updates(response)
+        for state_info in state_updates:
+            if state_info:
+                update_agent_state(agent_name, state_info)
 
-    # Process through learning loop
-    clean_response = process_response_learning(
-        agent_name, clean_response,
-        trigger="message",
-        input_summary=message_text
-    )
+        # Process through learning loop
+        clean_response = process_response_learning(
+            agent_name, clean_response,
+            trigger="message",
+            input_summary=message_text
+        )
 
-    # Send response
-    sent = send_telegram(chat_id, clean_response, telegram_config["bot_token"])
-    if sent:
-        logger.info(f"Response from {agent_name} delivered to {chat_id}")
-    else:
-        logger.error(f"FAILED to deliver {agent_name} response to {chat_id}")
+        # Send response
+        sent = send_telegram(chat_id, clean_response, telegram_config["bot_token"])
+        if sent:
+            logger.info(f"Response from {agent_name} delivered to {chat_id}")
+        else:
+            logger.error(f"FAILED to deliver {agent_name} response to {chat_id}")
+
+    except Exception as e:
+        # CRITICAL: Never silently fail. Tom must ALWAYS get a response.
+        logger.error(f"HANDLER CRASH for {agent_name}: {e}", exc_info=True)
+        try:
+            agent_display = AGENT_DISPLAY.get(agent_name, agent_name)
+            send_telegram(chat_id,
+                          f"{agent_display} encountered an internal error: {str(e)[:200]}\n\nPlease try again.",
+                          telegram_config["bot_token"])
+        except Exception:
+            logger.error(f"Could not even send error message to {chat_id}")
 
 
 def handle_photo_message(chat_id: str, photo_sizes: list, caption: str,
@@ -1306,79 +1361,72 @@ def handle_photo_message(chat_id: str, photo_sizes: list, caption: str,
     """
     Handle a photo sent by Tom.
     Downloads the image, sends it to Claude Vision with the agent's full brain.
+    Wrapped in try/except so Tom ALWAYS gets a reply.
     """
     agent_name = identify_agent_from_chat(chat_id, telegram_config)
     if not agent_name:
         logger.warning(f"Photo from unknown chat ID: {chat_id}")
         return
 
-    # Download the photo
-    image_b64, media_type = download_telegram_photo(photo_sizes, bot_token)
-    if not image_b64:
-        send_telegram(chat_id, "[Could not download photo]", bot_token)
-        return
+    try:
+        # Download the photo
+        image_b64, media_type = download_telegram_photo(photo_sizes, bot_token)
+        if not image_b64:
+            send_telegram(chat_id, "[Could not download photo]", bot_token)
+            return
 
-    # Load agent brain
-    brain = load_agent_brain(agent_name)
+        # Load agent brain
+        brain = load_agent_brain(agent_name)
 
-    # PREP gets full context for photos too (agent states, financial data)
-    task_type = "chat"
-    if agent_name == "strategic-advisor":
-        agent_states = []
-        for other_agent in ("global-events", "dbh-marketing", "new-business",
-                            "health-fitness", "social", "creative-projects", "daily-briefing"):
-            state_file = AGENTS_DIR / other_agent / "state" / "CONTEXT.md"
-            if state_file.exists():
-                content = state_file.read_text(encoding='utf-8')
-                agent_states.append(f"--- {other_agent} STATE ---\n{content}")
-        if agent_states:
-            brain += f"\n\n=== ALL AGENT STATES ===\n" + "\n\n".join(agent_states)
+        # PREP gets full context for photos too
+        task_type = "chat"
+        if agent_name == "strategic-advisor":
+            brain = _inject_prep_context(brain)
+            task_type = "deep_analysis"
 
+        # Build caption prompt
+        if caption:
+            user_text = f"Tom sent a photo with caption: {caption}\n\nFORMATTING: This goes to Telegram. NEVER use markdown tables. Use bullet points and Label: Value pairs."
+        else:
+            user_text = "Tom sent a photo. Analyse it in the context of your role and expertise.\n\nFORMATTING: This goes to Telegram. NEVER use markdown tables."
+
+        # Call Claude with vision
+        response = call_claude_vision(brain, image_b64, media_type, user_text, task_type=task_type)
+
+        # Check for API errors
+        if response.startswith("API Error:"):
+            logger.error(f"Claude Vision API failed for {agent_name}: {response}")
+            send_telegram(chat_id, "Couldn't process that image right now -- API error. Try again.", bot_token)
+            return
+
+        # Extract and save state updates (proper multi-marker handling)
+        clean_response, state_updates = _extract_state_updates(response)
+        for state_info in state_updates:
+            if state_info:
+                update_agent_state(agent_name, state_info)
+
+        # Process through learning loop
+        clean_response = process_response_learning(
+            agent_name, clean_response,
+            trigger="photo",
+            input_summary=f"[Photo] {caption}" if caption else "[Photo]"
+        )
+
+        sent = send_telegram(chat_id, clean_response, bot_token)
+        if sent:
+            logger.info(f"Photo response from {agent_name} delivered")
+        else:
+            logger.error(f"FAILED to deliver {agent_name} photo response")
+
+    except Exception as e:
+        logger.error(f"PHOTO HANDLER CRASH for {agent_name}: {e}", exc_info=True)
         try:
-            from core.data_fetcher import fetch_all_performance_data
-            perf = fetch_all_performance_data()
-            brain += f"\n\n=== LIVE PERFORMANCE DATA ===\n{perf}"
+            agent_display = AGENT_DISPLAY.get(agent_name, agent_name)
+            send_telegram(chat_id,
+                          f"{agent_display} couldn't process that photo: {str(e)[:200]}",
+                          bot_token)
         except Exception:
-            pass
-
-        task_type = "deep_analysis"
-
-    # Build caption prompt
-    if caption:
-        user_text = f"Tom sent a photo with caption: {caption}\n\nFORMATTING: This goes to Telegram. NEVER use markdown tables. Use bullet points and Label: Value pairs."
-    else:
-        user_text = "Tom sent a photo. Analyse it in the context of your role and expertise.\n\nFORMATTING: This goes to Telegram. NEVER use markdown tables."
-
-    # Call Claude with vision
-    response = call_claude_vision(brain, image_b64, media_type, user_text, task_type=task_type)
-
-    # Check for API errors
-    if response.startswith("API Error:"):
-        logger.error(f"Claude Vision API failed for {agent_name}: {response}")
-        send_telegram(chat_id, "Couldn't process that image right now -- API error. Try again.", bot_token)
-        return
-
-    # Extract and save state updates if present
-    if "[STATE UPDATE:" in response:
-        parts = response.split("[STATE UPDATE:")
-        clean_response = parts[0].strip()
-        state_info = parts[1].rstrip("]").strip()
-        update_agent_state(agent_name, state_info)
-    else:
-        clean_response = response
-
-    # Process through learning loop
-    clean_response = process_response_learning(
-        agent_name, clean_response,
-        trigger="photo",
-        input_summary=f"[Photo] {caption}" if caption else "[Photo]"
-    )
-
-    sent = send_telegram(chat_id, clean_response, bot_token)
-    if sent:
-        logger.info(f"Photo response from {agent_name} delivered")
-    else:
-        logger.error(f"FAILED to deliver {agent_name} photo response")
+            logger.error(f"Could not send photo error message to {chat_id}")
 
 
 def handle_command(command: str, telegram_config: dict):
