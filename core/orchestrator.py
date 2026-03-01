@@ -279,6 +279,12 @@ def process_response_learning(agent_name: str, response: str, trigger: str = "ch
             output_summary=response[:500]
         )
 
+        # Process cross-agent events from response
+        process_events_from_response(agent_name, response)
+
+        # Auto-create Asana tasks from response
+        create_asana_tasks_from_response(agent_name, response)
+
         # Clean markers from response
         return InsightExtractor.clean_response(response)
     except Exception as e:
@@ -293,7 +299,116 @@ def _clean_markers(response: str) -> str:
     response = re.sub(r'\[DECISION:[^\]]+\]', '', response)
     response = re.sub(r'\[METRIC:[^\]]+\]', '', response)
     response = re.sub(r'\[STATE UPDATE:[^\]]+\]', '', response)
+    response = re.sub(r'\[EVENT:[^\]]+\]', '', response)
+    response = re.sub(r'\[TASK:[^\]]+\]', '', response)
     return response.strip()
+
+
+# --- Event Bus Integration ---
+
+def process_events_from_response(agent_name: str, response: str):
+    """
+    Extract [EVENT: type|severity|{json}] markers from agent responses
+    and publish them to the cross-agent event bus.
+    """
+    import re
+    try:
+        from core.event_bus import EventBus
+        bus = EventBus()
+
+        # Match [EVENT: type|severity|{payload}] or [EVENT: type|severity|description]
+        pattern = r'\[EVENT:\s*([^|]+)\|([^|]+)\|([^\]]+)\]'
+        matches = re.findall(pattern, response)
+
+        for event_type, severity, payload_str in matches:
+            event_type = event_type.strip()
+            severity = severity.strip().upper()
+            payload_str = payload_str.strip()
+
+            # Try parsing as JSON, fall back to description string
+            try:
+                payload = json.loads(payload_str)
+            except (json.JSONDecodeError, ValueError):
+                payload = {"description": payload_str}
+
+            bus.publish(
+                event_type=event_type,
+                source_agent=agent_name,
+                severity=severity,
+                payload=payload
+            )
+            logger.info(f"Event published: {event_type} from {agent_name} ({severity})")
+
+        bus.close()
+    except Exception as e:
+        logger.warning(f"Event bus processing failed (non-fatal): {e}")
+
+
+def get_pending_events_for_agent(agent_name: str) -> str:
+    """Get unprocessed events for an agent, formatted for injection into prompts."""
+    try:
+        from core.event_bus import EventBus
+        bus = EventBus()
+        events = bus.get_pending_events(agent_name)
+
+        if not events:
+            bus.close()
+            return ""
+
+        lines = ["=== CROSS-AGENT EVENTS (from other agents) ==="]
+        for evt in events:
+            lines.append(
+                f"- [{evt['severity']}] {evt['event_type']} from {evt['source_agent']}: "
+                f"{json.dumps(evt['payload']) if isinstance(evt['payload'], dict) else evt['payload']}"
+            )
+            # Mark as processed so this agent doesn't see it again
+            bus.mark_processed(evt['id'], agent_name)
+
+        bus.close()
+        lines.append("React to these events if relevant to your domain. Acknowledge what you've processed.")
+        return "\n".join(lines)
+    except Exception as e:
+        logger.warning(f"Event bus read failed (non-fatal): {e}")
+        return ""
+
+
+# --- Asana Auto-Task Creation ---
+
+def create_asana_tasks_from_response(agent_name: str, response: str):
+    """
+    Extract [TASK: title|priority|description] markers from agent responses
+    and auto-create tasks in Asana.
+    """
+    import re
+    try:
+        from core.asana_writer import AsanaWriter
+        writer = AsanaWriter()
+        if not writer.available:
+            return
+
+        pattern = r'\[TASK:\s*([^|]+)\|([^|]+)\|([^\]]+)\]'
+        matches = re.findall(pattern, response)
+
+        for title, priority, description in matches:
+            title = title.strip()
+            priority = priority.strip().lower()
+            description = description.strip()
+
+            # Map priority to Asana due date offset
+            due_days = {"urgent": 1, "high": 3, "medium": 7, "low": 14}.get(priority, 7)
+
+            from datetime import timedelta
+            due_date = (datetime.now() + timedelta(days=due_days)).strftime("%Y-%m-%d")
+
+            writer.create_task(
+                name=f"[{agent_name}] {title}",
+                notes=f"Auto-created by {agent_name}\n\n{description}",
+                due_on=due_date
+            )
+            logger.info(f"Asana task created: {title} (from {agent_name}, due {due_date})")
+
+    except Exception as e:
+        logger.warning(f"Asana auto-task creation failed (non-fatal): {e}")
 
 
 # --- Voice Transcription (OpenAI Whisper) ---
@@ -570,6 +685,18 @@ def run_scheduled_task(agent_name: str, task_name: str, telegram_config: dict):
 
     task_prompt = task_prompts.get(task_name, f"Execute task: {task_name}")
 
+    # Add cross-agent event and task markers to all scheduled prompts
+    task_prompt += """
+
+SYSTEM CAPABILITIES — use these markers when appropriate:
+- To flag something for another agent: [EVENT: event.type|SEVERITY|description or json]
+  Example: [EVENT: campaign.performance_drop|IMPORTANT|{"campaign":"GLM March","roas":2.1}]
+- To create a task in Asana: [TASK: title|priority|description]
+  Example: [TASK: Refresh GLM creative|high|ROAS dropped below 3x, need new ad variants]
+- Severity levels: CRITICAL, IMPORTANT, NOTABLE, INFO
+- Task priorities: urgent, high, medium, low
+Only emit these when genuinely useful. Do not force them."""
+
     # --- Inject live data into task prompts ---
 
     # 1. Live news for scan/briefing tasks
@@ -718,6 +845,12 @@ The daily plan should reference the 90-day execution map from Meridian's intelli
         except Exception as e:
             logger.warning(f"Agent state loading failed (non-fatal): {e}")
 
+    # Inject pending cross-agent events
+    pending_events = get_pending_events_for_agent(agent_name)
+    if pending_events:
+        task_prompt += f"\n\n{pending_events}"
+        logger.info(f"Injected cross-agent events for {agent_name}")
+
     # Call Claude with full brain + task
     # PREP always uses Opus -- strategic thinking needs the best model
     effective_task_type = "deep_analysis" if agent_name == "strategic-advisor" else task_name
@@ -797,12 +930,20 @@ def handle_incoming_message(chat_id: str, message_text: str, telegram_config: di
     else:
         task_type = "chat"
 
-    user_prompt = f"""Tom says: {message_text}
+    # Inject any pending cross-agent events
+    pending_events = get_pending_events_for_agent(agent_name)
+    events_section = f"\n\n{pending_events}" if pending_events else ""
 
+    user_prompt = f"""Tom says: {message_text}
+{events_section}
 Respond as your agent character. You have your full context loaded above.
 If this message contains information that updates your current state,
 note what should be saved at the end of your response with:
-[STATE UPDATE: <info to save>]"""
+[STATE UPDATE: <info to save>]
+If you discover something another agent should know, emit:
+[EVENT: event.type|SEVERITY|description or json payload]
+If something needs to be done, emit:
+[TASK: title|priority|description]"""
 
     response = call_claude(brain, user_prompt, task_type=task_type)
 
@@ -1056,6 +1197,28 @@ def start_polling(telegram_config: dict):
         logger.info("Learning loop active")
     else:
         logger.warning("Learning loop inactive -- database not available")
+
+    # Initialise event bus with default subscriptions
+    try:
+        from core.event_bus import EventBus
+        bus = EventBus()
+        # Default subscriptions -- each agent listens to relevant event patterns
+        default_subs = {
+            "dbh-marketing":     ["campaign.*", "customer.*", "inventory.*", "market.*"],
+            "strategic-advisor": ["*"],  # PREP sees everything
+            "daily-briefing":    ["*"],  # Oracle sees everything for synthesis
+            "creative-projects": ["campaign.*", "content.*"],
+            "global-events":     ["market.*"],
+            "new-business":      ["market.*"],
+            "command-center":    ["system.*"],
+        }
+        for agent, patterns in default_subs.items():
+            for pat in patterns:
+                bus.subscribe(agent, pat)
+        bus.close()
+        logger.info("Event bus initialised with default subscriptions")
+    except Exception as e:
+        logger.warning(f"Event bus init failed (non-fatal): {e}")
 
     while True:
         try:

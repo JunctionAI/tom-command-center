@@ -492,6 +492,8 @@ class InsightExtractor:
         response = re.sub(r'\[DECISION:[^\]]+\]', '', response)
         response = re.sub(r'\[METRIC:[^\]]+\]', '', response)
         response = re.sub(r'\[STATE UPDATE:[^\]]+\]', '', response)
+        response = re.sub(r'\[EVENT:[^\]]+\]', '', response)
+        response = re.sub(r'\[TASK:[^\]]+\]', '', response)
         return response.strip()
 
 
