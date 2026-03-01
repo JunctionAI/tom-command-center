@@ -554,6 +554,24 @@ patterns -- what's driving sales? Compare to benchmarks in your playbooks."""
         except Exception as e:
             logger.warning(f"Performance data fetch failed (non-fatal): {e}")
 
+    # 2b. Order-level intelligence (per-order attribution + customer analysis)
+    if task_name in perf_data_tasks and agent_name in ("daily-briefing", "dbh-marketing"):
+        try:
+            from core.order_intelligence import fetch_order_intelligence
+            days = 7 if task_name == "weekly_review" else 1
+            order_data = fetch_order_intelligence(days)
+            task_prompt += f"""
+
+{order_data}
+
+IMPORTANT: Analyse each individual order. What caused each sale? What does the customer
+profile tell us? Identify patterns: which channels drive highest AOV, which bring new vs
+returning customers, which campaigns are working. Flag any unattributed orders.
+For returning customers, note their LTV trajectory and what product they keep buying."""
+            logger.info(f"Injected order intelligence for {agent_name}/{task_name}")
+        except Exception as e:
+            logger.warning(f"Order intelligence fetch failed (non-fatal): {e}")
+
     # 3. Asana task data for briefings
     asana_tasks = ("morning_briefing", "morning_brief")
     if task_name in asana_tasks:
@@ -856,7 +874,21 @@ def handle_command(command: str, telegram_config: dict):
         except Exception as e:
             lines.append(f"[FAIL] Asana: {e}")
 
-        # 6. Slack
+        # 6. Order Intelligence
+        try:
+            from core.order_intelligence import fetch_order_intelligence
+            data = fetch_order_intelligence(1)
+            if "unavailable" in data.lower() or "error" in data.lower():
+                lines.append(f"[--] Order Intelligence: {data[:80]}")
+            elif "No orders" in data:
+                lines.append(f"[OK] Order Intelligence: connected (no orders in last 24h)")
+            else:
+                order_count = data.count("Products:")
+                lines.append(f"[OK] Order Intelligence: {order_count} orders analysed")
+        except Exception as e:
+            lines.append(f"[FAIL] Order Intelligence: {e}")
+
+        # 7. Slack
         try:
             from core.slack_client import SlackClient
             slack = SlackClient()
