@@ -1209,6 +1209,7 @@ def _inject_prep_context(brain: str) -> str:
     Returns the augmented brain. All fetches are individually wrapped."""
 
     # 1. Agent states
+    logger.info("PREP inject: loading agent states...")
     agent_states = []
     for other_agent in ("global-events", "dbh-marketing", "new-business",
                         "health-fitness", "social", "creative-projects", "daily-briefing"):
@@ -1221,16 +1222,20 @@ def _inject_prep_context(brain: str) -> str:
                 pass
     if agent_states:
         brain += f"\n\n=== ALL AGENT STATES (you see the full picture) ===\n" + "\n\n".join(agent_states)
+    logger.info(f"PREP inject: {len(agent_states)} agent states loaded")
 
-    # 2. Live performance data (with timeout, no signal.alarm -- use requests timeout instead)
+    # 2. Live performance data
+    logger.info("PREP inject: fetching performance data...")
     try:
         from core.data_fetcher import fetch_all_performance_data
         perf = fetch_all_performance_data()
         brain += f"\n\n=== LIVE PERFORMANCE DATA ===\n{perf}"
+        logger.info(f"PREP inject: performance data OK ({len(perf)} chars)")
     except Exception as e:
-        logger.warning(f"Performance data fetch failed for PREP (non-fatal): {e}")
+        logger.warning(f"PREP inject: performance data FAILED (non-fatal): {e}")
 
     # 3. Xero financial data
+    logger.info("PREP inject: checking Xero...")
     try:
         from core.xero_client import XeroClient
         xero = XeroClient()
@@ -1238,10 +1243,14 @@ def _inject_prep_context(brain: str) -> str:
             fin_snapshot = xero.get_financial_health_snapshot()
             if fin_snapshot:
                 brain += f"\n\n=== XERO FINANCIAL DATA ===\n{fin_snapshot}"
+                logger.info(f"PREP inject: Xero data OK ({len(fin_snapshot)} chars)")
+        else:
+            logger.info("PREP inject: Xero not available (skipped)")
     except Exception as e:
-        logger.warning(f"Xero data for PREP chat failed (non-fatal): {e}")
+        logger.warning(f"PREP inject: Xero FAILED (non-fatal): {e}")
 
     # 4. Wise multi-currency data
+    logger.info("PREP inject: checking Wise...")
     try:
         from core.wise_client import WiseClient
         wise = WiseClient()
@@ -1249,9 +1258,13 @@ def _inject_prep_context(brain: str) -> str:
             wise_snapshot = wise.get_financial_snapshot()
             if wise_snapshot:
                 brain += f"\n\n=== WISE BALANCES & FX ===\n{wise_snapshot}"
+                logger.info(f"PREP inject: Wise data OK ({len(wise_snapshot)} chars)")
+        else:
+            logger.info("PREP inject: Wise not available (skipped)")
     except Exception as e:
-        logger.warning(f"Wise data for PREP chat failed (non-fatal): {e}")
+        logger.warning(f"PREP inject: Wise FAILED (non-fatal): {e}")
 
+    logger.info(f"PREP inject: COMPLETE. Total brain: ~{len(brain)//4} tokens")
     return brain
 
 
