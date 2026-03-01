@@ -339,6 +339,27 @@ def run_scheduled_task(agent_name: str, task_name: str, telegram_config: dict):
 
     task_prompt = task_prompts.get(task_name, f"Execute task: {task_name}")
 
+    # For scan/briefing tasks, fetch live news and inject into the prompt
+    live_news_tasks = ("scan", "model_scan", "morning_brief", "morning_briefing", "weekly_review", "weekly_deep_dive")
+    if task_name in live_news_tasks:
+        try:
+            from news_fetcher import fetch_news_for_agent
+            live_news = fetch_news_for_agent(agent_name)
+            if live_news:
+                task_prompt = f"""{task_prompt}
+
+IMPORTANT: Below are LIVE news headlines fetched just now. Use these as your primary source
+of current information. Your training data may be outdated -- trust these headlines for
+what is happening RIGHT NOW.
+
+{live_news}
+
+Analyse these headlines through your frameworks. Focus on what's NEW and significant.
+Cross-reference with your state/CONTEXT.md to identify changes since your last briefing."""
+                logger.info(f"Injected {len(live_news)} chars of live news for {agent_name}/{task_name}")
+        except Exception as e:
+            logger.warning(f"News fetch failed (non-fatal): {e}")
+
     # Call Claude with full brain + task
     response = call_claude(brain, task_prompt, task_type=task_name)
 
