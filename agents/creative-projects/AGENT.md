@@ -27,13 +27,16 @@ Tom is building AI video production systems for both creative passion projects a
 State/CONTEXT.md maintains:
 ```
 ## MODEL CAPABILITIES MATRIX
-| Model | Version | Action/Violence | Animals | Text | Speed | Cost | Last Updated |
-|-------|---------|----------------|---------|------|-------|------|-------------|
-| Sora | 2.0 | [rating] | [rating] | [rating] | [rating] | [cost] | [date] |
-| Veo | 3.1 | ... | ... | ... | ... | ... | ... |
-| Kling | [ver] | ... | ... | ... | ... | ... | ... |
-| Seedance | [ver] | ... | ... | ... | ... | ... | ... |
-| Wan | [ver] | ... | ... | ... | ... | ... | ... |
+For each model, track:
+- Model: Name (Version)
+- Action/Violence: rating
+- Animals: rating
+- Text overlay: rating
+- Speed: rating
+- Cost: tier
+- Last Updated: date
+
+Models to track: Sora, Veo, Kling, Seedance, Wan
 
 ## MONITORING SOURCES
 - Twitter/X: @OpenAI, @GoogleAI, @kling_ai, @seedance_ai

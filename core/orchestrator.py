@@ -586,6 +586,57 @@ def call_claude_vision(system_prompt: str, image_b64: str, media_type: str,
 
 # --- Telegram Handler ---
 
+def _convert_tables_to_text(text: str) -> str:
+    """Convert markdown tables to structured text readable on Telegram."""
+    import re
+
+    lines = text.split("\n")
+    result = []
+    table_rows = []
+    headers = []
+
+    def flush_table():
+        """Convert accumulated table rows into readable text."""
+        if not table_rows:
+            return
+        if headers:
+            for row in table_rows:
+                parts = []
+                for i, cell in enumerate(row):
+                    label = headers[i] if i < len(headers) else ""
+                    if label and cell:
+                        parts.append(f"{label}: {cell}")
+                    elif cell:
+                        parts.append(cell)
+                if parts:
+                    result.append("  ".join(parts))
+        else:
+            for row in table_rows:
+                result.append("  ".join(row))
+        table_rows.clear()
+        headers.clear()
+
+    for line in lines:
+        stripped = line.strip()
+        # Detect table separator rows (|---|---|)
+        if re.match(r"^\|[\s\-:]+(\|[\s\-:]+)+\|?$", stripped):
+            continue  # Skip separator rows
+        # Detect table data rows (| cell | cell |)
+        if stripped.startswith("|") and stripped.count("|") >= 2:
+            cells = [c.strip() for c in stripped.strip("|").split("|")]
+            cells = [c for c in cells if c]  # Remove empty
+            if not headers and not table_rows:
+                headers = cells
+            else:
+                table_rows.append(cells)
+        else:
+            flush_table()
+            result.append(line)
+
+    flush_table()
+    return "\n".join(result)
+
+
 def send_telegram(chat_id: str, text: str, bot_token: str):
     """Send a message to a Telegram chat."""
     import requests
@@ -597,6 +648,9 @@ def send_telegram(chat_id: str, text: str, bot_token: str):
     if not text or not text.strip():
         logger.warning(f"Empty message for {chat_id}, skipping")
         return False
+
+    # Convert any markdown tables to structured text (Telegram can't render tables)
+    text = _convert_tables_to_text(text)
 
     url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
 
@@ -765,8 +819,15 @@ def run_scheduled_task(agent_name: str, task_name: str, telegram_config: dict):
 
     task_prompt = task_prompts.get(task_name, f"Execute task: {task_name}")
 
-    # Add cross-agent event and task markers to all scheduled prompts
+    # Add formatting rules + cross-agent event and task markers to all scheduled prompts
     task_prompt += """
+
+FORMATTING RULES (Telegram output):
+- NEVER use markdown tables (| col | col |). Telegram cannot render them.
+- Use bullet points, numbered lists, or "Label: Value" pairs instead.
+- Bold with *asterisks*, not **double**. Telegram Markdown uses single asterisks.
+- Keep lines under 80 chars where possible for mobile readability.
+- Use line breaks and section headers (ALL CAPS or emoji) to separate sections.
 
 SYSTEM CAPABILITIES — use these markers when appropriate:
 - To flag something for another agent: [EVENT: event.type|SEVERITY|description or json]
@@ -1106,6 +1167,10 @@ def handle_incoming_message(chat_id: str, message_text: str, telegram_config: di
     user_prompt = f"""Tom says: {message_text}
 {events_section}
 Respond as your agent character. You have your full context loaded above.
+
+FORMATTING: This goes to Telegram. NEVER use markdown tables. Use bullet points,
+numbered lists, or "Label: Value" format instead. Bold with *single asterisks*.
+
 If this message contains information that updates your current state,
 note what should be saved at the end of your response with:
 [STATE UPDATE: <info to save>]
