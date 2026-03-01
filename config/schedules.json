@@ -72,6 +72,12 @@
       "task": "weekly_review",
       "cron": "0 8 * * 1",
       "description": "PREP weekly strategic review (Monday 8am)"
+    },
+    {
+      "agent": "dbh-marketing",
+      "task": "intelligence_sync",
+      "cron": "0 23 * * *",
+      "description": "Nightly customer intelligence DB sync (11pm)"
     }
   ]
 }

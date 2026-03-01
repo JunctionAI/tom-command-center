@@ -497,6 +497,46 @@ def run_scheduled_task(agent_name: str, task_name: str, telegram_config: dict):
     """
     logger.info(f"Running scheduled task: {agent_name}/{task_name}")
 
+    # --- Silent intelligence sync (no Claude call, just DB update) ---
+    if task_name == "intelligence_sync":
+        try:
+            from core.order_intelligence import fetch_order_intelligence, get_customer_db_summary
+            # Fetch today's orders and persist to customer intelligence DB
+            order_data = fetch_order_intelligence(days=1)
+            db_summary = get_customer_db_summary()
+
+            # Count what was synced
+            order_count = order_data.count("--- #")
+            if "No orders" in order_data:
+                order_count = 0
+
+            # Post brief status to channel
+            chat_id = telegram_config.get("chat_ids", {}).get(agent_name, "")
+            if chat_id:
+                from core.order_intelligence import get_db
+                try:
+                    db = get_db()
+                    total_customers = db.execute("SELECT COUNT(*) FROM customers").fetchone()[0]
+                    total_orders = db.execute("SELECT COUNT(*) FROM orders").fetchone()[0]
+                    db.close()
+                except Exception:
+                    total_customers = "?"
+                    total_orders = "?"
+
+                status_msg = (
+                    f"🔄 *Intelligence Sync Complete*\n"
+                    f"Orders today: {order_count}\n"
+                    f"DB totals: {total_customers} customers, {total_orders} orders tracked\n"
+                    f"_Learning accumulates — next briefing will use updated intelligence._"
+                )
+                bot_token = telegram_config.get("bot_token", os.environ.get("TELEGRAM_BOT_TOKEN", ""))
+                send_telegram(chat_id, status_msg, bot_token)
+
+            logger.info(f"Intelligence sync complete: {order_count} orders persisted")
+        except Exception as e:
+            logger.error(f"Intelligence sync failed: {e}")
+        return  # No Claude call needed
+
     brain = load_agent_brain(agent_name)
 
     # Build task-specific prompt
@@ -557,18 +597,24 @@ patterns -- what's driving sales? Compare to benchmarks in your playbooks."""
     # 2b. Order-level intelligence (per-order attribution + customer analysis)
     if task_name in perf_data_tasks and agent_name in ("daily-briefing", "dbh-marketing", "strategic-advisor"):
         try:
-            from core.order_intelligence import fetch_order_intelligence
+            from core.order_intelligence import fetch_order_intelligence, get_customer_db_summary
             days = 7 if task_name == "weekly_review" else 1
             order_data = fetch_order_intelligence(days)
+            db_summary = get_customer_db_summary()
             task_prompt += f"""
 
 {order_data}
 
+=== CUMULATIVE CUSTOMER INTELLIGENCE ===
+{db_summary}
+
 IMPORTANT: Analyse each individual order. What caused each sale? What does the customer
 profile tell us? Identify patterns: which channels drive highest AOV, which bring new vs
 returning customers, which campaigns are working. Flag any unattributed orders.
-For returning customers, note their LTV trajectory and what product they keep buying."""
-            logger.info(f"Injected order intelligence for {agent_name}/{task_name}")
+For returning customers, note their LTV trajectory and what product they keep buying.
+Use the cumulative intelligence DB summary to spot long-term trends (repeat buyers,
+channel shifts, category growth). The DB learns more with every briefing."""
+            logger.info(f"Injected order intelligence + DB summary for {agent_name}/{task_name}")
         except Exception as e:
             logger.warning(f"Order intelligence fetch failed (non-fatal): {e}")
 
