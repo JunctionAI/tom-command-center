@@ -482,7 +482,24 @@ Include task status in the briefing. Flag overdue tasks as urgent. List today's 
         except Exception as e:
             logger.warning(f"Asana fetch failed (non-fatal): {e}")
 
-    # 4. Cross-agent state for Oracle master briefing
+    # 4. Slack activity for briefings
+    if task_name in asana_tasks:
+        try:
+            from slack_client import SlackClient
+            slack = SlackClient()
+            if slack.available:
+                slack_summary = slack.format_briefing_summary()
+                task_prompt += f"""
+
+{slack_summary}
+
+Include Slack activity in the briefing. Flag any task completions detected.
+If someone posted that something is 'done' or 'shipped', note it."""
+                logger.info(f"Injected Slack data for {agent_name}/{task_name}")
+        except Exception as e:
+            logger.warning(f"Slack fetch failed (non-fatal): {e}")
+
+    # 5. Cross-agent state for Oracle master briefing
     if agent_name == "daily-briefing" and task_name == "morning_briefing":
         try:
             agent_states = []
