@@ -1650,6 +1650,30 @@ def start_polling(telegram_config: dict):
     offset = 0
 
     logger.info("Starting Telegram polling loop...")
+    logger.info(f"Bot token: ...{bot_token[-8:]}")
+    logger.info(f"Owner ID: '{owner_id}' (type: {type(owner_id).__name__})")
+
+    # Log registered chat IDs so we can verify
+    chat_ids = telegram_config.get("chat_ids", {})
+    for agent, cid in chat_ids.items():
+        logger.info(f"  Chat mapping: {agent} -> {cid}")
+
+    # Startup self-test: send a brief message to command-center
+    nexus_chat = chat_ids.get("command-center")
+    if nexus_chat:
+        try:
+            import requests as _req
+            _test_url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
+            _test_resp = _req.post(_test_url, json={
+                "chat_id": nexus_chat,
+                "text": "System online. Polling active.",
+            }, timeout=10)
+            if _test_resp.ok:
+                logger.info("Startup self-test: message sent to Nexus channel")
+            else:
+                logger.error(f"Startup self-test failed: {_test_resp.text}")
+        except Exception as e:
+            logger.error(f"Startup self-test error: {e}")
 
     # Initialise learning DB on startup
     db = get_learning_db()
@@ -1693,14 +1717,21 @@ def start_polling(telegram_config: dict):
                 for update in data["result"]:
                     offset = update["update_id"] + 1
 
-                    message = update.get("message", {})
+                    message = update.get("message")
+                    if not message:
+                        # Not a regular message (could be edited_message, callback_query, etc.)
+                        logger.debug(f"Non-message update: {list(update.keys())}")
+                        continue
+
                     text = message.get("text", "")
                     chat_id = str(message.get("chat", {}).get("id", ""))
                     user_id = str(message.get("from", {}).get("id", ""))
 
+                    logger.info(f"Update received: chat_id={chat_id}, user_id={user_id}, text={text[:60] if text else '(no text)'}")
+
                     # Security: only respond to Tom
-                    if user_id != str(owner_id):
-                        logger.warning(f"Ignoring message from unknown user: {user_id}")
+                    if user_id != str(owner_id).strip():
+                        logger.warning(f"Ignoring message from unknown user: user_id='{user_id}' vs owner_id='{owner_id}'")
                         continue
 
                     # Handle voice messages
