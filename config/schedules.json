@@ -60,6 +60,18 @@
       "task": "weekly_deep_dive",
       "cron": "0 8 * * 0",
       "description": "Atlas weekly deep analysis (Sunday 8am)"
+    },
+    {
+      "agent": "strategic-advisor",
+      "task": "morning_briefing",
+      "cron": "30 7 * * *",
+      "description": "PREP CEO morning strategic briefing (7:30am, after Oracle)"
+    },
+    {
+      "agent": "strategic-advisor",
+      "task": "weekly_review",
+      "cron": "0 8 * * 1",
+      "description": "PREP weekly strategic review (Monday 8am)"
     }
   ]
 }

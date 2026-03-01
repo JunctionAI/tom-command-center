@@ -539,7 +539,7 @@ Cross-reference with your state/CONTEXT.md to identify changes since your last b
 
     # 2. Performance data for business briefings
     perf_data_tasks = ("morning_briefing", "morning_brief", "weekly_review")
-    if task_name in perf_data_tasks and agent_name in ("daily-briefing", "dbh-marketing"):
+    if task_name in perf_data_tasks and agent_name in ("daily-briefing", "dbh-marketing", "strategic-advisor"):
         try:
             from core.data_fetcher import fetch_all_performance_data, fetch_weekly_performance_data
             days = 7 if task_name == "weekly_review" else 1
@@ -555,7 +555,7 @@ patterns -- what's driving sales? Compare to benchmarks in your playbooks."""
             logger.warning(f"Performance data fetch failed (non-fatal): {e}")
 
     # 2b. Order-level intelligence (per-order attribution + customer analysis)
-    if task_name in perf_data_tasks and agent_name in ("daily-briefing", "dbh-marketing"):
+    if task_name in perf_data_tasks and agent_name in ("daily-briefing", "dbh-marketing", "strategic-advisor"):
         try:
             from core.order_intelligence import fetch_order_intelligence
             days = 7 if task_name == "weekly_review" else 1
@@ -606,30 +606,44 @@ If someone posted that something is 'done' or 'shipped', note it."""
         except Exception as e:
             logger.warning(f"Slack fetch failed (non-fatal): {e}")
 
-    # 5. Cross-agent state for Oracle master briefing
-    if agent_name == "daily-briefing" and task_name == "morning_briefing":
+    # 5. Cross-agent state for Oracle and PREP briefings
+    if agent_name in ("daily-briefing", "strategic-advisor") and task_name in ("morning_briefing", "weekly_review"):
         try:
             agent_states = []
-            for other_agent in ("global-events", "dbh-marketing", "new-business",
+            for other_agent in ("global-events", "dbh-marketing", "pure-pets", "new-business",
                                 "health-fitness", "social", "creative-projects"):
                 state_file = AGENTS_DIR / other_agent / "state" / "CONTEXT.md"
                 if state_file.exists():
                     content = state_file.read_text(encoding='utf-8')
                     agent_states.append(f"--- {other_agent} STATE ---\n{content}")
             if agent_states:
-                task_prompt += f"""
+                if agent_name == "strategic-advisor":
+                    task_prompt += f"""
+
+=== ALL AGENT STATES (you see the full picture across every domain) ===
+{chr(10).join(agent_states)}
+
+Synthesise everything above into your strategic briefing. Connect the dots.
+Your briefing should cover: financial position, DBH performance, macro events
+that affect the business, personal health/social status, and the top 3
+strategic priorities for today. Challenge anything that needs challenging.
+Flag any automation opportunities you spot."""
+                else:
+                    task_prompt += f"""
 
 === ALL AGENT STATES (read these to build your cross-domain briefing) ===
 {chr(10).join(agent_states)}
 
 Synthesise the above into your unified briefing. Find cross-domain connections.
 The daily plan should reference the 90-day execution map from Meridian's intelligence."""
-                logger.info(f"Injected {len(agent_states)} agent states for Oracle briefing")
+                logger.info(f"Injected {len(agent_states)} agent states for {agent_name} briefing")
         except Exception as e:
             logger.warning(f"Agent state loading failed (non-fatal): {e}")
 
     # Call Claude with full brain + task
-    response = call_claude(brain, task_prompt, task_type=task_name)
+    # PREP always uses Opus -- strategic thinking needs the best model
+    effective_task_type = "deep_analysis" if agent_name == "strategic-advisor" else task_name
+    response = call_claude(brain, task_prompt, task_type=effective_task_type)
 
     # Process through learning loop (extract insights, clean markers)
     response = process_response_learning(
