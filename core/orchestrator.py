@@ -1293,11 +1293,49 @@ def handle_incoming_message(chat_id: str, message_text: str, telegram_config: di
         else:
             task_type = "chat"
 
-        # Inject any pending cross-agent events
-        pending_events = get_pending_events_for_agent(agent_name)
-        events_section = f"\n\n{pending_events}" if pending_events else ""
+        # ASI (evening-reading): if Tom asks for a reading, trigger the knowledge engine
+        # Otherwise ASI can still chat normally as a life mentor
+        if agent_name == "evening-reading":
+            reading_triggers = ["reading", "teach", "lesson", "read", "tonight",
+                                "give me", "first reading", "what should i learn",
+                                "hit me", "go", "start"]
+            msg_lower = message_text.lower().strip()
+            is_reading_request = any(t in msg_lower for t in reading_triggers)
 
-        user_prompt = f"""Tom says: {message_text}
+            if is_reading_request:
+                # Trigger a full knowledge-engine reading
+                try:
+                    from core.knowledge_engine import get_tonight_reading
+                    reading = get_tonight_reading()
+                    user_prompt = reading["prompt"]
+                    logger.info(f"ASI on-demand reading: {reading['primary_concept']} (score: {reading['primary_score']})")
+                    task_type = "deep_analysis"  # Use Opus for depth
+                    response = call_claude(brain, user_prompt, task_type=task_type)
+                except Exception as e:
+                    logger.error(f"Knowledge engine failed for on-demand reading: {e}")
+                    # Fall through to normal chat
+                    is_reading_request = False
+
+            if not is_reading_request:
+                # Normal ASI conversation -- life mentor chat
+                pending_events = get_pending_events_for_agent(agent_name)
+                events_section = f"\n\n{pending_events}" if pending_events else ""
+                user_prompt = f"""Tom says: {message_text}
+{events_section}
+Respond as ASI, Tom's life mentor. You have your full context loaded above.
+Be warm but profound. Use stories and analogies. Make non-linear connections.
+
+FORMATTING: Telegram. No tables. Bold with *single asterisks*. Short paragraphs.
+
+After your response, emit [STATE UPDATE: <what to remember>]."""
+                response = call_claude(brain, user_prompt, task_type=task_type)
+        else:
+            # All other agents -- standard chat flow
+            # Inject any pending cross-agent events
+            pending_events = get_pending_events_for_agent(agent_name)
+            events_section = f"\n\n{pending_events}" if pending_events else ""
+
+            user_prompt = f"""Tom says: {message_text}
 {events_section}
 Respond as your agent character. You have your full context loaded above.
 
@@ -1313,7 +1351,7 @@ If you discover something another agent should know, emit:
 If something needs to be done, emit:
 [TASK: title|priority|description]"""
 
-        response = call_claude(brain, user_prompt, task_type=task_type)
+            response = call_claude(brain, user_prompt, task_type=task_type)
 
         # Check for API errors before processing
         if response.startswith("API Error:"):
@@ -1469,8 +1507,16 @@ def handle_command(command: str, telegram_config: dict):
     elif cmd.startswith("run "):
         agent_to_run = cmd.split("run ", 1)[1].strip()
         if agent_to_run in telegram_config["chat_ids"]:
-            run_scheduled_task(agent_to_run, "morning_brief", telegram_config)
-            send_telegram(chat_id, f"Triggered {agent_to_run}", bot_token)
+            # Default task per agent -- not everything is "morning_brief"
+            default_tasks = {
+                "evening-reading": "evening_reading",
+                "global-events": "scan",
+                "creative-projects": "model_scan",
+                "social": "weekly_plan",
+            }
+            task_name = default_tasks.get(agent_to_run, "morning_brief")
+            send_telegram(chat_id, f"Triggering {agent_to_run}/{task_name}...", bot_token)
+            run_scheduled_task(agent_to_run, task_name, telegram_config)
         else:
             send_telegram(chat_id, f"Unknown agent: {agent_to_run}", bot_token)
 
