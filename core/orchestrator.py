@@ -148,6 +148,17 @@ def load_agent_brain(agent_name: str) -> str:
     if state_file.exists():
         brain_parts.append(f"=== CURRENT STATE ===\n{state_file.read_text(encoding='utf-8')}")
 
+    # 7. DECISION MEMORY -- Recent decisions with reasoning chains
+    try:
+        from core.decision_logger import DecisionLogger
+        dl = DecisionLogger()
+        decision_context = dl.format_decisions_for_agent(agent_name)
+        dl.close()
+        if decision_context:
+            brain_parts.append(decision_context)
+    except Exception:
+        pass  # Non-fatal, agent works fine without decision memory
+
     brain = "\n\n".join(brain_parts)
 
     # Log brain size for monitoring
@@ -285,6 +296,15 @@ def process_response_learning(agent_name: str, response: str, trigger: str = "ch
         # Auto-create Asana tasks from response
         create_asana_tasks_from_response(agent_name, response)
 
+        # Extract structured decisions with reasoning chains
+        try:
+            from core.decision_logger import DecisionLogger
+            dl = DecisionLogger()
+            dl.extract_decisions_from_response(agent_name, response)
+            dl.close()
+        except Exception as e:
+            logger.warning(f"Decision logging failed (non-fatal): {e}")
+
         # Clean markers from response
         return InsightExtractor.clean_response(response)
     except Exception as e:
@@ -301,6 +321,7 @@ def _clean_markers(response: str) -> str:
     response = re.sub(r'\[STATE UPDATE:[^\]]+\]', '', response)
     response = re.sub(r'\[EVENT:[^\]]+\]', '', response)
     response = re.sub(r'\[TASK:[^\]]+\]', '', response)
+    response = re.sub(r'\[VERIFY:[^\]]+\]', '', response)
     return response.strip()
 
 
@@ -693,6 +714,10 @@ SYSTEM CAPABILITIES — use these markers when appropriate:
   Example: [EVENT: campaign.performance_drop|IMPORTANT|{"campaign":"GLM March","roas":2.1}]
 - To create a task in Asana: [TASK: title|priority|description]
   Example: [TASK: Refresh GLM creative|high|ROAS dropped below 3x, need new ad variants]
+- To log a decision with reasoning: [DECISION: type|title|reasoning|confidence]
+  Example: [DECISION: tactical|Pause GLM Meta campaign|ROAS below 2x for 3 days|0.85]
+  Types: strategy, tactical, operational, creative, financial
+- To verify a past decision: [VERIFY: decision_id|positive or negative|outcome notes]
 - Severity levels: CRITICAL, IMPORTANT, NOTABLE, INFO
 - Task priorities: urgent, high, medium, low
 Only emit these when genuinely useful. Do not force them."""
@@ -776,6 +801,36 @@ The replenishment system auto-fires Klaviyo events at 10pm daily for eligible cu
                 logger.info(f"Injected replenishment brief for {agent_name}/{task_name}")
         except Exception as e:
             logger.warning(f"Replenishment brief failed (non-fatal): {e}")
+
+    # 2d. Open exceptions for briefings (catch and resolve, don't report)
+    if task_name in ("morning_brief", "morning_briefing", "weekly_review") and agent_name in ("daily-briefing", "dbh-marketing", "strategic-advisor"):
+        try:
+            from core.exception_router import ExceptionRouter
+            er = ExceptionRouter()
+            exception_brief = er.format_exception_brief()
+            if exception_brief:
+                task_prompt += f"""
+
+{exception_brief}
+
+CRITICAL: These are open exceptions that need resolution. Do NOT just report them.
+For each exception: state the problem, what auto-resolution was attempted, and what
+specific action you recommend right now. Force resolution, don't create a dashboard."""
+                logger.info(f"Injected exception brief for {agent_name}/{task_name}")
+
+            # Weekly review gets the full summary
+            if task_name == "weekly_review":
+                weekly = er.get_weekly_summary()
+                if weekly.get("total", 0) > 0:
+                    task_prompt += f"""
+
+=== EXCEPTION HANDLING SUMMARY (Last 7 Days) ===
+Total: {weekly.get('total', 0)} | Auto-resolved: {weekly.get('auto_resolved', 0)} | Escalated: {weekly.get('escalated', 0)} | Still open: {weekly.get('still_open', 0)}
+Analyse: Are we catching exceptions fast enough? What patterns repeat? What should be automated next?"""
+
+            er.close()
+        except Exception as e:
+            logger.warning(f"Exception brief failed (non-fatal): {e}")
 
     # 3. Asana task data for briefings
     asana_tasks = ("morning_briefing", "morning_brief")
