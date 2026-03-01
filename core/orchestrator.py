@@ -721,12 +721,39 @@ def run_scheduled_task(agent_name: str, task_name: str, telegram_config: dict):
             logger.error(f"Replenishment scan failed: {e}")
         return  # No Claude call needed
 
+    # --- Thought leader scan (scrapes RSS feeds from AI leaders) ---
+    if task_name == "thought_leader_scan":
+        try:
+            from core.thought_leader_scraper import run_thought_leader_scan
+            result = run_thought_leader_scan()
+            logger.info(f"Thought leader scan complete: {result[:100]}")
+        except Exception as e:
+            logger.error(f"Thought leader scan failed: {e}")
+        return  # No Claude call needed
+
+    # --- Thought leader insight extraction (processes new content through Claude) ---
+    if task_name == "thought_leader_extract":
+        try:
+            from core.thought_leader_scraper import run_insight_extraction
+            result = run_insight_extraction()
+
+            # Notify Nexus channel with summary
+            chat_id = telegram_config.get("chat_ids", {}).get(agent_name, "")
+            if chat_id and result:
+                bot_token = telegram_config.get("bot_token", os.environ.get("TELEGRAM_BOT_TOKEN", ""))
+                send_telegram(chat_id, f"Thought Leader Intelligence\n\n{result}", bot_token)
+
+            logger.info(f"Thought leader extraction complete")
+        except Exception as e:
+            logger.error(f"Thought leader extraction failed: {e}")
+        return  # No Claude call needed
+
     brain = load_agent_brain(agent_name)
 
     # Build task-specific prompt
     task_prompts = {
         "morning_protocol": "Execute your morning protocol. Generate today's training plan, meal plan, and any notes. Use the format specified in your AGENT.md.",
-        "morning_briefing": "Generate the daily master briefing. Read all agent states and synthesise. Use the format specified in your AGENT.md.",
+        "morning_briefing": "Generate the daily master briefing NOW. You have all agent states and live data injected below. DO NOT ask Tom what he wants -- just deliver the briefing in full using the exact format from your AGENT.md. If any data feed is missing, say '[Data unavailable]' for that section and continue. Never ask permission or offer options -- just brief.",
         "morning_brief": "Generate your morning operations brief. Check latest data, flag issues, list priorities. Use the format specified in your AGENT.md.",
         "scan": "Execute your monitoring scan. Search for updates on your watchlist topics. Report only what's NEW since your last scan. Use the format specified in your AGENT.md.",
         "model_scan": "Execute your AI model release scan. Search for new video model announcements, updates to tracked models. If anything could handle action sequences, mark as CRITICAL. Use the format specified in your AGENT.md.",
@@ -882,6 +909,34 @@ vs Roie, and identify campaigns that need fresh creative based on performance da
         except Exception as e:
             logger.warning(f"Design pipeline status failed (non-fatal): {e}")
 
+    # 2f. Thought leader insights for Oracle, PREP, and Venture
+    if task_name in ("morning_briefing", "morning_brief", "weekly_review") and agent_name in ("daily-briefing", "strategic-advisor", "new-business"):
+        try:
+            from core.thought_leader_scraper import format_thought_leader_brief, get_improvement_suggestions
+            tl_brief = format_thought_leader_brief()
+            if tl_brief:
+                task_prompt += f"""
+
+{tl_brief}
+
+Review these thought leader insights. Flag any that suggest improvements to our system or
+business strategy. If an insight contradicts our current approach, note the tension."""
+                logger.info(f"Injected thought leader brief for {agent_name}/{task_name}")
+
+            # PREP gets improvement suggestions too
+            if agent_name == "strategic-advisor":
+                suggestions = get_improvement_suggestions()
+                if suggestions:
+                    task_prompt += f"""
+
+=== SYSTEM IMPROVEMENT SUGGESTIONS (from thought leader analysis) ===
+{suggestions}
+
+Evaluate these suggestions against our current architecture. Which are worth implementing?
+Which are we already doing? Include the top 1-2 actionable ones in your briefing."""
+        except Exception as e:
+            logger.warning(f"Thought leader brief failed (non-fatal): {e}")
+
     # 3. Asana task data for briefings
     asana_tasks = ("morning_briefing", "morning_brief")
     if task_name in asana_tasks:
@@ -920,7 +975,7 @@ If someone posted that something is 'done' or 'shipped', note it."""
     if agent_name in ("daily-briefing", "strategic-advisor") and task_name in ("morning_briefing", "weekly_review"):
         try:
             agent_states = []
-            for other_agent in ("global-events", "dbh-marketing", "pure-pets", "new-business",
+            for other_agent in ("global-events", "dbh-marketing", "new-business",
                                 "health-fitness", "social", "creative-projects"):
                 state_file = AGENTS_DIR / other_agent / "state" / "CONTEXT.md"
                 if state_file.exists():

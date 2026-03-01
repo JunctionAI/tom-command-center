@@ -84,6 +84,18 @@
       "task": "intelligence_sync",
       "cron": "0 23 * * *",
       "description": "Nightly customer intelligence DB sync (11pm)"
+    },
+    {
+      "agent": "command-center",
+      "task": "thought_leader_scan",
+      "cron": "0 5 * * *",
+      "description": "Scrape AI thought leaders for new content (5am, before briefings)"
+    },
+    {
+      "agent": "command-center",
+      "task": "thought_leader_extract",
+      "cron": "30 5 * * *",
+      "description": "Extract insights from new thought leader content (5:30am)"
     }
   ]
 }
