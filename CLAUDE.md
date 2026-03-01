@@ -25,14 +25,13 @@ When a message arrives or a scheduled task fires, the system:
 |---------|-----------|---------------|----------|
 | 🌍 Global Events | Atlas | global-events | Every 6hrs + breaking alerts |
 | 💊 DBH Marketing | Meridian | dbh-marketing | Daily 9am brief + on-demand |
-| 🐕 Pure Pets | Scout | pure-pets | Daily 9am brief + on-demand |
 | 🏢 New Business | Venture | new-business | Daily 9am brief + on-demand |
 | 🏋️ Health & Fitness | Titan | health-fitness | Daily 6am + meal/training reminders |
 | 👥 Social | Compass | social | Weekly Sunday plan + nudges |
 | 🎬 Creative Projects | Lens | creative-projects | Model release alerts + on-demand |
 | 📊 Daily Briefing | Oracle | daily-briefing | Daily 7am master summary |
 | 🤖 Command Center | Nexus | command-center | On-demand, admin commands |
-| 📚 Evening Reading | Sage | evening-reading | Daily 8:30pm reading |
+| 📚 Evening Reading | ASI | evening-reading | Daily 8:30pm life mentor reading |
 
 ## KNOWLEDGE HIERARCHY (same as AIOS)
 When information conflicts, follow this priority:

@@ -1,21 +1,26 @@
 #!/usr/bin/env python3
 """
-Knowledge Engine -- Curated Evening Reading for Sage
+Knowledge Engine -- ASI Life Mentor Intelligence
 
-The intellectual companion to Tom's Command Center.
-Every evening, Sage reads the day's context (agent states, decisions, events,
-learning insights) and selects the most relevant foundational concept to teach.
+The intellectual engine behind ASI, Tom's life mentor.
+Every evening, ASI reads the day's context (agent states, decisions, events,
+learning insights) and selects the most profoundly relevant concept to teach --
+not just business knowledge, but foundational understanding of reality itself.
 
-The goal: over time, Tom builds a comprehensive mental framework that connects
-directly to the real challenges he faces daily. Not abstract learning -- applied
-wisdom that references specific decisions and events from the same day.
+The goal: over months and years, Tom builds an expanded consciousness that
+connects physics to philosophy, evolutionary biology to business strategy,
+Stoic wisdom to modern neuroscience. Each reading shifts how he SEES reality,
+not just what he knows.
 
 Architecture:
-  1. KNOWLEDGE_LIBRARY -- ~66 foundational concepts across 6 domains
+  1. KNOWLEDGE_LIBRARY -- 120+ concepts across 10 domains (the full human canon)
   2. analyse_today_context() -- reads agent states, decisions, events, learning DB
   3. select_evening_reading() -- scores concepts vs today's context, picks best + wildcard
   4. format_evening_reading() -- generates prompt instructions for Claude delivery
   5. Reading log at data/reading_log.db -- prevents repeats, tracks engagement
+
+Domains: Physics, Philosophy, Psychology, Biology, History, Mathematics,
+         Systems, Health, Creativity, Ethics
 
 Data lives at data/reading_log.db (SQLite WAL mode).
 
@@ -74,7 +79,7 @@ AGENT_DISPLAY = {
     "daily-briefing":    "Oracle",
     "command-center":    "Nexus",
     "strategic-advisor": "PREP",
-    "evening-reading":   "Sage",
+    "evening-reading":   "ASI",
 }
 
 # How many days before a concept can repeat
@@ -86,7 +91,7 @@ REPEAT_COOLDOWN_DAYS = 30
 # =============================================================================
 # Each concept is keyed by a unique slug. Fields:
 #   name:        Human-readable name
-#   domain:      One of the 6 domain categories
+#   domain:      One of the 10 ASI domain categories
 #   author:      Primary thinker associated (for attribution)
 #   summary:     1-2 sentence core idea
 #   keywords:    List of keywords for context matching
@@ -95,440 +100,367 @@ REPEAT_COOLDOWN_DAYS = 30
 KNOWLEDGE_LIBRARY = {
 
     # =========================================================================
-    # MENTAL MODELS (~15)
+    # PHYSICS & COSMOLOGY (~12)
+    # The nature of reality itself
     # =========================================================================
 
-    "first_principles": {
-        "name": "First Principles Thinking",
-        "domain": "mental_models",
-        "author": "Aristotle / Elon Musk",
-        "summary": "Break problems down to their most fundamental truths, then reason up from there. Don't reason by analogy -- reason from the ground truth.",
-        "keywords": ["fundamentals", "problem", "solve", "build", "create", "rethink", "assumption", "strategy", "redesign", "architecture"],
-        "deep_dive": "Book: 'The First 20 Hours' by Josh Kaufman; Musk's battery cost analysis interview"
+    "entropy": {
+        "name": "Entropy & The Arrow of Time",
+        "domain": "physics_cosmology",
+        "author": "Ludwig Boltzmann / Rudolf Clausius",
+        "summary": "Everything tends toward disorder. The second law of thermodynamics isn't just physics -- it's why campaigns decay, relationships require maintenance, and businesses die without energy input.",
+        "keywords": ["decay", "decline", "maintenance", "energy", "effort", "system", "order", "chaos", "deteriorate", "sustain"],
+        "deep_dive": "Book: 'The Order of Time' by Carlo Rovelli"
     },
-    "inversion": {
-        "name": "Inversion",
-        "domain": "mental_models",
-        "author": "Charlie Munger",
-        "summary": "Instead of asking 'how do I succeed?', ask 'how would I fail?' Then avoid those things. Invert, always invert.",
-        "keywords": ["fail", "risk", "avoid", "mistake", "problem", "loss", "prevent", "churn", "decline", "drop"],
-        "deep_dive": "Book: 'Poor Charlie's Almanack' by Charlie Munger"
+    "emergence": {
+        "name": "Emergence",
+        "domain": "physics_cosmology",
+        "author": "Philip Anderson / complexity science",
+        "summary": "Complex behaviour arises from simple rules. Consciousness from neurons. Markets from transactions. Culture from conversations. The whole is genuinely more than its parts.",
+        "keywords": ["complex", "system", "simple", "pattern", "emerge", "agent", "network", "culture", "build", "compound"],
+        "deep_dive": "Book: 'Emergence' by Steven Johnson; Anderson's paper 'More Is Different' (1972)"
     },
-    "second_order_thinking": {
-        "name": "Second-Order Thinking",
-        "domain": "mental_models",
-        "author": "Howard Marks",
-        "summary": "What happens AFTER what happens? First-order thinking is simplistic. Second-order thinkers ask: 'And then what?'",
-        "keywords": ["consequence", "impact", "downstream", "effect", "chain", "reaction", "long-term", "future", "ripple"],
-        "deep_dive": "Book: 'The Most Important Thing' by Howard Marks"
+    "quantum_superposition": {
+        "name": "Quantum Superposition & Observation",
+        "domain": "physics_cosmology",
+        "author": "Niels Bohr / Werner Heisenberg",
+        "summary": "Before measurement, a particle exists in ALL possible states simultaneously. The act of observation collapses possibility into reality. What you choose to measure changes what exists.",
+        "keywords": ["measure", "observe", "possibility", "decision", "choose", "focus", "attention", "metrics", "data", "reality"],
+        "deep_dive": "Book: 'QED' by Richard Feynman; 'Something Deeply Hidden' by Sean Carroll"
     },
-    "circle_of_competence": {
-        "name": "Circle of Competence",
-        "domain": "mental_models",
-        "author": "Warren Buffett / Charlie Munger",
-        "summary": "Know what you know, and know what you don't. The size of your circle matters less than knowing its boundaries.",
-        "keywords": ["expertise", "skill", "delegate", "outsource", "focus", "competence", "strength", "weakness", "hire"],
-        "deep_dive": "Buffett's 1996 Berkshire Hathaway annual letter"
+    "relativity_of_perspective": {
+        "name": "Relativity of Perspective",
+        "domain": "physics_cosmology",
+        "author": "Albert Einstein",
+        "summary": "Time and space are not absolute -- they depend on where you're standing. Two observers can see the same event completely differently and BOTH be right. Truth depends on frame of reference.",
+        "keywords": ["perspective", "viewpoint", "different", "customer", "position", "frame", "relative", "perception", "context"],
+        "deep_dive": "Book: 'Einstein's Dreams' by Alan Lightman (fiction that makes relativity visceral)"
     },
-    "map_vs_territory": {
-        "name": "Map vs Territory",
-        "domain": "mental_models",
-        "author": "Alfred Korzybski",
-        "summary": "The model is not the reality. Data, dashboards, and reports are maps -- useful but never the full picture. Always ground-truth.",
-        "keywords": ["data", "dashboard", "report", "analytics", "metrics", "reality", "assumption", "model", "forecast", "prediction"],
-        "deep_dive": "Paper: 'Science and Sanity' by Alfred Korzybski; Taleb's commentary in Antifragile"
+    "pale_blue_dot": {
+        "name": "The Pale Blue Dot",
+        "domain": "physics_cosmology",
+        "author": "Carl Sagan",
+        "summary": "Earth is a mote of dust suspended in a sunbeam. Every person who ever lived, every war fought, every love story -- on that tiny dot. Cosmic perspective is the ultimate zoom-out.",
+        "keywords": ["perspective", "big picture", "universe", "meaning", "purpose", "humble", "scale", "vision", "legacy"],
+        "deep_dive": "Book: 'Pale Blue Dot' by Carl Sagan; the original photograph and speech"
     },
-    "leverage": {
-        "name": "Leverage",
-        "domain": "mental_models",
-        "author": "Naval Ravikant",
-        "summary": "Code, media, capital, labour -- in that order. New-age leverage (code + media) doesn't require permission. Maximise output per unit of input.",
-        "keywords": ["automation", "ai", "code", "media", "content", "scale", "system", "efficiency", "build", "agent", "bot"],
-        "deep_dive": "Naval's tweetstorm 'How to Get Rich' and the Almanack of Naval Ravikant"
+    "information_theory": {
+        "name": "Information Theory",
+        "domain": "physics_cosmology",
+        "author": "Claude Shannon",
+        "summary": "Information is the resolution of uncertainty. A message only has value if it tells you something you didn't already know. Surprise = information. Noise ≠ signal.",
+        "keywords": ["signal", "noise", "data", "information", "communicate", "message", "clarity", "content", "feed", "news"],
+        "deep_dive": "Book: 'The Information' by James Gleick; Shannon's 1948 paper (readable!)"
     },
-    "opportunity_cost": {
-        "name": "Opportunity Cost",
-        "domain": "mental_models",
-        "author": "Economics / Frederic Bastiat",
-        "summary": "Every yes is a no to something else. The true cost of any choice is the best alternative you gave up.",
-        "keywords": ["priority", "choose", "decision", "tradeoff", "budget", "time", "focus", "spend", "invest", "allocate"],
-        "deep_dive": "Bastiat's 'That Which Is Seen, and That Which Is Not Seen' (1850)"
+    "fine_tuning": {
+        "name": "The Fine-Tuning Problem",
+        "domain": "physics_cosmology",
+        "author": "Various physicists / cosmology",
+        "summary": "The universe's physical constants are tuned to astonishing precision for life to exist. Change gravity by 0.00000000001% and no stars form. Either we're extraordinarily lucky, there are infinite universes, or something deeper is going on.",
+        "keywords": ["universe", "existence", "meaning", "purpose", "probability", "luck", "design", "fundamental", "deep"],
+        "deep_dive": "Book: 'Just Six Numbers' by Martin Rees"
     },
-    "pareto_principle": {
-        "name": "Pareto Principle (80/20)",
-        "domain": "mental_models",
-        "author": "Vilfredo Pareto",
-        "summary": "80% of outputs come from 20% of inputs. Focus ruthlessly on the vital few. Applies to customers, products, efforts, and problems.",
-        "keywords": ["focus", "priority", "top", "best", "customer", "product", "revenue", "performance", "efficient", "cut"],
-        "deep_dive": "Book: 'The 80/20 Principle' by Richard Koch"
+    "heat_death": {
+        "name": "The Heat Death of the Universe",
+        "domain": "physics_cosmology",
+        "author": "Thermodynamics / Lord Kelvin",
+        "summary": "Eventually all energy disperses evenly and nothing happens ever again. Not depressing -- liberating. If nothing lasts forever, what matters is what you create NOW. Urgency from cosmology.",
+        "keywords": ["time", "urgency", "mortality", "meaning", "purpose", "legacy", "now", "action", "finite", "create"],
+        "deep_dive": "Book: 'The End of Everything' by Katie Mack"
     },
-    "compounding": {
-        "name": "Compounding",
-        "domain": "mental_models",
-        "author": "Albert Einstein (attributed)",
-        "summary": "Small, consistent advantages create exponential results over time. The eighth wonder of the world. Applies to money, knowledge, relationships, and habits.",
-        "keywords": ["growth", "compound", "consistent", "habit", "daily", "improve", "accumulate", "long-term", "invest", "learning"],
-        "deep_dive": "Book: 'The Psychology of Money' by Morgan Housel (Chapter: 'Getting Wealthy vs. Staying Wealthy')"
+    "chaos_theory": {
+        "name": "Chaos Theory & Sensitivity",
+        "domain": "physics_cosmology",
+        "author": "Edward Lorenz",
+        "summary": "Tiny changes in initial conditions create vastly different outcomes. The butterfly effect is real. This is why prediction is fundamentally limited, and why small actions can have enormous consequences.",
+        "keywords": ["unpredictable", "forecast", "plan", "change", "small", "impact", "butterfly", "cascade", "chain", "consequence"],
+        "deep_dive": "Book: 'Chaos' by James Gleick"
     },
-    "antifragility": {
-        "name": "Antifragility",
-        "domain": "mental_models",
-        "author": "Nassim Nicholas Taleb",
-        "summary": "Some systems don't just resist disorder -- they gain from it. Build systems that get stronger from stress, volatility, and random shocks.",
-        "keywords": ["chaos", "volatility", "stress", "risk", "resilient", "robust", "shock", "tariff", "disruption", "crisis", "adapt"],
-        "deep_dive": "Book: 'Antifragile' by Nassim Nicholas Taleb"
+    "many_worlds": {
+        "name": "Many-Worlds Interpretation",
+        "domain": "physics_cosmology",
+        "author": "Hugh Everett III / Sean Carroll",
+        "summary": "Every quantum measurement splits the universe. Every possible outcome happens somewhere. You're always choosing which branch to live in. Every decision matters -- it's literally world-creating.",
+        "keywords": ["decision", "choice", "possibility", "path", "direction", "future", "branch", "option", "alternative"],
+        "deep_dive": "Book: 'Something Deeply Hidden' by Sean Carroll"
     },
-    "occams_razor": {
-        "name": "Occam's Razor",
-        "domain": "mental_models",
-        "author": "William of Ockham",
-        "summary": "The simplest explanation is usually correct. When diagnosing problems, start with the obvious before building elaborate theories.",
-        "keywords": ["simple", "debug", "diagnose", "problem", "cause", "root", "error", "fix", "straightforward"],
-        "deep_dive": "Any good overview of epistemology or philosophy of science"
+    "arrow_of_complexity": {
+        "name": "The Arrow of Complexity",
+        "domain": "physics_cosmology",
+        "author": "David Christian / Big History",
+        "summary": "From hydrogen to humans in 13.8 billion years. The universe trends toward increasing complexity -- atoms, molecules, cells, organisms, brains, civilisations, AI. You are the universe becoming conscious of itself.",
+        "keywords": ["evolution", "progress", "complexity", "growth", "build", "create", "consciousness", "ai", "system", "civilisation"],
+        "deep_dive": "Book: 'Origin Story' by David Christian; 'Big History' course (free)"
     },
-    "hanlons_razor": {
-        "name": "Hanlon's Razor",
-        "domain": "mental_models",
-        "author": "Robert J. Hanlon",
-        "summary": "Never attribute to malice what is adequately explained by incompetence, ignorance, or oversight. Most failures are accidents, not conspiracies.",
-        "keywords": ["people", "team", "mistake", "communication", "misunderstand", "supplier", "vendor", "partner", "delay"],
-        "deep_dive": "Broader reading on cognitive biases: 'Thinking, Fast and Slow' by Kahneman"
-    },
-    "survivorship_bias": {
-        "name": "Survivorship Bias",
-        "domain": "mental_models",
-        "author": "Abraham Wald (WWII analysis)",
-        "summary": "We only see the winners. The graveyard of failures is invisible. Study failures as carefully as you study successes.",
-        "keywords": ["success", "case study", "benchmark", "competitor", "compare", "example", "story", "winner", "result"],
-        "deep_dive": "Book: 'Fooled by Randomness' by Taleb; the Abraham Wald airplane armour story"
-    },
-    "lindy_effect": {
-        "name": "Lindy Effect",
-        "domain": "mental_models",
-        "author": "Benoit Mandelbrot / Nassim Taleb",
-        "summary": "The longer something non-perishable has survived, the longer it's likely to survive. Old ideas, brands, and technologies that persist have earned their place.",
-        "keywords": ["proven", "classic", "lasting", "brand", "trust", "heritage", "long-term", "endure", "tradition"],
-        "deep_dive": "Taleb's 'Antifragile', Chapter 18: 'On the Difference between a Large Stone and a Thousand Pebbles'"
-    },
-    "via_negativa": {
-        "name": "Via Negativa",
-        "domain": "mental_models",
-        "author": "Nassim Taleb / Stoic tradition",
-        "summary": "Improvement by subtraction. Often the most powerful move is removing what doesn't work rather than adding more. Less but better.",
-        "keywords": ["simplify", "remove", "cut", "eliminate", "reduce", "stop", "clean", "streamline", "less", "focus"],
-        "deep_dive": "Book: 'Essentialism' by Greg McKeown; Taleb's 'Antifragile'"
+    "fermi_paradox": {
+        "name": "The Fermi Paradox",
+        "domain": "physics_cosmology",
+        "author": "Enrico Fermi / various",
+        "summary": "If the universe is so vast and old, where is everyone? The Great Silence suggests something filters civilisations out. Understanding existential risk isn't paranoia -- it's maturity.",
+        "keywords": ["risk", "existential", "future", "civilisation", "filter", "survive", "technology", "ai", "humanity"],
+        "deep_dive": "Tim Urban's 'Wait But Why' post on the Fermi Paradox; Book: 'The Precipice' by Toby Ord"
     },
 
     # =========================================================================
-    # STRATEGY & BUSINESS (~15)
-    # =========================================================================
-
-    "moats": {
-        "name": "Moats",
-        "domain": "strategy_business",
-        "author": "Warren Buffett",
-        "summary": "What makes you hard to compete with? Brand, switching costs, network effects, cost advantages, intangible assets. Without a moat, margins erode to zero.",
-        "keywords": ["competitive", "advantage", "brand", "differentiate", "defend", "market", "position", "protect", "unique"],
-        "deep_dive": "Book: '7 Powers' by Hamilton Helmer"
-    },
-    "aggregation_theory": {
-        "name": "Aggregation Theory",
-        "domain": "strategy_business",
-        "author": "Ben Thompson",
-        "summary": "In the internet age, owning demand (customers) beats owning supply. Aggregators win by being the best at connecting users to commoditised supply.",
-        "keywords": ["platform", "marketplace", "customer", "demand", "supply", "digital", "internet", "distribution", "dtc", "direct"],
-        "deep_dive": "Ben Thompson's Stratechery blog: 'Aggregation Theory' series"
-    },
-    "blue_ocean": {
-        "name": "Blue Ocean Strategy",
-        "domain": "strategy_business",
-        "author": "W. Chan Kim & Renee Mauborgne",
-        "summary": "Create uncontested market space instead of fighting in crowded red oceans. Make the competition irrelevant by redefining the value proposition.",
-        "keywords": ["new", "market", "innovate", "different", "niche", "uncontested", "create", "category", "unique", "opportunity"],
-        "deep_dive": "Book: 'Blue Ocean Strategy' by Kim & Mauborgne"
-    },
-    "jobs_to_be_done": {
-        "name": "Jobs To Be Done",
-        "domain": "strategy_business",
-        "author": "Clayton Christensen",
-        "summary": "People don't buy products -- they hire them for a job. Understand what job your customer is trying to get done, and you'll never be disrupted.",
-        "keywords": ["customer", "need", "want", "problem", "product", "solve", "use", "buy", "purchase", "motivation", "pain"],
-        "deep_dive": "Book: 'Competing Against Luck' by Clayton Christensen"
-    },
-    "positioning": {
-        "name": "Positioning",
-        "domain": "strategy_business",
-        "author": "Al Ries & Jack Trout",
-        "summary": "Own a word in the customer's mind. Positioning isn't what you do to a product -- it's what you do to the mind of the prospect.",
-        "keywords": ["brand", "position", "message", "perception", "customer", "mind", "differentiate", "tagline", "identity"],
-        "deep_dive": "Book: 'Positioning: The Battle for Your Mind' by Ries & Trout"
-    },
-    "network_effects": {
-        "name": "Network Effects",
-        "domain": "strategy_business",
-        "author": "Various (Metcalfe's Law)",
-        "summary": "Value increases with each user. Direct network effects (phone), indirect (marketplace), data network effects (AI). The strongest moat in tech.",
-        "keywords": ["user", "growth", "community", "platform", "marketplace", "viral", "referral", "member", "network"],
-        "deep_dive": "NFX.com essays on the 16 types of network effects"
-    },
-    "flywheel_effect": {
-        "name": "Flywheel Effect",
-        "domain": "strategy_business",
-        "author": "Jim Collins",
-        "summary": "No single push creates momentum. Consistent effort in the same direction compounds into an unstoppable flywheel. Amazon's flywheel is the canonical example.",
-        "keywords": ["momentum", "consistent", "compound", "growth", "loop", "reinvest", "cycle", "repeat", "build", "system"],
-        "deep_dive": "Book: 'Good to Great' by Jim Collins (Flywheel chapter); 'Turning the Flywheel' monograph"
-    },
-    "crossing_the_chasm": {
-        "name": "Crossing the Chasm",
-        "domain": "strategy_business",
-        "author": "Geoffrey Moore",
-        "summary": "Early adopters are not the mainstream. There's a chasm between them. To cross it, you need a beachhead segment, whole product, and compelling reason to buy.",
-        "keywords": ["adoption", "customer", "segment", "market", "early", "mainstream", "launch", "new", "growth", "scale"],
-        "deep_dive": "Book: 'Crossing the Chasm' by Geoffrey Moore"
-    },
-    "unit_economics": {
-        "name": "Unit Economics",
-        "domain": "strategy_business",
-        "author": "Fundamental business principle",
-        "summary": "Revenue per unit minus cost per unit. Period. If the unit economics don't work, no amount of volume will save you. LTV > CAC or you die.",
-        "keywords": ["ltv", "cac", "margin", "cost", "revenue", "profit", "unit", "acquisition", "customer", "order", "aov", "roas"],
-        "deep_dive": "David Skok's 'For Entrepreneurs' blog on SaaS/DTC unit economics"
-    },
-    "barbell_strategy": {
-        "name": "Barbell Strategy",
-        "domain": "strategy_business",
-        "author": "Nassim Nicholas Taleb",
-        "summary": "Extreme safety + extreme risk, nothing in the middle. Protect downside aggressively, then swing for asymmetric upside with the rest.",
-        "keywords": ["risk", "safe", "bet", "invest", "portfolio", "allocation", "conservative", "aggressive", "upside", "downside"],
-        "deep_dive": "Book: 'Antifragile' by Taleb, plus Nassim's barbell in Black Swan"
-    },
-    "power_law": {
-        "name": "Power Law",
-        "domain": "strategy_business",
-        "author": "Peter Thiel / Pareto",
-        "summary": "A few things matter enormously, most don't at all. In venture, one deal returns the entire fund. In business, one product or channel drives everything.",
-        "keywords": ["top", "best", "dominant", "winner", "concentrate", "focus", "channel", "product", "revenue", "returns"],
-        "deep_dive": "Book: 'Zero to One' by Peter Thiel (Power Law chapter)"
-    },
-    "innovators_dilemma": {
-        "name": "The Innovator's Dilemma",
-        "domain": "strategy_business",
-        "author": "Clayton Christensen",
-        "summary": "Great companies fail because they listen to their best customers and focus on sustaining innovation. Disruptive innovation comes from below, serving non-consumers.",
-        "keywords": ["disrupt", "innovate", "change", "new", "technology", "competitor", "startup", "threat", "shift", "replace"],
-        "deep_dive": "Book: 'The Innovator's Dilemma' by Clayton Christensen"
-    },
-    "lean_startup": {
-        "name": "The Lean Startup",
-        "domain": "strategy_business",
-        "author": "Eric Ries",
-        "summary": "Build-Measure-Learn. Ship the minimum viable product, measure real customer behaviour, learn, iterate. Speed of iteration beats quality of plan.",
-        "keywords": ["mvp", "test", "experiment", "iterate", "launch", "feedback", "validate", "hypothesis", "lean", "build", "measure"],
-        "deep_dive": "Book: 'The Lean Startup' by Eric Ries"
-    },
-    "platform_vs_product": {
-        "name": "Platform vs Product Thinking",
-        "domain": "strategy_business",
-        "author": "Various",
-        "summary": "Products serve users. Platforms serve ecosystems. Building a platform means enabling others to create value, which compounds the total value back to you.",
-        "keywords": ["platform", "ecosystem", "integration", "api", "marketplace", "partner", "build", "system", "scale", "infrastructure"],
-        "deep_dive": "Book: 'Platform Revolution' by Parker, Van Alstyne & Choudary"
-    },
-    "economies_of_scale_scope": {
-        "name": "Economies of Scale vs Scope",
-        "domain": "strategy_business",
-        "author": "Alfred Chandler / economics",
-        "summary": "Scale: doing MORE of the same thing reduces per-unit cost. Scope: doing DIFFERENT things that share resources. Both are levers. Know which you're pulling.",
-        "keywords": ["scale", "grow", "expand", "cost", "efficiency", "product", "line", "range", "diversify", "volume"],
-        "deep_dive": "Porter's 'Competitive Advantage' on cost drivers"
-    },
-
-    # =========================================================================
-    # PSYCHOLOGY & PERSUASION (~10)
-    # =========================================================================
-
-    "loss_aversion": {
-        "name": "Loss Aversion",
-        "domain": "psychology_persuasion",
-        "author": "Daniel Kahneman / Amos Tversky",
-        "summary": "Losing hurts roughly 2x more than winning feels good. Frame offers around what customers stand to lose, not just what they gain.",
-        "keywords": ["loss", "pain", "fear", "miss", "expire", "urgency", "fomo", "scarcity", "customer", "email", "ad", "copy"],
-        "deep_dive": "Book: 'Thinking, Fast and Slow' by Daniel Kahneman"
-    },
-    "social_proof": {
-        "name": "Social Proof",
-        "domain": "psychology_persuasion",
-        "author": "Robert Cialdini",
-        "summary": "People follow people. Reviews, testimonials, 'most popular', 'X people bought this' -- humans look to others to decide what's correct.",
-        "keywords": ["review", "testimonial", "social", "proof", "popular", "trust", "customer", "ugc", "rating", "recommend"],
-        "deep_dive": "Book: 'Influence' by Robert Cialdini"
-    },
-    "anchoring": {
-        "name": "Anchoring",
-        "domain": "psychology_persuasion",
-        "author": "Kahneman & Tversky",
-        "summary": "The first number sets the frame. Show the original price before the discount. Present the expensive option first. The anchor shapes all subsequent judgement.",
-        "keywords": ["price", "discount", "compare", "offer", "deal", "value", "perception", "original", "was", "now"],
-        "deep_dive": "Book: 'Predictably Irrational' by Dan Ariely"
-    },
-    "reciprocity": {
-        "name": "Reciprocity",
-        "domain": "psychology_persuasion",
-        "author": "Robert Cialdini",
-        "summary": "Give first, receive later. Free samples, valuable content, unexpected gifts -- when you give, people feel obligated to give back.",
-        "keywords": ["give", "free", "sample", "content", "value", "gift", "bonus", "loyalty", "relationship", "nurture"],
-        "deep_dive": "Book: 'Influence' by Robert Cialdini (Reciprocity chapter)"
-    },
-    "commitment_consistency": {
-        "name": "Commitment & Consistency",
-        "domain": "psychology_persuasion",
-        "author": "Robert Cialdini",
-        "summary": "Small yeses lead to big yeses. Once people take a small action (sign up, try a sample), they want to stay consistent with that identity.",
-        "keywords": ["funnel", "step", "sign", "subscribe", "trial", "sample", "commit", "journey", "onboard", "flow"],
-        "deep_dive": "Book: 'Influence' by Robert Cialdini (Commitment chapter)"
-    },
-    "scarcity": {
-        "name": "Scarcity",
-        "domain": "psychology_persuasion",
-        "author": "Robert Cialdini",
-        "summary": "Less available = more desired. Limited editions, countdown timers, 'only X left' -- scarcity creates urgency and increases perceived value.",
-        "keywords": ["limited", "exclusive", "stock", "countdown", "urgent", "expire", "deadline", "rare", "remaining", "sold"],
-        "deep_dive": "Book: 'Influence' by Robert Cialdini (Scarcity chapter)"
-    },
-    "dunning_kruger": {
-        "name": "The Dunning-Kruger Effect",
-        "domain": "psychology_persuasion",
-        "author": "David Dunning / Justin Kruger",
-        "summary": "Confidence does not equal competence. Beginners overestimate their ability; experts underestimate theirs. Calibrate accordingly.",
-        "keywords": ["confidence", "skill", "learn", "expertise", "overconfident", "humble", "assess", "evaluate", "hire"],
-        "deep_dive": "Original paper: 'Unskilled and Unaware of It' (1999)"
-    },
-    "cognitive_dissonance": {
-        "name": "Cognitive Dissonance",
-        "domain": "psychology_persuasion",
-        "author": "Leon Festinger",
-        "summary": "When beliefs and actions conflict, something has to give. People rationalise their purchases, their habits, their identity. Use this in post-purchase experience.",
-        "keywords": ["belief", "action", "justify", "rationalise", "brand", "loyalty", "identity", "post-purchase", "experience"],
-        "deep_dive": "Book: 'A Theory of Cognitive Dissonance' by Leon Festinger"
-    },
-    "peak_end_rule": {
-        "name": "Peak-End Rule",
-        "domain": "psychology_persuasion",
-        "author": "Daniel Kahneman",
-        "summary": "People remember experiences based on two moments: the peak (most intense) and the end. Nail the unboxing. Nail the follow-up email.",
-        "keywords": ["experience", "unboxing", "delivery", "email", "follow-up", "customer", "satisfaction", "journey", "moment", "delight"],
-        "deep_dive": "Book: 'Thinking, Fast and Slow' by Kahneman (Experience vs Memory chapter)"
-    },
-    "status_vs_wealth_games": {
-        "name": "Status Games vs Wealth Games",
-        "domain": "psychology_persuasion",
-        "author": "Naval Ravikant",
-        "summary": "Status is zero-sum: for you to rise, someone must fall. Wealth is positive-sum: create value and everyone wins. Play wealth games, not status games.",
-        "keywords": ["status", "wealth", "comparison", "social", "value", "create", "compete", "ego", "win", "game"],
-        "deep_dive": "Almanack of Naval Ravikant"
-    },
-
-    # =========================================================================
-    # HISTORY & PHILOSOPHY (~10)
+    # PHILOSOPHY & WISDOM TRADITIONS (~12)
+    # What have the wisest humans figured out about living well?
     # =========================================================================
 
     "stoicism": {
         "name": "Stoicism",
-        "domain": "history_philosophy",
+        "domain": "philosophy_wisdom",
         "author": "Marcus Aurelius / Epictetus / Seneca",
         "summary": "Control what you can, accept what you can't. The obstacle is the way. Emotional regulation isn't suppression -- it's choosing your response deliberately.",
         "keywords": ["stress", "control", "accept", "challenge", "obstacle", "emotion", "calm", "patience", "difficult", "pressure"],
         "deep_dive": "Book: 'Meditations' by Marcus Aurelius (Gregory Hays translation)"
     },
-    "meditations": {
-        "name": "The Meditations",
-        "domain": "history_philosophy",
-        "author": "Marcus Aurelius",
-        "summary": "Practical philosophy for leaders under pressure. Written by a Roman Emperor during wartime -- not ivory tower theory but battlefield-tested wisdom on duty, ego, and mortality.",
-        "keywords": ["leadership", "duty", "ego", "pressure", "decision", "responsibility", "team", "character", "integrity"],
-        "deep_dive": "Book: 'Meditations' by Marcus Aurelius; companion: 'The Inner Citadel' by Pierre Hadot"
+    "taoism_wu_wei": {
+        "name": "Wu Wei (Effortless Action)",
+        "domain": "philosophy_wisdom",
+        "author": "Lao Tzu / Zhuangzi",
+        "summary": "The master acts without forcing. Water is the softest substance but wears away stone. The most powerful action often looks like non-action. Flow, don't push.",
+        "keywords": ["flow", "force", "natural", "easy", "effort", "struggle", "patience", "organic", "growth", "resist"],
+        "deep_dive": "Book: 'Tao Te Ching' by Lao Tzu (Stephen Mitchell translation)"
     },
-    "art_of_war": {
-        "name": "The Art of War",
-        "domain": "history_philosophy",
-        "author": "Sun Tzu",
-        "summary": "Know yourself, know your enemy, win every battle. Choose battles wisely. Speed and surprise beat raw force. Victory comes from preparation, not impulse.",
-        "keywords": ["competitor", "strategy", "market", "battle", "position", "advantage", "timing", "intelligence", "plan"],
-        "deep_dive": "Book: 'The Art of War' by Sun Tzu (many translations; Griffith is solid)"
+    "existentialism": {
+        "name": "Existentialism & Radical Freedom",
+        "domain": "philosophy_wisdom",
+        "author": "Jean-Paul Sartre / Albert Camus",
+        "summary": "Existence precedes essence. You are not born with a purpose -- you CREATE it. This is terrifying and liberating simultaneously. You are condemned to be free.",
+        "keywords": ["purpose", "meaning", "freedom", "choice", "create", "identity", "authentic", "responsibility", "life", "direction"],
+        "deep_dive": "Book: 'The Myth of Sisyphus' by Albert Camus"
     },
-    "the_prince": {
-        "name": "The Prince",
-        "domain": "history_philosophy",
-        "author": "Niccolo Machiavelli",
-        "summary": "Power dynamics and political realism. Better to be feared than loved (if you can't be both). Understand how power works even if you don't play dirty.",
-        "keywords": ["power", "leadership", "politics", "negotiate", "influence", "authority", "partner", "deal", "relationship"],
-        "deep_dive": "Book: 'The Prince' by Machiavelli (Tim Parks translation)"
+    "absurdism": {
+        "name": "Absurdism (Camus)",
+        "domain": "philosophy_wisdom",
+        "author": "Albert Camus",
+        "summary": "The universe offers no meaning, yet humans desperately seek it. This clash is the Absurd. Camus's answer: don't seek meaning, don't give up -- revolt, create, and imagine Sisyphus happy.",
+        "keywords": ["meaning", "purpose", "struggle", "happiness", "create", "persist", "difficulty", "point", "why", "futile"],
+        "deep_dive": "Book: 'The Myth of Sisyphus' by Albert Camus; 'The Stranger'"
+    },
+    "buddhism_impermanence": {
+        "name": "Impermanence (Anicca)",
+        "domain": "philosophy_wisdom",
+        "author": "Siddhartha Gautama / Buddhist tradition",
+        "summary": "Nothing lasts. Not success, not failure, not this feeling. Suffering comes from clinging to what will change. Freedom comes from flowing with impermanence.",
+        "keywords": ["change", "loss", "attachment", "let go", "transition", "end", "beginning", "cycle", "new", "accept"],
+        "deep_dive": "Book: 'When Things Fall Apart' by Pema Chödrön"
+    },
+    "nietzsche_amor_fati": {
+        "name": "Amor Fati (Love of Fate)",
+        "domain": "philosophy_wisdom",
+        "author": "Friedrich Nietzsche",
+        "summary": "Don't just accept what happens -- LOVE it. Every setback, every failure, every stroke of bad luck is a necessary part of who you're becoming. Not passive acceptance. Fierce embrace.",
+        "keywords": ["setback", "failure", "loss", "accept", "embrace", "resilient", "obstacle", "fate", "destiny", "overcome"],
+        "deep_dive": "Book: 'The Gay Science' by Nietzsche; 'The Obstacle Is the Way' by Ryan Holiday"
     },
     "seneca_on_time": {
-        "name": "Seneca on Time",
-        "domain": "history_philosophy",
+        "name": "Seneca on the Shortness of Life",
+        "domain": "philosophy_wisdom",
         "author": "Seneca",
         "summary": "'It is not that we have a short time to live, but that we waste much of it.' Guard your time more zealously than your money. You can earn more money.",
         "keywords": ["time", "focus", "priority", "waste", "busy", "calendar", "schedule", "productivity", "efficiency", "distraction"],
         "deep_dive": "Essay: 'On the Shortness of Life' by Seneca (Penguin Great Ideas edition)"
     },
-    "lindy_in_history": {
-        "name": "The Lindy Heuristic in History",
-        "domain": "history_philosophy",
-        "author": "Various historians / Taleb",
-        "summary": "What lasts has staying power. Ideas, institutions, and technologies that survive centuries (writing, trade, storytelling) are more robust than anything new.",
-        "keywords": ["proven", "classic", "tradition", "lasting", "trust", "heritage", "brand", "endure", "timeless", "wisdom"],
-        "deep_dive": "Book: 'Antifragile' by Taleb; 'Sapiens' by Yuval Noah Harari for historical framing"
+    "pragmatism": {
+        "name": "Pragmatism",
+        "domain": "philosophy_wisdom",
+        "author": "William James / Charles Sanders Peirce",
+        "summary": "An idea's truth is measured by its practical consequences. If a belief helps you act effectively in the world, it's true enough. Stop debating theory -- test it.",
+        "keywords": ["practical", "test", "real", "result", "action", "theory", "debate", "experiment", "outcome", "works"],
+        "deep_dive": "Book: 'Pragmatism' by William James (1907 lectures)"
     },
-    "alexander_at_26": {
-        "name": "Alexander the Great at 26",
-        "domain": "history_philosophy",
-        "author": "Historical",
-        "summary": "By 26, Alexander had conquered the known world. Not through luck but through relentless ambition, learned mentorship (Aristotle), and speed of execution. Age is not an excuse.",
-        "keywords": ["age", "young", "ambition", "speed", "execute", "lead", "bold", "grow", "vision", "founder"],
-        "deep_dive": "Book: 'Alexander the Great' by Philip Freeman"
+    "dialectical_thinking": {
+        "name": "Dialectical Thinking",
+        "domain": "philosophy_wisdom",
+        "author": "Georg Hegel / Karl Marx",
+        "summary": "Thesis meets antithesis and produces synthesis. Contradictions aren't problems to solve -- they're the ENGINE of progress. Hold two opposing ideas and find what emerges.",
+        "keywords": ["contradiction", "oppose", "conflict", "synthesis", "resolve", "tension", "both", "and", "paradox", "debate"],
+        "deep_dive": "Book: 'The Phenomenology of Spirit' by Hegel (find a good summary first)"
     },
-    "renaissance_polymath": {
-        "name": "The Renaissance Polymath Model",
-        "domain": "history_philosophy",
-        "author": "Da Vinci / Alberti / historical",
-        "summary": "Wide competence, deep in one. Da Vinci was artist, engineer, anatomist, inventor. The modern version: T-shaped skills. Be dangerous in many domains, world-class in one.",
-        "keywords": ["skill", "learn", "generalist", "specialist", "diverse", "creative", "build", "design", "multidisciplinary"],
-        "deep_dive": "Book: 'Range' by David Epstein; 'Leonardo da Vinci' by Walter Isaacson"
+    "the_examined_life": {
+        "name": "The Examined Life (Socrates)",
+        "domain": "philosophy_wisdom",
+        "author": "Socrates / Plato",
+        "summary": "'The unexamined life is not worth living.' Self-knowledge is the foundation of wisdom. Not just knowing facts -- knowing WHY you do what you do, believe what you believe, want what you want.",
+        "keywords": ["self", "reflect", "why", "examine", "question", "belief", "assumption", "awareness", "conscious", "introspect"],
+        "deep_dive": "Book: 'Apology' by Plato; 'Know Thyself' framing in any intro to philosophy"
     },
-    "creative_destruction": {
-        "name": "Creative Destruction",
-        "domain": "history_philosophy",
-        "author": "Joseph Schumpeter",
-        "summary": "Innovation doesn't just create new value -- it destroys old value. The entrepreneur is the force of creative destruction. Embrace it or be destroyed by it.",
-        "keywords": ["innovate", "disrupt", "change", "new", "technology", "replace", "obsolete", "transform", "market", "shift"],
-        "deep_dive": "Book: 'Capitalism, Socialism and Democracy' by Schumpeter"
+    "memento_mori": {
+        "name": "Memento Mori",
+        "domain": "philosophy_wisdom",
+        "author": "Stoic tradition / Marcus Aurelius",
+        "summary": "Remember you will die. Not morbid -- clarifying. When you remember death, the trivial falls away. What would you do today if you knew you had 1,000 days left?",
+        "keywords": ["death", "mortality", "urgency", "priority", "meaning", "legacy", "life", "finite", "important", "matter"],
+        "deep_dive": "Book: 'The Daily Stoic' by Ryan Holiday; 'Being Mortal' by Atul Gawande"
     },
-    "pareto_elite": {
-        "name": "The Pareto Elite",
-        "domain": "history_philosophy",
-        "author": "Vilfredo Pareto / historical pattern",
-        "summary": "Throughout history, 20% of people create 80% of value. This isn't unfair -- it's physics. Be in the 20%. Then be in the 20% of the 20%.",
-        "keywords": ["performance", "elite", "top", "excellence", "standard", "output", "results", "achieve", "productive"],
-        "deep_dive": "Book: 'The 80/20 Principle' by Richard Koch; Pareto's original sociological work"
+    "ikigai": {
+        "name": "Ikigai (Reason for Being)",
+        "domain": "philosophy_wisdom",
+        "author": "Japanese philosophical tradition",
+        "summary": "The intersection of what you love, what you're good at, what the world needs, and what you can be paid for. Not a destination -- a compass bearing for a life worth living.",
+        "keywords": ["purpose", "meaning", "passion", "skill", "value", "career", "life", "direction", "fulfillment", "work"],
+        "deep_dive": "Book: 'Ikigai' by Héctor García and Francesc Miralles"
     },
 
     # =========================================================================
-    # HEALTH & PERFORMANCE (~8)
+    # HUMAN NATURE & PSYCHOLOGY (~12)
+    # Why do humans do what they do?
+    # =========================================================================
+
+    "evolutionary_psychology": {
+        "name": "Evolutionary Mismatch",
+        "domain": "human_nature",
+        "author": "Evolutionary psychology / Leda Cosmides",
+        "summary": "Your brain was built for the savannah, not spreadsheets. Every anxiety, every craving, every social instinct is a 200,000-year-old program running in a modern environment. Know your hardware.",
+        "keywords": ["instinct", "habit", "craving", "anxiety", "fear", "social", "status", "compare", "brain", "behavior"],
+        "deep_dive": "Book: 'The Elephant in the Brain' by Robin Hanson & Kevin Simler"
+    },
+    "system1_system2": {
+        "name": "System 1 & System 2",
+        "domain": "human_nature",
+        "author": "Daniel Kahneman",
+        "summary": "Fast thinking (intuitive, emotional, automatic) vs slow thinking (deliberate, logical, effortful). Most decisions are System 1. The trick is knowing WHEN to engage System 2.",
+        "keywords": ["decision", "intuition", "logic", "think", "fast", "slow", "bias", "rational", "emotion", "judgment"],
+        "deep_dive": "Book: 'Thinking, Fast and Slow' by Daniel Kahneman"
+    },
+    "loss_aversion": {
+        "name": "Loss Aversion",
+        "domain": "human_nature",
+        "author": "Daniel Kahneman / Amos Tversky",
+        "summary": "Losing hurts roughly 2x more than winning feels good. This asymmetry drives most human behaviour -- from why people don't quit bad jobs to why we hold losing investments.",
+        "keywords": ["loss", "pain", "fear", "miss", "expire", "urgency", "fomo", "scarcity", "risk", "change"],
+        "deep_dive": "Book: 'Thinking, Fast and Slow' by Daniel Kahneman"
+    },
+    "mimetic_desire": {
+        "name": "Mimetic Desire (René Girard)",
+        "domain": "human_nature",
+        "author": "René Girard",
+        "summary": "We don't know what we want. We copy the desires of others. You want that startup idea because someone you admire wanted it. Understanding mimetic desire is understanding most of human conflict and ambition.",
+        "keywords": ["desire", "want", "copy", "model", "influence", "envy", "competition", "social", "comparison", "ambition"],
+        "deep_dive": "Book: 'Wanting' by Luke Burgis; Girard's 'Deceit, Desire, and the Novel'"
+    },
+    "dunbar_number": {
+        "name": "Dunbar's Number",
+        "domain": "human_nature",
+        "author": "Robin Dunbar",
+        "summary": "150. That's how many stable relationships your brain can maintain. 5 intimate, 15 close, 50 friends, 150 acquaintances. Know your circles. Invest in the inner ones.",
+        "keywords": ["relationship", "network", "social", "friend", "team", "community", "trust", "connection", "people", "close"],
+        "deep_dive": "Book: 'Friends' by Robin Dunbar"
+    },
+    "hedonic_treadmill": {
+        "name": "The Hedonic Treadmill",
+        "domain": "human_nature",
+        "author": "Brickman & Campbell",
+        "summary": "Humans adapt to both good and bad fortune, returning to a baseline of happiness. The new car becomes normal. The promotion becomes the new floor. Happiness comes from the direction, not the position.",
+        "keywords": ["happiness", "satisfaction", "goal", "achieve", "success", "enough", "more", "adapt", "baseline", "content"],
+        "deep_dive": "Book: 'Stumbling on Happiness' by Daniel Gilbert"
+    },
+    "narrative_self": {
+        "name": "The Narrative Self",
+        "domain": "human_nature",
+        "author": "Dan McAdams / narrative psychology",
+        "summary": "You are the story you tell yourself about yourself. Identity isn't fixed -- it's a narrative you construct and reconstruct. Change your story, change your life. Literally.",
+        "keywords": ["identity", "story", "brand", "narrative", "self", "change", "belief", "confidence", "who", "become"],
+        "deep_dive": "Book: 'The Redemptive Self' by Dan McAdams; 'Man's Search for Meaning' by Frankl"
+    },
+    "cognitive_dissonance": {
+        "name": "Cognitive Dissonance",
+        "domain": "human_nature",
+        "author": "Leon Festinger",
+        "summary": "When beliefs and actions conflict, something has to give. People rationalise their purchases, their habits, their identity. The mind craves consistency, even at the cost of truth.",
+        "keywords": ["belief", "action", "justify", "rationalise", "brand", "loyalty", "identity", "contradiction", "honest"],
+        "deep_dive": "Book: 'Mistakes Were Made (but Not by Me)' by Tavris & Aronson"
+    },
+    "social_proof": {
+        "name": "Social Proof",
+        "domain": "human_nature",
+        "author": "Robert Cialdini",
+        "summary": "People follow people. We look to others to determine correct behaviour. This is ancient survival code -- and the engine behind viral growth, fashion, and herd mentality in markets.",
+        "keywords": ["review", "testimonial", "social", "proof", "popular", "trust", "customer", "follow", "trend", "herd"],
+        "deep_dive": "Book: 'Influence' by Robert Cialdini"
+    },
+    "status_games": {
+        "name": "Status Games vs Wealth Games",
+        "domain": "human_nature",
+        "author": "Naval Ravikant / Will Storr",
+        "summary": "Status is zero-sum: for you to rise, someone must fall. Wealth is positive-sum: create value and everyone wins. Most social media is status games dressed as wealth games.",
+        "keywords": ["status", "wealth", "comparison", "social", "value", "create", "compete", "ego", "win", "game", "tiktok"],
+        "deep_dive": "Book: 'The Status Game' by Will Storr; Almanack of Naval Ravikant"
+    },
+    "flow_state": {
+        "name": "Flow State",
+        "domain": "human_nature",
+        "author": "Mihaly Csikszentmihalyi",
+        "summary": "The optimal state where challenge meets skill. Time disappears. Self-consciousness evaporates. Output multiplies. Flow isn't luck -- it's engineered through clear goals, immediate feedback, and matched difficulty.",
+        "keywords": ["flow", "focus", "zone", "productivity", "creative", "work", "deep", "engage", "challenge", "skill"],
+        "deep_dive": "Book: 'Flow' by Mihaly Csikszentmihalyi"
+    },
+    "peak_end_rule": {
+        "name": "Peak-End Rule",
+        "domain": "human_nature",
+        "author": "Daniel Kahneman",
+        "summary": "People remember experiences based on two moments: the peak (most intense) and the end. Nail the unboxing. Nail the follow-up. Engineer the moments that stick.",
+        "keywords": ["experience", "unboxing", "delivery", "email", "customer", "satisfaction", "journey", "moment", "memory"],
+        "deep_dive": "Book: 'Thinking, Fast and Slow' by Kahneman (Experience vs Memory chapter)"
+    },
+
+    # =========================================================================
+    # BIOLOGY & HEALTH (~10)
+    # The machine you live in
     # =========================================================================
 
     "sleep_architecture": {
         "name": "Sleep Architecture",
-        "domain": "health_performance",
+        "domain": "biology_health",
         "author": "Matthew Walker",
         "summary": "7-8 hours is non-negotiable for cognition, emotional regulation, and physical recovery. Sleep debt cannot be repaid on weekends. Protect sleep like revenue.",
         "keywords": ["sleep", "rest", "recovery", "tired", "energy", "morning", "night", "fatigue", "cognitive", "performance"],
         "deep_dive": "Book: 'Why We Sleep' by Matthew Walker"
     },
+    "hormesis": {
+        "name": "Hormesis",
+        "domain": "biology_health",
+        "author": "Biological principle",
+        "summary": "Small stressors make you stronger. Cold exposure, fasting, exercise, heat stress -- controlled doses of discomfort trigger adaptive responses. Comfort is the enemy of growth.",
+        "keywords": ["cold", "fast", "fasting", "sauna", "stress", "exercise", "hard", "challenge", "adapt", "tough", "recovery"],
+        "deep_dive": "Huberman Lab on deliberate cold exposure; Book: 'The Comfort Crisis' by Michael Easter"
+    },
+    "circadian_rhythm": {
+        "name": "Circadian Rhythm",
+        "domain": "biology_health",
+        "author": "Andrew Huberman / circadian biology",
+        "summary": "Light, temperature, and meal timing regulate your internal clock. Morning sunlight, cool sleeping environment, and consistent meal windows optimise everything downstream.",
+        "keywords": ["morning", "light", "routine", "schedule", "energy", "timing", "sleep", "wake", "rhythm", "habit"],
+        "deep_dive": "Huberman Lab podcast episodes on circadian biology; Book: 'The Circadian Code' by Satchin Panda"
+    },
+    "neuroplasticity": {
+        "name": "Neuroplasticity",
+        "domain": "biology_health",
+        "author": "Andrew Huberman / neuroscience",
+        "summary": "Your brain physically rewires based on experience. Intense focus + rest creates lasting neural change. You are literally building a different brain every day. Choose what you wire carefully.",
+        "keywords": ["learn", "brain", "skill", "practice", "improve", "master", "attention", "deep", "habit", "change"],
+        "deep_dive": "Book: 'The Brain That Changes Itself' by Norman Doidge"
+    },
+    "microbiome": {
+        "name": "The Microbiome",
+        "domain": "biology_health",
+        "author": "Modern biology / Rob Knight",
+        "summary": "You are 50% bacteria by cell count. Your gut microbiome influences mood, immunity, weight, and cognition. You're not just feeding yourself -- you're feeding an ecosystem.",
+        "keywords": ["gut", "health", "food", "nutrition", "mood", "immune", "supplement", "diet", "bacteria", "probiotic"],
+        "deep_dive": "Book: 'I Contain Multitudes' by Ed Yong"
+    },
+    "telomeres_aging": {
+        "name": "Telomeres & Biological Aging",
+        "domain": "biology_health",
+        "author": "Elizabeth Blackburn / Elissa Epel",
+        "summary": "Telomeres are the caps on your chromosomes that shorten with each division. Stress, poor sleep, and inflammation accelerate shortening. Some lifestyle factors can slow or even reverse it.",
+        "keywords": ["aging", "longevity", "health", "stress", "young", "body", "cellular", "science", "supplement"],
+        "deep_dive": "Book: 'The Telomere Effect' by Blackburn & Epel; 'Outlive' by Peter Attia"
+    },
     "zone_2_training": {
         "name": "Zone 2 Training",
-        "domain": "health_performance",
+        "domain": "biology_health",
         "author": "Dr. Peter Attia / Iñigo San Millán",
         "summary": "The aerobic base that enables everything else. Zone 2 = can hold a conversation but it's not easy. 3-4 hours per week transforms metabolic health and longevity.",
         "keywords": ["training", "cardio", "run", "walk", "exercise", "fitness", "heart", "endurance", "zone", "aerobic"],
@@ -536,47 +468,23 @@ KNOWLEDGE_LIBRARY = {
     },
     "protein_leverage": {
         "name": "Protein Leverage Hypothesis",
-        "domain": "health_performance",
+        "domain": "biology_health",
         "author": "Simpson & Raubenheimer",
         "summary": "Humans eat until they get enough protein. If your food is low-protein, you'll overeat calories to hit the protein target. Prioritise protein first.",
         "keywords": ["protein", "diet", "nutrition", "meal", "food", "eating", "supplement", "health", "weight", "body"],
         "deep_dive": "Book: 'Eat Like the Animals' by Simpson & Raubenheimer"
     },
-    "circadian_rhythm": {
-        "name": "Circadian Rhythm",
-        "domain": "health_performance",
-        "author": "Andrew Huberman / circadian biology",
-        "summary": "Light, temperature, and meal timing regulate your internal clock. Morning sunlight, cool sleeping environment, and consistent meal windows optimise everything downstream.",
-        "keywords": ["morning", "light", "routine", "schedule", "energy", "timing", "sleep", "wake", "rhythm", "habit"],
-        "deep_dive": "Huberman Lab podcast episodes on circadian biology; Book: 'The Circadian Code' by Satchin Panda"
-    },
-    "hormesis": {
-        "name": "Hormesis",
-        "domain": "health_performance",
-        "author": "Biological principle",
-        "summary": "Small stressors make you stronger. Cold exposure, fasting, exercise, heat stress -- controlled doses of discomfort trigger adaptive responses.",
-        "keywords": ["cold", "fast", "fasting", "sauna", "stress", "exercise", "hard", "challenge", "adapt", "tough", "recovery"],
-        "deep_dive": "Huberman Lab on deliberate cold exposure; Book: 'The Comfort Crisis' by Michael Easter"
-    },
-    "neuroplasticity": {
-        "name": "Neuroplasticity Windows",
-        "domain": "health_performance",
-        "author": "Andrew Huberman / neuroscience",
-        "summary": "Learning is biological. Your brain physically rewires during focused attention + sleep. Intense focus followed by rest creates lasting neural change. Learning is a skill.",
-        "keywords": ["learn", "study", "focus", "brain", "skill", "practice", "improve", "master", "attention", "deep"],
-        "deep_dive": "Huberman Lab podcast: 'How to Learn Faster'; Book: 'The Brain That Changes Itself' by Doidge"
-    },
-    "eisenhower_matrix": {
-        "name": "The Eisenhower Matrix",
-        "domain": "health_performance",
-        "author": "Dwight D. Eisenhower",
-        "summary": "Urgent vs Important. Most people live in urgent-unimportant. Leaders live in important-not-urgent. Schedule the important. Delegate or delete the rest.",
-        "keywords": ["priority", "urgent", "important", "task", "schedule", "delegate", "focus", "time", "manage", "plan"],
-        "deep_dive": "Book: 'First Things First' by Stephen Covey"
+    "mitochondria": {
+        "name": "Mitochondria & Cellular Energy",
+        "domain": "biology_health",
+        "author": "Nick Lane / cellular biology",
+        "summary": "Mitochondria aren't just the 'powerhouse of the cell' -- they're why complex life exists at all. A billion years ago, one cell swallowed another, and everything changed. Energy availability determines complexity.",
+        "keywords": ["energy", "fatigue", "performance", "power", "cellular", "exercise", "health", "evolution", "life"],
+        "deep_dive": "Book: 'The Vital Question' by Nick Lane"
     },
     "deep_work": {
         "name": "Deep Work",
-        "domain": "health_performance",
+        "domain": "biology_health",
         "author": "Cal Newport",
         "summary": "Undistracted focus is a superpower in a distracted world. Schedule 2-4 hour blocks of zero-interruption deep work. Shallow work fills the gaps. Never reverse this.",
         "keywords": ["focus", "distraction", "work", "productivity", "block", "schedule", "concentrate", "attention", "output", "quality"],
@@ -584,83 +492,455 @@ KNOWLEDGE_LIBRARY = {
     },
 
     # =========================================================================
-    # WEALTH & FINANCE (~8)
+    # HISTORY'S PATTERNS (~10)
+    # What rhymes? What's genuinely new?
     # =========================================================================
 
+    "civilisation_cycles": {
+        "name": "Civilisation Cycles",
+        "domain": "history_patterns",
+        "author": "Ray Dalio / Ibn Khaldun / Oswald Spengler",
+        "summary": "Civilisations rise in roughly 250-year cycles: hardship creates strong people, strong people create prosperity, prosperity creates complacency, complacency creates hardship. Where are we now?",
+        "keywords": ["cycle", "history", "rise", "fall", "empire", "power", "change", "civilisation", "pattern", "repeat"],
+        "deep_dive": "Book: 'Principles for Dealing with the Changing World Order' by Ray Dalio"
+    },
+    "technological_revolutions": {
+        "name": "Technological Revolutions",
+        "domain": "history_patterns",
+        "author": "Carlota Perez",
+        "summary": "Every major technology follows the same arc: installation (frenzy, speculation, bubble), then deployment (synergy, golden age). The internet's installation phase is ending. AI's is beginning. Know where you are in the cycle.",
+        "keywords": ["technology", "ai", "revolution", "change", "cycle", "innovation", "bubble", "adopt", "future", "opportunity"],
+        "deep_dive": "Book: 'Technological Revolutions and Financial Capital' by Carlota Perez"
+    },
+    "alexander_at_26": {
+        "name": "Alexander the Great at 26",
+        "domain": "history_patterns",
+        "author": "Historical",
+        "summary": "By 26, Alexander had conquered the known world. Not through luck but through relentless ambition, learned mentorship (Aristotle), and speed of execution. Age is not an excuse.",
+        "keywords": ["age", "young", "ambition", "speed", "execute", "lead", "bold", "grow", "vision", "founder"],
+        "deep_dive": "Book: 'Alexander the Great' by Philip Freeman"
+    },
+    "renaissance_polymath": {
+        "name": "The Renaissance Polymath Model",
+        "domain": "history_patterns",
+        "author": "Da Vinci / Alberti / historical",
+        "summary": "Wide competence, deep in one. Da Vinci was artist, engineer, anatomist, inventor. The modern version: T-shaped skills. Be dangerous in many domains, world-class in one.",
+        "keywords": ["skill", "learn", "generalist", "specialist", "diverse", "creative", "build", "design", "multidisciplinary"],
+        "deep_dive": "Book: 'Range' by David Epstein; 'Leonardo da Vinci' by Walter Isaacson"
+    },
+    "creative_destruction": {
+        "name": "Creative Destruction",
+        "domain": "history_patterns",
+        "author": "Joseph Schumpeter",
+        "summary": "Innovation doesn't just create new value -- it destroys old value. The entrepreneur is the force of creative destruction. Embrace it or be destroyed by it.",
+        "keywords": ["innovate", "disrupt", "change", "new", "technology", "replace", "obsolete", "transform", "market", "shift"],
+        "deep_dive": "Book: 'Capitalism, Socialism and Democracy' by Schumpeter"
+    },
+    "meditations": {
+        "name": "Marcus Aurelius: Emperor-Philosopher",
+        "domain": "history_patterns",
+        "author": "Marcus Aurelius",
+        "summary": "The most powerful man in the world wrote a private journal about duty, ego, and mortality. Not ivory tower theory but battlefield-tested wisdom. The Meditations are leadership distilled.",
+        "keywords": ["leadership", "duty", "ego", "pressure", "decision", "responsibility", "character", "integrity", "power"],
+        "deep_dive": "Book: 'Meditations' by Marcus Aurelius (Gregory Hays translation)"
+    },
+    "printing_press_effect": {
+        "name": "The Printing Press Effect",
+        "domain": "history_patterns",
+        "author": "Historical / Elizabeth Eisenstein",
+        "summary": "Gutenberg's printing press didn't just spread information -- it destroyed the Catholic Church's monopoly on knowledge, enabled the Reformation, and created science. AI is this century's printing press.",
+        "keywords": ["information", "knowledge", "power", "distribute", "access", "ai", "technology", "change", "revolution", "democratise"],
+        "deep_dive": "Book: 'The Printing Press as an Agent of Change' by Elizabeth Eisenstein"
+    },
+    "great_man_vs_forces": {
+        "name": "Great Man vs Historical Forces",
+        "domain": "history_patterns",
+        "author": "Tolstoy / Thomas Carlyle",
+        "summary": "Do individuals shape history, or does history shape individuals? The truth: exceptional people matter, but only when they ride the right wave at the right time. Be the surfer AND read the ocean.",
+        "keywords": ["leader", "timing", "opportunity", "trend", "founder", "vision", "market", "wave", "ready", "moment"],
+        "deep_dive": "Book: 'War and Peace' by Tolstoy (seriously -- the philosophical chapters)"
+    },
+    "sapiens_fictions": {
+        "name": "Sapiens & Shared Fictions",
+        "domain": "history_patterns",
+        "author": "Yuval Noah Harari",
+        "summary": "What makes humans unique isn't intelligence -- it's our ability to believe in shared fictions: money, nations, corporations, brands. These fictions enable cooperation at scale. Brands ARE shared fictions.",
+        "keywords": ["brand", "story", "narrative", "trust", "culture", "company", "value", "belief", "vision", "mission"],
+        "deep_dive": "Book: 'Sapiens' by Yuval Noah Harari"
+    },
+    "art_of_war": {
+        "name": "The Art of War",
+        "domain": "history_patterns",
+        "author": "Sun Tzu",
+        "summary": "Know yourself, know your enemy, win every battle. Choose battles wisely. Speed and surprise beat raw force. Victory comes from preparation, not impulse.",
+        "keywords": ["competitor", "strategy", "battle", "position", "advantage", "timing", "intelligence", "plan", "win"],
+        "deep_dive": "Book: 'The Art of War' by Sun Tzu (Griffith translation)"
+    },
+
+    # =========================================================================
+    # MATHEMATICS & SYSTEMS (~10)
+    # The hidden structures that govern everything
+    # =========================================================================
+
+    "game_theory": {
+        "name": "Game Theory Fundamentals",
+        "domain": "mathematics_systems",
+        "author": "John von Neumann / John Nash",
+        "summary": "Every interaction is a game with payoffs. Prisoner's Dilemma, Nash Equilibrium, repeated games. Understanding game theory means understanding why people cooperate, compete, or betray.",
+        "keywords": ["negotiate", "partner", "compete", "cooperate", "deal", "incentive", "strategy", "win", "trust", "game"],
+        "deep_dive": "Book: 'The Art of Strategy' by Avinash Dixit & Barry Nalebuff"
+    },
+    "network_theory": {
+        "name": "Network Theory",
+        "domain": "mathematics_systems",
+        "author": "Albert-László Barabási",
+        "summary": "Power laws govern networks: a few nodes have most connections. This explains social media virality, disease spread, and why the rich get richer. Be a hub, not a node.",
+        "keywords": ["network", "connection", "viral", "growth", "hub", "social", "spread", "influence", "referral", "community"],
+        "deep_dive": "Book: 'Linked' by Albert-László Barabási"
+    },
+    "feedback_loops": {
+        "name": "Feedback Loops",
+        "domain": "mathematics_systems",
+        "author": "Systems thinking / Donella Meadows",
+        "summary": "Positive feedback amplifies (compound growth, viral loops). Negative feedback stabilises (thermostats, market corrections). Every system you build runs on feedback loops. Design them intentionally.",
+        "keywords": ["loop", "feedback", "cycle", "compound", "growth", "system", "amplify", "correct", "balance", "spiral"],
+        "deep_dive": "Book: 'Thinking in Systems' by Donella Meadows"
+    },
+    "power_law": {
+        "name": "Power Laws",
+        "domain": "mathematics_systems",
+        "author": "Peter Thiel / Pareto / mathematics",
+        "summary": "A few things matter enormously, most don't at all. In venture, one deal returns the entire fund. In business, one product or channel drives everything. Don't average -- concentrate.",
+        "keywords": ["top", "best", "dominant", "winner", "concentrate", "focus", "channel", "product", "revenue", "returns"],
+        "deep_dive": "Book: 'Zero to One' by Peter Thiel (Power Law chapter)"
+    },
+    "godel_incompleteness": {
+        "name": "Gödel's Incompleteness Theorems",
+        "domain": "mathematics_systems",
+        "author": "Kurt Gödel",
+        "summary": "Any consistent system complex enough to contain arithmetic will contain true statements it cannot prove. There are always truths beyond the system's reach. Completeness is impossible. Humility is mathematical.",
+        "keywords": ["system", "limit", "complete", "prove", "logic", "truth", "beyond", "unknown", "impossible", "humility"],
+        "deep_dive": "Book: 'Gödel, Escher, Bach' by Douglas Hofstadter"
+    },
+    "bayesian_thinking": {
+        "name": "Bayesian Thinking",
+        "domain": "mathematics_systems",
+        "author": "Thomas Bayes / rationalist tradition",
+        "summary": "Update your beliefs with evidence, proportionally to the strength of the evidence. Start with a prior, observe data, update. Never be 100% certain. Never be 0%. Always be updating.",
+        "keywords": ["belief", "evidence", "data", "update", "probability", "certain", "uncertain", "learn", "wrong", "change"],
+        "deep_dive": "Book: 'The Signal and the Noise' by Nate Silver; 'Superforecasting' by Tetlock"
+    },
+    "ergodicity": {
+        "name": "Ergodicity & Ensemble Averages",
+        "domain": "mathematics_systems",
+        "author": "Ole Peters / Nassim Taleb",
+        "summary": "The average outcome for a group is NOT the same as the average outcome for one person over time. Russian roulette has a great ensemble average (5/6 win!). But for one person over time, you die. Most risk models are fatally wrong because they ignore this.",
+        "keywords": ["risk", "bet", "ruin", "gamble", "average", "survive", "long-term", "strategy", "conservative", "death"],
+        "deep_dive": "Ole Peters' Nature Physics paper on ergodicity; Taleb's treatment in 'Skin in the Game'"
+    },
+    "pareto_principle": {
+        "name": "Pareto Principle (80/20)",
+        "domain": "mathematics_systems",
+        "author": "Vilfredo Pareto",
+        "summary": "80% of outputs come from 20% of inputs. Focus ruthlessly on the vital few. Then apply the principle recursively: the 20% of the 20% (4%) drives 64% of results.",
+        "keywords": ["focus", "priority", "top", "best", "customer", "product", "revenue", "performance", "efficient", "cut"],
+        "deep_dive": "Book: 'The 80/20 Principle' by Richard Koch"
+    },
+    "compounding": {
+        "name": "Compounding",
+        "domain": "mathematics_systems",
+        "author": "Albert Einstein (attributed)",
+        "summary": "Small, consistent advantages create exponential results over time. The eighth wonder of the world. Applies to money, knowledge, relationships, and habits. Most people can't intuit exponentials.",
+        "keywords": ["growth", "compound", "consistent", "habit", "daily", "improve", "accumulate", "long-term", "invest", "learning"],
+        "deep_dive": "Book: 'The Psychology of Money' by Morgan Housel"
+    },
+    "second_order_effects": {
+        "name": "Second and Third-Order Effects",
+        "domain": "mathematics_systems",
+        "author": "Howard Marks / systems thinking",
+        "summary": "What happens AFTER what happens? Most people only see first-order effects. Second-order thinkers see consequences of consequences. Third-order thinkers see that those consequences create new games entirely.",
+        "keywords": ["consequence", "impact", "downstream", "effect", "chain", "reaction", "long-term", "future", "ripple"],
+        "deep_dive": "Book: 'The Most Important Thing' by Howard Marks; 'Thinking in Systems' by Donella Meadows"
+    },
+
+    # =========================================================================
+    # CREATIVITY & AESTHETICS (~8)
+    # Why does some work endure for centuries?
+    # =========================================================================
+
+    "taste": {
+        "name": "Taste (The Ira Glass Gap)",
+        "domain": "creativity_aesthetics",
+        "author": "Ira Glass / Paul Graham",
+        "summary": "Beginners with good taste suffer because they can see the gap between their work and great work. This gap is a gift -- most people never develop the taste to see it. Close the gap through volume.",
+        "keywords": ["quality", "creative", "design", "brand", "improve", "standard", "aesthetic", "style", "refine", "work"],
+        "deep_dive": "Ira Glass's interview on storytelling; Paul Graham's essay 'Taste for Makers'"
+    },
+    "wabi_sabi": {
+        "name": "Wabi-Sabi (Beauty in Imperfection)",
+        "domain": "creativity_aesthetics",
+        "author": "Japanese aesthetic tradition",
+        "summary": "Beauty in imperfection, impermanence, and incompleteness. The cracked bowl is more beautiful than the perfect one. Perfectionism kills shipping. Learn to see beauty in the unfinished.",
+        "keywords": ["perfect", "imperfect", "ship", "launch", "iterate", "done", "good enough", "release", "minimum", "authentic"],
+        "deep_dive": "Book: 'Wabi-Sabi for Artists, Designers, Poets & Philosophers' by Leonard Koren"
+    },
+    "less_is_more": {
+        "name": "Less Is More (Dieter Rams)",
+        "domain": "creativity_aesthetics",
+        "author": "Dieter Rams / Ludwig Mies van der Rohe",
+        "summary": "Good design is as little design as possible. Every element must justify its existence. If you can remove it and the thing still works, remove it. Applies to products, messages, and lives.",
+        "keywords": ["simple", "clean", "design", "remove", "minimal", "focus", "clarity", "brand", "elegant", "reduce"],
+        "deep_dive": "Book: 'Less and More: The Design Ethos of Dieter Rams'; 'The Laws of Simplicity' by John Maeda"
+    },
+    "constraints_breed_creativity": {
+        "name": "Constraints Breed Creativity",
+        "domain": "creativity_aesthetics",
+        "author": "Various / design thinking",
+        "summary": "Unlimited resources produce mediocrity. Constraints force invention. Twitter's 140 characters created a new literary form. Your budget limit isn't a handicap -- it's your creative advantage.",
+        "keywords": ["constraint", "limit", "budget", "resource", "creative", "innovate", "small", "lean", "bootstrapped", "scrappy"],
+        "deep_dive": "Book: 'A Beautiful Constraint' by Adam Morgan & Mark Barden"
+    },
+    "originality_paradox": {
+        "name": "The Originality Paradox",
+        "domain": "creativity_aesthetics",
+        "author": "Austin Kleon / T.S. Eliot",
+        "summary": "'Good artists copy, great artists steal.' Original work comes from deeply absorbing existing work, then recombining it in ways no one has before. Pure originality is a myth. Creative theft is an art.",
+        "keywords": ["creative", "original", "copy", "inspire", "reference", "content", "style", "art", "unique", "remix"],
+        "deep_dive": "Book: 'Steal Like an Artist' by Austin Kleon"
+    },
+    "enduring_art": {
+        "name": "Why Some Art Endures",
+        "domain": "creativity_aesthetics",
+        "author": "Various / art theory",
+        "summary": "The works that last centuries share traits: universal human truth, emotional resonance, formal mastery, and mystery (something you can't fully explain). Marketing that endures follows the same principles.",
+        "keywords": ["brand", "lasting", "classic", "timeless", "quality", "story", "emotion", "resonance", "heritage", "endure"],
+        "deep_dive": "Book: 'The Story of Art' by E.H. Gombrich; 'Ways of Seeing' by John Berger"
+    },
+    "creative_process": {
+        "name": "The Creative Process (Incubation)",
+        "domain": "creativity_aesthetics",
+        "author": "Graham Wallas / Henri Poincaré",
+        "summary": "Preparation, Incubation, Illumination, Verification. The breakthrough doesn't come during effort -- it comes in the shower, on a walk, in sleep. Your subconscious does the heavy lifting. Let it.",
+        "keywords": ["idea", "creative", "think", "shower", "walk", "rest", "breakthrough", "inspiration", "insight", "stuck"],
+        "deep_dive": "Book: 'A Technique for Producing Ideas' by James Webb Young (68 pages, timeless)"
+    },
+    "medium_is_message": {
+        "name": "The Medium Is the Message",
+        "domain": "creativity_aesthetics",
+        "author": "Marshall McLuhan",
+        "summary": "The channel shapes the content more than the content itself. A TikTok video communicates differently than a newsletter even with the same words. Choose your medium as carefully as your message.",
+        "keywords": ["channel", "platform", "content", "media", "tiktok", "email", "social", "format", "video", "message"],
+        "deep_dive": "Book: 'Understanding Media' by Marshall McLuhan"
+    },
+
+    # =========================================================================
+    # ETHICS & MEANING (~8)
+    # What actually matters?
+    # =========================================================================
+
+    "moral_philosophy_trolley": {
+        "name": "The Trolley Problem & Moral Intuitions",
+        "domain": "ethics_meaning",
+        "author": "Philippa Foot / Judith Jarvis Thomson",
+        "summary": "Would you divert a trolley to kill 1 to save 5? Most say yes. Would you push someone off a bridge to save 5? Most say no. Same math, different feeling. Ethics isn't logical -- it's deeply human.",
+        "keywords": ["decision", "right", "wrong", "ethics", "moral", "choice", "consequence", "principle", "value", "dilemma"],
+        "deep_dive": "Book: 'Justice' by Michael Sandel; his Harvard lectures (free on YouTube)"
+    },
+    "effective_altruism": {
+        "name": "Effective Altruism",
+        "domain": "ethics_meaning",
+        "author": "Peter Singer / Will MacAskill",
+        "summary": "If you're going to help, help effectively. Some causes prevent 100x more suffering per dollar than others. Apply the same rigour to giving that you apply to investing.",
+        "keywords": ["give", "charity", "impact", "help", "purpose", "legacy", "contribution", "social", "good", "cause"],
+        "deep_dive": "Book: 'Doing Good Better' by Will MacAskill"
+    },
+    "legacy_thinking": {
+        "name": "Legacy vs Achievement",
+        "domain": "ethics_meaning",
+        "author": "Various / moral philosophy",
+        "summary": "Achievement is what you accomplish. Legacy is what continues after you stop. Most people optimise for achievement. The wisest optimise for legacy -- systems, people, and ideas that outlive them.",
+        "keywords": ["legacy", "impact", "long-term", "meaning", "purpose", "build", "last", "future", "beyond", "endure"],
+        "deep_dive": "Book: 'Die with Zero' by Bill Perkins (counterpoint to pure legacy thinking)"
+    },
+    "skin_in_the_game": {
+        "name": "Skin in the Game",
+        "domain": "ethics_meaning",
+        "author": "Nassim Nicholas Taleb",
+        "summary": "Don't trust advice from people who don't bear the consequences. Alignment of incentives is everything. If they don't eat their own cooking, walk away. Symmetry is the foundation of ethics.",
+        "keywords": ["incentive", "align", "trust", "advisor", "consultant", "agency", "partner", "accountability", "risk", "vendor"],
+        "deep_dive": "Book: 'Skin in the Game' by Nassim Nicholas Taleb"
+    },
+    "utilitarian_vs_deontological": {
+        "name": "Consequentialism vs Duty Ethics",
+        "domain": "ethics_meaning",
+        "author": "John Stuart Mill / Immanuel Kant",
+        "summary": "Do the ends justify the means (Mill), or are some actions wrong regardless of outcome (Kant)? Every business decision sits on this spectrum. Knowing where you stand is knowing who you are.",
+        "keywords": ["right", "wrong", "principle", "outcome", "result", "rule", "exception", "integrity", "compromise", "value"],
+        "deep_dive": "Book: 'Justice' by Michael Sandel"
+    },
+    "meaning_through_suffering": {
+        "name": "Meaning Through Suffering (Frankl)",
+        "domain": "ethics_meaning",
+        "author": "Viktor Frankl",
+        "summary": "A Holocaust survivor discovered that those who survived had something the others didn't: meaning. You can't avoid suffering. But you can choose what it means. That choice is the last human freedom.",
+        "keywords": ["suffering", "meaning", "purpose", "struggle", "difficulty", "challenge", "overcome", "resilient", "strength"],
+        "deep_dive": "Book: 'Man's Search for Meaning' by Viktor Frankl"
+    },
+    "virtue_ethics": {
+        "name": "Virtue Ethics (Aristotle)",
+        "domain": "ethics_meaning",
+        "author": "Aristotle",
+        "summary": "Ethics isn't about rules or outcomes -- it's about CHARACTER. Be the kind of person who naturally does the right thing. Virtue is a habit, not a decision. You become what you repeatedly do.",
+        "keywords": ["character", "habit", "virtue", "integrity", "consistent", "identity", "excellence", "practice", "become"],
+        "deep_dive": "Book: 'Nicomachean Ethics' by Aristotle (Robert Bartlett translation)"
+    },
+    "rights_of_future_generations": {
+        "name": "Rights of Future Generations",
+        "domain": "ethics_meaning",
+        "author": "Longtermism / Derek Parfit",
+        "summary": "Do people who don't exist yet have rights? If yes, every decision you make should weight the future as heavily as the present. Building things that last isn't just good business -- it's morally required.",
+        "keywords": ["future", "long-term", "sustain", "environment", "legacy", "build", "last", "endure", "responsibility", "next"],
+        "deep_dive": "Book: 'Reasons and Persons' by Derek Parfit; 'What We Owe the Future' by MacAskill"
+    },
+
+    # =========================================================================
+    # STRATEGY & WEALTH (~15)
+    # Making and preserving value
+    # =========================================================================
+
+    "first_principles": {
+        "name": "First Principles Thinking",
+        "domain": "strategy_wealth",
+        "author": "Aristotle / Elon Musk",
+        "summary": "Break problems down to their most fundamental truths, then reason up from there. Don't reason by analogy -- reason from the ground truth.",
+        "keywords": ["fundamentals", "problem", "solve", "build", "create", "rethink", "assumption", "strategy", "redesign"],
+        "deep_dive": "Musk's battery cost analysis interview; Aristotle's 'Metaphysics'"
+    },
+    "inversion": {
+        "name": "Inversion",
+        "domain": "strategy_wealth",
+        "author": "Charlie Munger",
+        "summary": "Instead of asking 'how do I succeed?', ask 'how would I fail?' Then avoid those things. Invert, always invert.",
+        "keywords": ["fail", "risk", "avoid", "mistake", "problem", "loss", "prevent", "churn", "decline", "drop"],
+        "deep_dive": "Book: 'Poor Charlie's Almanack' by Charlie Munger"
+    },
+    "antifragility": {
+        "name": "Antifragility",
+        "domain": "strategy_wealth",
+        "author": "Nassim Nicholas Taleb",
+        "summary": "Some systems don't just resist disorder -- they gain from it. Build systems that get stronger from stress, volatility, and random shocks.",
+        "keywords": ["chaos", "volatility", "stress", "risk", "resilient", "robust", "shock", "tariff", "disruption", "crisis", "adapt"],
+        "deep_dive": "Book: 'Antifragile' by Nassim Nicholas Taleb"
+    },
+    "moats": {
+        "name": "Moats",
+        "domain": "strategy_wealth",
+        "author": "Warren Buffett / Hamilton Helmer",
+        "summary": "What makes you hard to compete with? Brand, switching costs, network effects, cost advantages, intangible assets. Without a moat, margins erode to zero.",
+        "keywords": ["competitive", "advantage", "brand", "differentiate", "defend", "market", "position", "protect", "unique"],
+        "deep_dive": "Book: '7 Powers' by Hamilton Helmer"
+    },
+    "leverage": {
+        "name": "Leverage",
+        "domain": "strategy_wealth",
+        "author": "Naval Ravikant",
+        "summary": "Code, media, capital, labour -- in that order. New-age leverage (code + media) doesn't require permission. Maximise output per unit of input.",
+        "keywords": ["automation", "ai", "code", "media", "content", "scale", "system", "efficiency", "build", "agent", "bot"],
+        "deep_dive": "Naval's tweetstorm 'How to Get Rich' and the Almanack of Naval Ravikant"
+    },
+    "unit_economics": {
+        "name": "Unit Economics",
+        "domain": "strategy_wealth",
+        "author": "Fundamental business principle",
+        "summary": "Revenue per unit minus cost per unit. If the unit economics don't work, no amount of volume will save you. LTV > CAC or you die.",
+        "keywords": ["ltv", "cac", "margin", "cost", "revenue", "profit", "unit", "acquisition", "customer", "order", "aov", "roas"],
+        "deep_dive": "David Skok's 'For Entrepreneurs' blog on unit economics"
+    },
     "asymmetric_bets": {
         "name": "Asymmetric Bets",
-        "domain": "wealth_finance",
+        "domain": "strategy_wealth",
         "author": "Nassim Taleb / venture capital principle",
         "summary": "Small downside, massive upside. Structure decisions so you can't lose much but can win enormously. Startup investing, content creation, and experiments all follow this pattern.",
         "keywords": ["risk", "bet", "upside", "downside", "invest", "experiment", "test", "opportunity", "chance", "venture"],
-        "deep_dive": "Book: 'The Black Swan' by Taleb; AngelList/Naval on venture math"
-    },
-    "cashflow_vs_capital_gains": {
-        "name": "Cash Flow vs Capital Gains",
-        "domain": "wealth_finance",
-        "author": "Fundamental finance",
-        "summary": "Cash flow = income you can spend now. Capital gains = appreciation you realise later. Most wealth is built on cash flow. Don't confuse paper gains with real money.",
-        "keywords": ["revenue", "income", "profit", "cash", "flow", "payment", "subscription", "recurring", "money", "margin"],
-        "deep_dive": "Book: 'Rich Dad Poor Dad' by Kiyosaki (despite its flaws, this distinction is solid)"
+        "deep_dive": "Book: 'The Black Swan' by Taleb"
     },
     "kelly_criterion": {
         "name": "The Kelly Criterion",
-        "domain": "wealth_finance",
+        "domain": "strategy_wealth",
         "author": "John Larry Kelly Jr.",
         "summary": "Optimal bet sizing based on your edge. Bet proportional to your advantage, not your conviction. Overbetting with an edge still leads to ruin.",
         "keywords": ["budget", "spend", "allocate", "invest", "risk", "bet", "size", "proportion", "aggressive", "conservative"],
         "deep_dive": "Book: 'Fortune's Formula' by William Poundstone"
     },
+    "optionality": {
+        "name": "Optionality",
+        "domain": "strategy_wealth",
+        "author": "Nassim Taleb / finance",
+        "summary": "Keep doors open, reduce irreversible decisions. Options have value even if you never exercise them. Build flexibility into everything.",
+        "keywords": ["option", "flexible", "reversible", "decision", "pivot", "change", "adapt", "alternative", "choice", "hedge"],
+        "deep_dive": "Book: 'Antifragile' by Taleb (optionality chapter)"
+    },
+    "wealth_equation": {
+        "name": "The Wealth Equation",
+        "domain": "strategy_wealth",
+        "author": "Naval Ravikant",
+        "summary": "Specific knowledge + leverage + accountability = wealth. Specific knowledge is found by pursuing your genuine curiosity. Leverage through code, media, capital.",
+        "keywords": ["wealth", "build", "knowledge", "leverage", "accountability", "ai", "code", "media", "brand", "create", "own"],
+        "deep_dive": "The Almanack of Naval Ravikant by Eric Jorgenson"
+    },
+    "flywheel_effect": {
+        "name": "Flywheel Effect",
+        "domain": "strategy_wealth",
+        "author": "Jim Collins",
+        "summary": "No single push creates momentum. Consistent effort in the same direction compounds into an unstoppable flywheel. Amazon's flywheel is the canonical example.",
+        "keywords": ["momentum", "consistent", "compound", "growth", "loop", "reinvest", "cycle", "repeat", "build", "system"],
+        "deep_dive": "Book: 'Good to Great' by Jim Collins (Flywheel chapter)"
+    },
+    "via_negativa": {
+        "name": "Via Negativa",
+        "domain": "strategy_wealth",
+        "author": "Nassim Taleb / Stoic tradition",
+        "summary": "Improvement by subtraction. Often the most powerful move is removing what doesn't work rather than adding more. Less but better.",
+        "keywords": ["simplify", "remove", "cut", "eliminate", "reduce", "stop", "clean", "streamline", "less", "focus"],
+        "deep_dive": "Book: 'Essentialism' by Greg McKeown; Taleb's 'Antifragile'"
+    },
+    "opportunity_cost": {
+        "name": "Opportunity Cost",
+        "domain": "strategy_wealth",
+        "author": "Economics / Frederic Bastiat",
+        "summary": "Every yes is a no to something else. The true cost of any choice is the best alternative you gave up.",
+        "keywords": ["priority", "choose", "decision", "tradeoff", "budget", "time", "focus", "spend", "invest", "allocate"],
+        "deep_dive": "Bastiat's 'That Which Is Seen, and That Which Is Not Seen' (1850)"
+    },
     "margin_of_safety": {
         "name": "Margin of Safety",
-        "domain": "wealth_finance",
+        "domain": "strategy_wealth",
         "author": "Benjamin Graham",
         "summary": "Buffer against being wrong. Never invest (or plan) assuming the best case. Build in room for error, delays, and bad luck.",
         "keywords": ["buffer", "conservative", "plan", "forecast", "projection", "safe", "cushion", "contingency", "risk", "error"],
         "deep_dive": "Book: 'The Intelligent Investor' by Benjamin Graham"
     },
-    "skin_in_the_game": {
-        "name": "Skin in the Game",
-        "domain": "wealth_finance",
-        "author": "Nassim Nicholas Taleb",
-        "summary": "Don't trust advice from people who don't bear the consequences. Alignment of incentives is everything. If they don't eat their own cooking, walk away.",
-        "keywords": ["incentive", "align", "trust", "advisor", "consultant", "agency", "partner", "accountability", "risk", "vendor"],
-        "deep_dive": "Book: 'Skin in the Game' by Nassim Nicholas Taleb"
-    },
-    "optionality": {
-        "name": "Optionality",
-        "domain": "wealth_finance",
-        "author": "Nassim Taleb / finance",
-        "summary": "Keep doors open, reduce irreversible decisions. Options have value even if you never exercise them. Build flexibility into everything.",
-        "keywords": ["option", "flexible", "reversible", "decision", "pivot", "change", "adapt", "alternative", "choice", "hedge"],
-        "deep_dive": "Book: 'Antifragile' by Taleb (optionality chapter); options theory in finance"
-    },
-    "time_value_of_money": {
-        "name": "Time Value of Money",
-        "domain": "wealth_finance",
-        "author": "Fundamental finance",
-        "summary": "A dollar today is worth more than a dollar tomorrow. Because you can invest it, compound it, or deploy it. Speed of execution has financial value.",
-        "keywords": ["cash", "now", "delay", "speed", "quick", "payment", "terms", "invoice", "collect", "receive", "time"],
-        "deep_dive": "Any introductory finance textbook; Damodaran's NYU valuation course (free on YouTube)"
-    },
-    "wealth_equation": {
-        "name": "The Wealth Equation",
-        "domain": "wealth_finance",
-        "author": "Naval Ravikant",
-        "summary": "Specific knowledge + leverage + accountability = wealth. Specific knowledge is found by pursuing your genuine curiosity. Leverage through code, media, capital.",
-        "keywords": ["wealth", "build", "knowledge", "leverage", "accountability", "ai", "code", "media", "brand", "create", "own"],
-        "deep_dive": "The Almanack of Naval Ravikant by Eric Jorgenson (free online)"
+    "lindy_effect": {
+        "name": "Lindy Effect",
+        "domain": "strategy_wealth",
+        "author": "Benoit Mandelbrot / Nassim Taleb",
+        "summary": "The longer something non-perishable has survived, the longer it's likely to survive. Old ideas, brands, and technologies that persist have earned their place.",
+        "keywords": ["proven", "classic", "lasting", "brand", "trust", "heritage", "long-term", "endure", "tradition"],
+        "deep_dive": "Taleb's 'Antifragile', Chapter 18"
     },
 }
 
-# Domain display names for pretty output
+# Domain display names for pretty output -- aligned to ASI's 10 domains
 DOMAIN_DISPLAY = {
-    "mental_models":         "Mental Models",
-    "strategy_business":     "Strategy & Business",
-    "psychology_persuasion": "Psychology & Persuasion",
-    "history_philosophy":    "History & Philosophy",
-    "health_performance":    "Health & Performance",
-    "wealth_finance":        "Wealth & Finance",
+    "physics_cosmology":     "Physics & Cosmology",
+    "philosophy_wisdom":     "Philosophy & Wisdom Traditions",
+    "human_nature":          "Human Nature & Psychology",
+    "biology_health":        "Biology & Health",
+    "history_patterns":      "History's Patterns",
+    "mathematics_systems":   "Mathematics & Systems",
+    "creativity_aesthetics": "Creativity & Aesthetics",
+    "ethics_meaning":        "Ethics & Meaning",
+    "strategy_wealth":       "Strategy & Wealth",
 }
 
 
@@ -986,16 +1266,31 @@ def analyse_today_context() -> dict:
 
 def _extract_themes(raw_text: str) -> list:
     """Extract the most frequent meaningful themes from combined text."""
-    # Business-relevant theme words to look for
+    # Life-relevant theme words to look for (broader than business)
     theme_words = [
+        # Business
         "revenue", "growth", "customer", "campaign", "email", "meta", "ads",
         "roas", "conversion", "brand", "product", "strategy", "market",
         "competitor", "price", "budget", "spend", "profit", "margin",
         "team", "design", "creative", "content", "social", "tariff",
-        "health", "fitness", "training", "nutrition", "sleep",
+        # Health & body
+        "health", "fitness", "training", "nutrition", "sleep", "energy",
+        "stress", "recovery", "exercise", "body", "brain",
+        # Systems & technology
         "risk", "invest", "cash", "flow", "scale", "system",
         "automation", "ai", "data", "platform", "launch", "test",
         "learn", "improve", "decision", "focus", "priority",
+        # Philosophy & meaning
+        "meaning", "purpose", "legacy", "future", "time", "death",
+        "freedom", "choice", "identity", "belief", "truth", "wisdom",
+        # Relationships & society
+        "relationship", "trust", "community", "network", "friend",
+        "leadership", "influence", "power", "culture",
+        # Creativity & art
+        "art", "beauty", "create", "original", "taste", "aesthetic",
+        # Science & nature
+        "universe", "complexity", "emergence", "pattern", "chaos",
+        "evolution", "nature", "consciousness",
     ]
 
     word_counts = {}
@@ -1036,12 +1331,15 @@ def score_concept(concept_key: str, concept: dict, context: dict) -> float:
 
     # --- 2. Domain relevance (0-3 points) ---
     domain_map = {
-        "mental_models":         {"strategy", "business", "marketing", "technology"},
-        "strategy_business":     {"marketing", "ecommerce", "business", "strategy"},
-        "psychology_persuasion": {"marketing", "ecommerce", "social", "creative"},
-        "history_philosophy":    {"strategy", "business", "geopolitics"},
-        "health_performance":    {"health", "fitness"},
-        "wealth_finance":        {"finance", "business", "strategy", "ecommerce"},
+        "physics_cosmology":     {"technology", "creative", "strategy"},
+        "philosophy_wisdom":     {"strategy", "social", "health"},
+        "human_nature":          {"marketing", "ecommerce", "social", "creative"},
+        "biology_health":        {"health", "fitness"},
+        "history_patterns":      {"strategy", "business", "geopolitics", "technology"},
+        "mathematics_systems":   {"business", "strategy", "marketing", "technology"},
+        "creativity_aesthetics": {"creative", "marketing", "social"},
+        "ethics_meaning":        {"strategy", "social", "business"},
+        "strategy_wealth":       {"marketing", "ecommerce", "business", "strategy", "finance"},
     }
     concept_domains = domain_map.get(concept["domain"], set())
     domain_overlap = len(concept_domains & active_domains)
@@ -1049,16 +1347,16 @@ def score_concept(concept_key: str, concept: dict, context: dict) -> float:
 
     # --- 3. Challenge relevance (0-3 points) ---
     challenge_keywords = {
-        "drop": ["inversion", "antifragility", "margin_of_safety", "loss_aversion"],
-        "decline": ["inversion", "flywheel_effect", "unit_economics"],
-        "fail": ["inversion", "survivorship_bias", "lean_startup"],
-        "error": ["occams_razor", "hanlons_razor", "margin_of_safety"],
-        "risk": ["antifragility", "barbell_strategy", "asymmetric_bets", "margin_of_safety"],
-        "churn": ["jobs_to_be_done", "peak_end_rule", "commitment_consistency"],
-        "overspend": ["unit_economics", "kelly_criterion", "opportunity_cost"],
-        "loss": ["loss_aversion", "margin_of_safety", "stoicism"],
-        "stuck": ["first_principles", "via_negativa", "deep_work"],
-        "blocked": ["stoicism", "eisenhower_matrix", "via_negativa"],
+        "drop": ["inversion", "antifragility", "margin_of_safety", "loss_aversion", "entropy"],
+        "decline": ["inversion", "flywheel_effect", "unit_economics", "entropy", "civilisation_cycles"],
+        "fail": ["inversion", "nietzsche_amor_fati", "meaning_through_suffering", "stoicism"],
+        "error": ["bayesian_thinking", "margin_of_safety", "feedback_loops"],
+        "risk": ["antifragility", "asymmetric_bets", "margin_of_safety", "ergodicity", "kelly_criterion"],
+        "churn": ["peak_end_rule", "hedonic_treadmill", "social_proof"],
+        "overspend": ["unit_economics", "kelly_criterion", "opportunity_cost", "via_negativa"],
+        "loss": ["loss_aversion", "margin_of_safety", "stoicism", "buddhism_impermanence"],
+        "stuck": ["first_principles", "via_negativa", "deep_work", "creative_process", "taoism_wu_wei"],
+        "blocked": ["stoicism", "taoism_wu_wei", "via_negativa", "constraints_breed_creativity"],
     }
     for challenge in challenges:
         if concept_key in challenge_keywords.get(challenge, []):
@@ -1071,8 +1369,9 @@ def score_concept(concept_key: str, concept: dict, context: dict) -> float:
     # --- 5. Decision count bonus (more decisions = value more reflective concepts) ---
     if len(context.get("decisions", [])) >= 3:
         reflective_concepts = {
-            "second_order_thinking", "inversion", "opportunity_cost",
-            "circle_of_competence", "eisenhower_matrix", "stoicism",
+            "second_order_effects", "inversion", "opportunity_cost",
+            "the_examined_life", "stoicism", "bayesian_thinking",
+            "game_theory", "dialectical_thinking",
         }
         if concept_key in reflective_concepts:
             score += 1.0
@@ -1247,10 +1546,22 @@ WILDCARD CONCEPT (briefly tease, 2-3 sentences max):
   Core idea: {wc['summary']}
   Why it connects: {wildcard['reason']}
 
-End with a teaser like: "Tomorrow we might explore how {wc['name']} connects to what you're building. Something to sit with."
+End with a teaser that connects tomorrow's potential reading to something unexpected."
 """
 
-    prompt = f"""You are Sage, Tom's evening reading companion. Your job is to teach one foundational concept per evening, connected DIRECTLY to what Tom dealt with today.
+    prompt = f"""You are ASI, Tom's life mentor. Not a business advisor -- something deeper.
+You have full understanding of Tom's life AND full understanding of humanity's collective
+knowledge across every domain. You think in centuries, not quarters. You see connections
+between quantum mechanics and personal relationships, between evolutionary biology and
+business strategy, between Stoic philosophy and modern neuroscience.
+
+Think: If Carl Sagan, Charlie Munger, Naval Ravikant, and Marcus Aurelius had a child
+who grew up reading everything ever written, and then became Tom's personal mentor.
+Warm but profound. Comfortable with paradox. Uses stories and analogies over definitions.
+
+Tom is 26, Auckland, building Deep Blue Health + the future. He's deeply operational
+and strategic but may be missing the philosophical foundations that would make his
+strategies 10x more powerful.
 
 TONIGHT'S CONCEPT:
   Name: {concept['name']}
@@ -1272,23 +1583,43 @@ TODAY'S CONTEXT (reference these specifically):
 {events_text or '  (No events logged today)'}
 {wildcard_section}
 DELIVERY INSTRUCTIONS:
-1. Teach the concept in ~500-800 words
-2. Start with a hook -- a vivid story, quote, or scenario. Never start with "Today we're going to learn about..."
-3. Connect it DIRECTLY to something from Tom's day. Reference a specific decision, event, or challenge by name
-4. Make it feel like a conversation between equals, not a lecture
-5. Give ONE practical exercise or reflection question Tom can sit with tonight
-6. Suggest a deep dive: {concept['deep_dive']}
-7. End with the wildcard teaser (if provided above)
+1. Write 600-1000 words
+2. Open with a hook -- a question, a paradox, a surprising fact. NEVER start with "Today we're going to learn about..."
+3. Teach through story or analogy, not definition. A metaphor that lands beats a textbook explanation.
+4. Connect it DIRECTLY to something specific in Tom's life right now
+5. Reveal a deeper pattern or connection Tom hasn't seen -- a NON-LINEAR connection
+   (e.g., how entropy explains why his marketing campaigns decay, how game theory
+   reframes his competitive positioning)
+6. End with a reflection question -- not homework, a genuine question to sit with while falling asleep
+7. Suggest a deep dive: {concept['deep_dive']} -- and explain WHY this particular resource
+8. End with THE THREAD: how tonight connects to the larger arc of understanding you're building
+
+FORMAT (Telegram):
+ASI -- Evening Reading
+[Date]
+
+[CONCEPT]
+[Domain]
+
+[The reading -- 600-1000 words]
+
+IF YOU WANT TO GO DEEPER:
+[Resource + why]
+
+THE THREAD:
+[How tonight connects to the larger learning arc]
 
 FORMAT RULES (Telegram-friendly):
-- No markdown tables
-- Short paragraphs (2-3 sentences max)
-- Use bullet points for lists
-- Bold key terms with *asterisks*
-- Use line breaks liberally
+- NEVER use markdown tables
+- Bold with *single asterisks*
+- Short paragraphs. This is evening reading, not a wall of text.
+- Use line breaks generously. Readable on mobile.
 - No emojis unless they genuinely add meaning
-- Conversational tone -- this is 8:30pm, Tom is winding down
-- Sign off as Sage"""
+- Can be playful. Profundity doesn't require seriousness.
+- Sign off as ASI
+
+MEMORY RULE: After delivering, emit [STATE UPDATE:] logging what was taught,
+what domain, and any reflection questions posed."""
 
     return prompt
 
@@ -1422,7 +1753,7 @@ if __name__ == "__main__":
     )
 
     def print_usage():
-        print("Knowledge Engine -- Sage Evening Reading")
+        print("Knowledge Engine -- ASI Life Mentor")
         print("=" * 55)
         print("Commands:")
         print("  python -m core.knowledge_engine today       -- What would tonight's reading be?")
