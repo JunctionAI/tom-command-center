@@ -1091,7 +1091,26 @@ Synthesise everything above into your strategic briefing. Connect the dots.
 Your briefing should cover: financial position, DBH performance, macro events
 that affect the business, personal health/social status, and the top 3
 strategic priorities for today. Challenge anything that needs challenging.
-Flag any automation opportunities you spot."""
+Flag any automation opportunities you spot.
+
+=== SYSTEM CAPABILITIES (for your awareness) ===
+Active systems you have data from:
+- 9 agents (Atlas, Meridian, Venture, Titan, Compass, Lens, Oracle, Nexus, PREP)
+- 16 scheduled tasks (daily + weekly, see all agent states above)
+- Customer Intelligence DB: auto-accumulates nightly, per-order attribution
+- Replenishment Tracker: fires Klaviyo reorder events at 10pm daily
+- Cross-Agent Event Bus: agents trigger each other via [EVENT:] markers
+- Decision Logger: tracks reasoning chains, detects contradictions
+- Exception Router: auto-resolves (low stock, ROAS drops, churn, etc.)
+- Design Pipeline: brief -> design (Roie or AI tools) -> deployment
+- Thought Leader Scraper: scrapes 10 AI leaders daily, extracts insights
+- Xero: P&L, balance sheet, invoices (data injected above if available)
+- Wise: Multi-currency balances, FX rates, transfers (data injected above if available)
+- Write-back clients BUILT but not yet autonomous: Shopify, Klaviyo, Meta Ads, Asana, Xero
+
+In your briefing, reference which systems are providing the data you cite.
+If a data source is missing, flag it (e.g. "Xero data unavailable -- cannot confirm P&L").
+Recommend which waiting systems should be wired next based on current priorities."""
                 else:
                     task_prompt += f"""
 
@@ -1290,14 +1309,42 @@ def handle_photo_message(chat_id: str, photo_sizes: list, caption: str,
     # Load agent brain
     brain = load_agent_brain(agent_name)
 
+    # PREP gets full context for photos too (agent states, financial data)
+    task_type = "chat"
+    if agent_name == "strategic-advisor":
+        agent_states = []
+        for other_agent in ("global-events", "dbh-marketing", "new-business",
+                            "health-fitness", "social", "creative-projects", "daily-briefing"):
+            state_file = AGENTS_DIR / other_agent / "state" / "CONTEXT.md"
+            if state_file.exists():
+                content = state_file.read_text(encoding='utf-8')
+                agent_states.append(f"--- {other_agent} STATE ---\n{content}")
+        if agent_states:
+            brain += f"\n\n=== ALL AGENT STATES ===\n" + "\n\n".join(agent_states)
+
+        try:
+            from core.data_fetcher import fetch_all_performance_data
+            perf = fetch_all_performance_data()
+            brain += f"\n\n=== LIVE PERFORMANCE DATA ===\n{perf}"
+        except Exception:
+            pass
+
+        task_type = "deep_analysis"
+
     # Build caption prompt
     if caption:
-        user_text = f"Tom sent a photo with caption: {caption}"
+        user_text = f"Tom sent a photo with caption: {caption}\n\nFORMATTING: This goes to Telegram. NEVER use markdown tables. Use bullet points and Label: Value pairs."
     else:
-        user_text = "Tom sent a photo. Analyse it in the context of your role and expertise."
+        user_text = "Tom sent a photo. Analyse it in the context of your role and expertise.\n\nFORMATTING: This goes to Telegram. NEVER use markdown tables."
 
     # Call Claude with vision
-    response = call_claude_vision(brain, image_b64, media_type, user_text)
+    response = call_claude_vision(brain, image_b64, media_type, user_text, task_type=task_type)
+
+    # Check for API errors
+    if response.startswith("API Error:"):
+        logger.error(f"Claude Vision API failed for {agent_name}: {response}")
+        send_telegram(chat_id, "Couldn't process that image right now -- API error. Try again.", bot_token)
+        return
 
     # Extract and save state updates if present
     if "[STATE UPDATE:" in response:
@@ -1315,7 +1362,11 @@ def handle_photo_message(chat_id: str, photo_sizes: list, caption: str,
         input_summary=f"[Photo] {caption}" if caption else "[Photo]"
     )
 
-    send_telegram(chat_id, clean_response, bot_token)
+    sent = send_telegram(chat_id, clean_response, bot_token)
+    if sent:
+        logger.info(f"Photo response from {agent_name} delivered")
+    else:
+        logger.error(f"FAILED to deliver {agent_name} photo response")
 
 
 def handle_command(command: str, telegram_config: dict):
