@@ -906,6 +906,44 @@ channel shifts, category growth). The DB learns more with every briefing."""
         except Exception as e:
             logger.warning(f"Order intelligence fetch failed (non-fatal): {e}")
 
+    # 2b2. Financial data from Xero + Wise for Oracle, PREP, Meridian
+    if task_name in perf_data_tasks and agent_name in ("daily-briefing", "strategic-advisor", "dbh-marketing"):
+        financial_parts = []
+
+        # Xero: P&L, balance sheet, unpaid invoices
+        try:
+            from core.xero_client import XeroClient
+            xero = XeroClient()
+            if xero.available:
+                snapshot = xero.get_financial_health_snapshot()
+                if snapshot:
+                    financial_parts.append(snapshot)
+                    logger.info(f"Injected Xero financial data for {agent_name}/{task_name}")
+        except Exception as e:
+            logger.warning(f"Xero data fetch failed (non-fatal): {e}")
+
+        # Wise: Multi-currency balances, recent transfers, exchange rates
+        try:
+            from core.wise_client import WiseClient
+            wise = WiseClient()
+            if wise.available:
+                wise_snapshot = wise.get_financial_snapshot()
+                if wise_snapshot:
+                    financial_parts.append(wise_snapshot)
+                    logger.info(f"Injected Wise financial data for {agent_name}/{task_name}")
+        except Exception as e:
+            logger.warning(f"Wise data fetch failed (non-fatal): {e}")
+
+        if financial_parts:
+            task_prompt += f"""
+
+=== FINANCIAL POSITION (Xero + Wise) ===
+{chr(10).join(financial_parts)}
+
+Use this financial data in your briefing. Flag cash position, outstanding invoices,
+upcoming payments, and FX exposure. PREP: compare actual spend vs budget.
+Oracle: include financial health in the PERFORMANCE section."""
+
     # 2c. Replenishment candidates for Meridian
     if task_name in ("morning_brief", "morning_briefing") and agent_name in ("dbh-marketing", "daily-briefing", "strategic-advisor"):
         try:
@@ -1154,6 +1192,27 @@ def handle_incoming_message(chat_id: str, message_text: str, telegram_config: di
         except Exception as e:
             signal.alarm(0)  # Cancel alarm on failure
             logger.warning(f"Performance data fetch failed for PREP (non-fatal): {e}")
+
+        # Inject Xero + Wise financial data for PREP
+        try:
+            from core.xero_client import XeroClient
+            xero = XeroClient()
+            if xero.available:
+                fin_snapshot = xero.get_financial_health_snapshot()
+                if fin_snapshot:
+                    brain += f"\n\n=== XERO FINANCIAL DATA ===\n{fin_snapshot}"
+        except Exception as e:
+            logger.warning(f"Xero data for PREP chat failed (non-fatal): {e}")
+
+        try:
+            from core.wise_client import WiseClient
+            wise = WiseClient()
+            if wise.available:
+                wise_snapshot = wise.get_financial_snapshot()
+                if wise_snapshot:
+                    brain += f"\n\n=== WISE BALANCES & FX ===\n{wise_snapshot}"
+        except Exception as e:
+            logger.warning(f"Wise data for PREP chat failed (non-fatal): {e}")
 
         # Use Opus for PREP -- strategic thinking needs the best model
         task_type = "deep_analysis"
