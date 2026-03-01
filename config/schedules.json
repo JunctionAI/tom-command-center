@@ -75,6 +75,12 @@
     },
     {
       "agent": "dbh-marketing",
+      "task": "replenishment_scan",
+      "cron": "0 22 * * *",
+      "description": "Daily replenishment scan -- fire Klaviyo reorder events (10pm)"
+    },
+    {
+      "agent": "dbh-marketing",
       "task": "intelligence_sync",
       "cron": "0 23 * * *",
       "description": "Nightly customer intelligence DB sync (11pm)"

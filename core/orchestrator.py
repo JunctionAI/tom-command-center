@@ -537,6 +537,22 @@ def run_scheduled_task(agent_name: str, task_name: str, telegram_config: dict):
             logger.error(f"Intelligence sync failed: {e}")
         return  # No Claude call needed
 
+    # --- Daily replenishment scan (fires Klaviyo events for customers due to reorder) ---
+    if task_name == "replenishment_scan":
+        try:
+            from core.replenishment_tracker import run_replenishment_scan
+            result = run_replenishment_scan()
+
+            chat_id = telegram_config.get("chat_ids", {}).get(agent_name, "")
+            if chat_id:
+                bot_token = telegram_config.get("bot_token", os.environ.get("TELEGRAM_BOT_TOKEN", ""))
+                send_telegram(chat_id, result, bot_token)
+
+            logger.info(f"Replenishment scan complete")
+        except Exception as e:
+            logger.error(f"Replenishment scan failed: {e}")
+        return  # No Claude call needed
+
     brain = load_agent_brain(agent_name)
 
     # Build task-specific prompt
@@ -617,6 +633,22 @@ channel shifts, category growth). The DB learns more with every briefing."""
             logger.info(f"Injected order intelligence + DB summary for {agent_name}/{task_name}")
         except Exception as e:
             logger.warning(f"Order intelligence fetch failed (non-fatal): {e}")
+
+    # 2c. Replenishment candidates for Meridian
+    if task_name in ("morning_brief", "morning_briefing") and agent_name in ("dbh-marketing", "daily-briefing", "strategic-advisor"):
+        try:
+            from core.replenishment_tracker import format_replenishment_brief
+            repl_brief = format_replenishment_brief()
+            if repl_brief:
+                task_prompt += f"""
+
+{repl_brief}
+
+Flag customers who are OVERDUE or URGENT for reorder. These are immediate revenue opportunities.
+The replenishment system auto-fires Klaviyo events at 10pm daily for eligible customers."""
+                logger.info(f"Injected replenishment brief for {agent_name}/{task_name}")
+        except Exception as e:
+            logger.warning(f"Replenishment brief failed (non-fatal): {e}")
 
     # 3. Asana task data for briefings
     asana_tasks = ("morning_briefing", "morning_brief")
