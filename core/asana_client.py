@@ -57,8 +57,8 @@ class AsanaClient:
     # --- Task Queries ---
 
     def get_project_tasks(self, completed_since: str = None) -> list:
-        """Get all tasks in the configured project."""
-        if not self.available or not self.project_id:
+        """Get all tasks in the configured project, or from workspace if no project set."""
+        if not self.available:
             return []
 
         params = {
@@ -68,7 +68,18 @@ class AsanaClient:
             params["completed_since"] = completed_since
 
         try:
-            return self._get(f"projects/{self.project_id}/tasks", params)
+            if self.project_id:
+                tasks = self._get(f"projects/{self.project_id}/tasks", params)
+            elif self.workspace_id:
+                # No project ID -- get all tasks assigned to me in the workspace
+                params["workspace"] = self.workspace_id
+                params["assignee"] = "me"
+                tasks = self._get("tasks", params)
+            else:
+                logger.warning("Asana: No ASANA_PROJECT_ID or ASANA_WORKSPACE_ID set")
+                return []
+            logger.info(f"Asana: fetched {len(tasks)} tasks")
+            return tasks
         except Exception as e:
             logger.error(f"Asana fetch error: {e}")
             return []
@@ -133,7 +144,10 @@ class AsanaClient:
     def format_task_summary(self) -> str:
         """Format a task summary for the morning briefing."""
         if not self.available:
-            return "[Asana data unavailable -- set ASANA_ACCESS_TOKEN and ASANA_PROJECT_ID]"
+            return "[Asana data unavailable -- set ASANA_ACCESS_TOKEN]"
+
+        if not self.project_id and not self.workspace_id:
+            return "[Asana: token set but ASANA_PROJECT_ID and ASANA_WORKSPACE_ID are missing -- cannot fetch tasks]"
 
         try:
             overdue = self.get_tasks_due_today()
