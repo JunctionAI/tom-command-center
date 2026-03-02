@@ -127,11 +127,11 @@ def fetch_klaviyo_data(days: int = 1) -> str:
     }
 
     try:
-        # Fetch recent campaigns
+        # Fetch recent campaigns (sort by -scheduled_at, not -send_time)
         resp = requests.get(
             "https://a.klaviyo.com/api/campaigns",
             headers=headers,
-            params={"filter": "equals(messages.channel,'email')", "sort": "-send_time"},
+            params={"filter": "equals(messages.channel,'email')", "sort": "-scheduled_at"},
             timeout=15
         )
 
@@ -140,29 +140,49 @@ def fetch_klaviyo_data(days: int = 1) -> str:
             logger.error(f"Klaviyo campaigns API error {resp.status_code}: {error_detail}")
             return f"[Klaviyo API error {resp.status_code}: {error_detail}]"
 
-        campaigns = resp.json().get("data", [])[:10]
+        campaigns = resp.json().get("data", [])
 
-        # Filter to campaigns sent within our date range
-        cutoff = (datetime.now(NZ_TZ) - timedelta(days=days)).isoformat()
+        # Filter to recent sent campaigns + a few for context
+        cutoff = (datetime.now(NZ_TZ) - timedelta(days=max(days, 7))).isoformat()
         recent = []
         for c in campaigns:
             attrs = c.get("attributes", {})
             send_time = attrs.get("send_time", "")
             status = attrs.get("status", "")
-            # Include sent campaigns within the date range
-            if status == "Sent" and send_time and send_time >= cutoff:
-                recent.append(c)
-            # Also include first few regardless for context
-            elif len(recent) < 3:
-                recent.append(c)
+            if status == "Sent" and send_time:
+                if send_time >= cutoff or len(recent) < 5:
+                    recent.append(c)
+            if len(recent) >= 5:
+                break
 
         lines = [
-            f"KLAVIYO -- Last {days} day(s) (as of {datetime.now(NZ_TZ).strftime('%Y-%m-%d %H:%M NZST')})",
+            f"KLAVIYO -- Recent campaigns (as of {datetime.now(NZ_TZ).strftime('%Y-%m-%d %H:%M NZST')})",
         ]
 
         if not recent:
-            lines.append("  No recent campaigns found")
+            lines.append("  No recent sent campaigns found")
             return "\n".join(lines)
+
+        # Fetch metrics for each campaign
+        # Klaviyo requires conversion_metric_id -- use "Placed Order" (Shopify)
+        # First find the metric ID for Placed Order
+        placed_order_metric_id = None
+        try:
+            metrics_resp = requests.get(
+                "https://a.klaviyo.com/api/metrics",
+                headers=headers,
+                timeout=15
+            )
+            if metrics_resp.status_code == 200:
+                for m in metrics_resp.json().get("data", []):
+                    if m.get("attributes", {}).get("name") == "Placed Order":
+                        integration = m.get("attributes", {}).get("integration", {})
+                        # Prefer Shopify Placed Order over API Placed Order
+                        int_name = integration.get("name", "") if integration else ""
+                        if int_name == "Shopify" or placed_order_metric_id is None:
+                            placed_order_metric_id = m["id"]
+        except Exception as me:
+            logger.debug(f"Klaviyo metrics list failed: {me}")
 
         for c in recent:
             attrs = c.get("attributes", {})
@@ -172,63 +192,57 @@ def fetch_klaviyo_data(days: int = 1) -> str:
             campaign_id = c.get("id", "")
 
             lines.append(f"  Campaign: {name}")
-            lines.append(f"    Status: {status}")
             if send_time:
                 lines.append(f"    Sent: {send_time[:16].replace('T', ' ')}")
 
-            # Fetch campaign metrics via campaign values endpoint
-            if campaign_id and status == "Sent":
+            # Fetch campaign metrics
+            if campaign_id and placed_order_metric_id:
                 try:
-                    # Use the query endpoint for campaign metrics
                     metrics_payload = {
                         "data": {
                             "type": "campaign-values-report",
                             "attributes": {
                                 "statistics": [
-                                    "opens", "unique_opens", "open_rate",
-                                    "clicks", "unique_clicks", "click_rate",
-                                    "revenue", "unsubscribes", "recipients"
+                                    "opens", "clicks", "recipients",
+                                    "unsubscribes", "open_rate", "click_rate",
+                                    "conversion_value", "conversions", "conversion_rate"
                                 ],
                                 "timeframe": {"key": "last_30_days"},
-                                "filter": f"equals(campaign_id,\"{campaign_id}\")"
+                                "filter": f"equals(campaign_id,\"{campaign_id}\")",
+                                "conversion_metric_id": placed_order_metric_id
                             }
                         }
                     }
-                    metrics_resp = requests.post(
+                    mr = requests.post(
                         "https://a.klaviyo.com/api/campaign-values-reports/",
                         headers={**headers, "Content-Type": "application/json"},
                         json=metrics_payload,
                         timeout=15
                     )
-                    if metrics_resp.status_code == 200:
-                        metrics_data = metrics_resp.json()
-                        results = metrics_data.get("data", {}).get("attributes", {}).get("results", [])
+                    if mr.status_code == 200:
+                        results = mr.json().get("data", {}).get("attributes", {}).get("results", [])
                         if results:
-                            r = results[0]
-                            stats = r.get("statistics", {})
-                            recipients = stats.get("recipients", 0)
-                            opens = stats.get("unique_opens", 0)
+                            stats = results[0].get("statistics", {})
+                            recipients = int(stats.get("recipients", 0))
+                            opens = int(stats.get("opens", 0))
                             open_rate = stats.get("open_rate", 0)
-                            clicks = stats.get("unique_clicks", 0)
+                            clicks = int(stats.get("clicks", 0))
                             click_rate = stats.get("click_rate", 0)
-                            revenue = stats.get("revenue", 0)
-                            unsubs = stats.get("unsubscribes", 0)
+                            revenue = stats.get("conversion_value", 0)
+                            orders = int(stats.get("conversions", 0))
+                            unsubs = int(stats.get("unsubscribes", 0))
 
                             lines.append(f"    Recipients: {recipients:,}")
                             lines.append(f"    Opens: {opens:,} ({open_rate:.1%})")
                             lines.append(f"    Clicks: {clicks:,} ({click_rate:.1%})")
-                            if revenue:
-                                lines.append(f"    Revenue: ${revenue:,.2f}")
+                            if orders or revenue:
+                                lines.append(f"    Orders: {orders} | Revenue: ${revenue:,.2f}")
                             if unsubs:
                                 lines.append(f"    Unsubscribes: {unsubs}")
                     else:
-                        logger.debug(f"Klaviyo metrics {metrics_resp.status_code} for {campaign_id}")
+                        logger.debug(f"Klaviyo metrics {mr.status_code} for {campaign_id}: {mr.text[:100]}")
                 except Exception as me:
                     logger.debug(f"Klaviyo metrics fetch failed for {name}: {me}")
-
-        # Flow summary
-        lines.append("")
-        lines.append("  Active Flows: see Klaviyo dashboard for flow-level revenue")
 
         return "\n".join(lines)
 
