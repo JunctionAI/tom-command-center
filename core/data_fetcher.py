@@ -11,7 +11,22 @@ import json
 import logging
 from datetime import datetime, timedelta
 
+try:
+    from zoneinfo import ZoneInfo
+except ImportError:
+    from backports.zoneinfo import ZoneInfo
+
+NZ_TZ = ZoneInfo("Pacific/Auckland")
+
 logger = logging.getLogger(__name__)
+
+
+def _nz_day_start(days_ago: int = 0) -> str:
+    """Return ISO timestamp for midnight NZST, `days_ago` days back.
+    Shopify API accepts ISO timestamps and interprets them correctly."""
+    now_nz = datetime.now(NZ_TZ)
+    day_start = now_nz.replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=days_ago)
+    return day_start.isoformat()
 
 
 # --- Shopify ---
@@ -27,7 +42,7 @@ def fetch_shopify_data(days: int = 1) -> str:
     import requests
 
     headers = {"X-Shopify-Access-Token": token, "Content-Type": "application/json"}
-    since = (datetime.utcnow() - timedelta(days=days)).strftime("%Y-%m-%dT00:00:00Z")
+    since = _nz_day_start(days_ago=days - 1)  # days=1 means "today" = midnight NZST today
 
     try:
         # Fetch orders
@@ -71,7 +86,7 @@ def fetch_shopify_data(days: int = 1) -> str:
             sources[key] = sources.get(key, 0) + float(order.get("total_price", 0))
 
         lines = [
-            f"SHOPIFY -- Last {days} day(s) (as of {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')})",
+            f"SHOPIFY -- Last {days} day(s) (as of {datetime.now(NZ_TZ).strftime('%Y-%m-%d %H:%M NZST')})",
             f"  Revenue: ${total_revenue:,.2f}",
             f"  Orders: {total_orders}",
             f"  AOV: ${avg_order:,.2f}",
@@ -164,8 +179,9 @@ def fetch_meta_ads_data(days: int = 1) -> str:
 
     import requests
 
-    since = (datetime.utcnow() - timedelta(days=days)).strftime("%Y-%m-%d")
-    until = datetime.utcnow().strftime("%Y-%m-%d")
+    now_nz = datetime.now(NZ_TZ)
+    since = (now_nz - timedelta(days=days)).strftime("%Y-%m-%d")
+    until = now_nz.strftime("%Y-%m-%d")
 
     try:
         # Account-level insights
@@ -253,7 +269,7 @@ def fetch_all_performance_data(days: int = 1) -> str:
     Returns a formatted text block for injection into agent prompts.
     """
     sections = [
-        f"=== LIVE PERFORMANCE DATA (fetched {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}) ===",
+        f"=== LIVE PERFORMANCE DATA (fetched {datetime.now(NZ_TZ).strftime('%Y-%m-%d %H:%M NZST')}) ===",
         ""
     ]
 

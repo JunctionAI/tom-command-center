@@ -137,6 +137,10 @@ Tom is in REBUILD phase. He's lost significant muscle from weeks of sedentary AI
 - NO BJJ. NO combat sports. Focus is pure lifting + running.
 - No competitions planned. No injuries.
 
+IMPORTANT: ALWAYS check state/CONTEXT.md for Tom's specific schedule constraints
+(workout times, availability windows). When Tom gives you a specific time, RESPECT IT
+EXACTLY. Never override his stated availability with generic advice.
+
 ### STATE MANAGEMENT
 Track weekly:
 - Training adherence (sessions planned vs completed)

@@ -872,6 +872,8 @@ SYSTEM CAPABILITIES — use these markers when appropriate:
 Only emit these when genuinely useful. Do not force them."""
 
     # --- Inject live data into task prompts ---
+    # Track what data was successfully injected vs unavailable
+    data_status = {}
 
     # 1. Live news for scan/briefing tasks
     live_news_tasks = ("scan", "model_scan", "morning_brief", "morning_briefing", "weekly_review", "weekly_deep_dive")
@@ -891,8 +893,12 @@ what is happening RIGHT NOW.
 Analyse these headlines through your frameworks. Focus on what's NEW and significant.
 Cross-reference with your state/CONTEXT.md to identify changes since your last briefing."""
                 logger.info(f"Injected {len(live_news)} chars of live news for {agent_name}/{task_name}")
+                data_status["Live News (RSS)"] = "OK"
+            else:
+                data_status["Live News (RSS)"] = "No headlines returned"
         except Exception as e:
             logger.warning(f"News fetch failed (non-fatal): {e}")
+            data_status["Live News (RSS)"] = f"FAILED: {e}"
 
     # 2. Performance data for business briefings
     perf_data_tasks = ("morning_briefing", "morning_brief", "weekly_review")
@@ -908,8 +914,10 @@ Cross-reference with your state/CONTEXT.md to identify changes since your last b
 Use this real performance data in your briefing. Show actual numbers. Identify attribution
 patterns -- what's driving sales? Compare to benchmarks in your playbooks."""
             logger.info(f"Injected performance data for {agent_name}/{task_name}")
+            data_status["Shopify/Klaviyo/Meta Performance"] = "OK"
         except Exception as e:
             logger.warning(f"Performance data fetch failed (non-fatal): {e}")
+            data_status["Shopify/Klaviyo/Meta Performance"] = f"FAILED: {e}"
 
     # 2b. Order-level intelligence (per-order attribution + customer analysis)
     if task_name in perf_data_tasks and agent_name in ("daily-briefing", "dbh-marketing", "strategic-advisor"):
@@ -932,8 +940,10 @@ For returning customers, note their LTV trajectory and what product they keep bu
 Use the cumulative intelligence DB summary to spot long-term trends (repeat buyers,
 channel shifts, category growth). The DB learns more with every briefing."""
             logger.info(f"Injected order intelligence + DB summary for {agent_name}/{task_name}")
+            data_status["Order Intelligence + Customer DB"] = "OK"
         except Exception as e:
             logger.warning(f"Order intelligence fetch failed (non-fatal): {e}")
+            data_status["Order Intelligence + Customer DB"] = f"FAILED: {e}"
 
     # 2b2. Financial data from Xero + Wise for Oracle, PREP, Meridian
     if task_name in perf_data_tasks and agent_name in ("daily-briefing", "strategic-advisor", "dbh-marketing"):
@@ -948,8 +958,14 @@ channel shifts, category growth). The DB learns more with every briefing."""
                 if snapshot:
                     financial_parts.append(snapshot)
                     logger.info(f"Injected Xero financial data for {agent_name}/{task_name}")
+                    data_status["Xero Financial"] = "OK"
+                else:
+                    data_status["Xero Financial"] = "Not configured (ASANA_ACCESS_TOKEN not set)"
+            else:
+                data_status["Xero Financial"] = "Not configured"
         except Exception as e:
             logger.warning(f"Xero data fetch failed (non-fatal): {e}")
+            data_status["Xero Financial"] = f"FAILED: {e}"
 
         # Wise: Multi-currency balances, recent transfers, exchange rates
         try:
@@ -960,8 +976,12 @@ channel shifts, category growth). The DB learns more with every briefing."""
                 if wise_snapshot:
                     financial_parts.append(wise_snapshot)
                     logger.info(f"Injected Wise financial data for {agent_name}/{task_name}")
+                    data_status["Wise Balances/FX"] = "OK"
+            else:
+                data_status["Wise Balances/FX"] = "Not configured"
         except Exception as e:
             logger.warning(f"Wise data fetch failed (non-fatal): {e}")
+            data_status["Wise Balances/FX"] = f"FAILED: {e}"
 
         if financial_parts:
             task_prompt += f"""
@@ -986,8 +1006,12 @@ Oracle: include financial health in the PERFORMANCE section."""
 Flag customers who are OVERDUE or URGENT for reorder. These are immediate revenue opportunities.
 The replenishment system auto-fires Klaviyo events at 10pm daily for eligible customers."""
                 logger.info(f"Injected replenishment brief for {agent_name}/{task_name}")
+                data_status["Replenishment Candidates"] = "OK"
+            else:
+                data_status["Replenishment Candidates"] = "No candidates"
         except Exception as e:
             logger.warning(f"Replenishment brief failed (non-fatal): {e}")
+            data_status["Replenishment Candidates"] = f"FAILED: {e}"
 
     # 2d. Open exceptions for briefings (catch and resolve, don't report)
     if task_name in ("morning_brief", "morning_briefing", "weekly_review") and agent_name in ("daily-briefing", "dbh-marketing", "strategic-advisor"):
@@ -1016,8 +1040,10 @@ Total: {weekly.get('total', 0)} | Auto-resolved: {weekly.get('auto_resolved', 0)
 Analyse: Are we catching exceptions fast enough? What patterns repeat? What should be automated next?"""
 
             er.close()
+            data_status["Exception Router"] = "OK"
         except Exception as e:
             logger.warning(f"Exception brief failed (non-fatal): {e}")
+            data_status["Exception Router"] = f"FAILED: {e}"
 
     # 2e. Creative pipeline status for Meridian/PREP
     if task_name in ("morning_brief", "morning_briefing", "weekly_review") and agent_name in ("dbh-marketing", "strategic-advisor", "creative-projects"):
@@ -1033,9 +1059,11 @@ Analyse: Are we catching exceptions fast enough? What patterns repeat? What shou
 Review creative pipeline: flag overdue tasks, recommend which briefs should go to AI tools
 vs Roie, and identify campaigns that need fresh creative based on performance data."""
                 logger.info(f"Injected design pipeline status for {agent_name}/{task_name}")
+                data_status["Design Pipeline"] = "OK"
             dp.close()
         except Exception as e:
             logger.warning(f"Design pipeline status failed (non-fatal): {e}")
+            data_status["Design Pipeline"] = f"FAILED: {e}"
 
     # 2f. Thought leader insights for Oracle, PREP, and Venture
     if task_name in ("morning_briefing", "morning_brief", "weekly_review") and agent_name in ("daily-briefing", "strategic-advisor", "new-business"):
@@ -1062,8 +1090,10 @@ business strategy. If an insight contradicts our current approach, note the tens
 
 Evaluate these suggestions against our current architecture. Which are worth implementing?
 Which are we already doing? Include the top 1-2 actionable ones in your briefing."""
+            data_status["Thought Leader Insights"] = "OK"
         except Exception as e:
             logger.warning(f"Thought leader brief failed (non-fatal): {e}")
+            data_status["Thought Leader Insights"] = f"FAILED: {e}"
 
     # 3. Asana task data for briefings
     asana_tasks = ("morning_briefing", "morning_brief")
@@ -1079,8 +1109,12 @@ Which are we already doing? Include the top 1-2 actionable ones in your briefing
 
 Include task status in the briefing. Flag overdue tasks as urgent. List today's planned tasks."""
                 logger.info(f"Injected Asana data for {agent_name}/{task_name}")
+                data_status["Asana Tasks"] = "OK"
+            else:
+                data_status["Asana Tasks"] = "Not configured (set ASANA_ACCESS_TOKEN)"
         except Exception as e:
             logger.warning(f"Asana fetch failed (non-fatal): {e}")
+            data_status["Asana Tasks"] = f"FAILED: {e}"
 
     # 4. Slack activity for briefings
     if task_name in asana_tasks:
@@ -1096,8 +1130,12 @@ Include task status in the briefing. Flag overdue tasks as urgent. List today's 
 Include Slack activity in the briefing. Flag any task completions detected.
 If someone posted that something is 'done' or 'shipped', note it."""
                 logger.info(f"Injected Slack data for {agent_name}/{task_name}")
+                data_status["Slack Activity"] = "OK"
+            else:
+                data_status["Slack Activity"] = "Not configured"
         except Exception as e:
             logger.warning(f"Slack fetch failed (non-fatal): {e}")
+            data_status["Slack Activity"] = f"FAILED: {e}"
 
     # 5. Cross-agent state for Oracle and PREP briefings
     if agent_name in ("daily-briefing", "strategic-advisor") and task_name in ("morning_briefing", "weekly_review"):
@@ -1149,14 +1187,26 @@ Recommend which waiting systems should be wired next based on current priorities
 Synthesise the above into your unified briefing. Find cross-domain connections.
 The daily plan should reference the 90-day execution map from Meridian's intelligence."""
                 logger.info(f"Injected {len(agent_states)} agent states for {agent_name} briefing")
+                data_status["Cross-Agent States"] = f"OK ({len(agent_states)} agents)"
         except Exception as e:
             logger.warning(f"Agent state loading failed (non-fatal): {e}")
+            data_status["Cross-Agent States"] = f"FAILED: {e}"
 
     # Inject pending cross-agent events
     pending_events = get_pending_events_for_agent(agent_name)
     if pending_events:
         task_prompt += f"\n\n{pending_events}"
         logger.info(f"Injected cross-agent events for {agent_name}")
+
+    # Append data availability summary so Claude knows what it has vs doesn't
+    if data_status:
+        status_lines = ["\n\n=== DATA AVAILABILITY REPORT ==="]
+        for source, status in data_status.items():
+            icon = "OK" if status == "OK" or status.startswith("OK") else "MISSING"
+            status_lines.append(f"  [{icon}] {source}: {status}")
+        status_lines.append("\nFor any data marked MISSING or FAILED: say 'not connected yet' rather than")
+        status_lines.append("'unavailable'. This helps Tom know what to wire up next.")
+        task_prompt += "\n".join(status_lines)
 
     # Call Claude with full brain + task
     # PREP always uses Opus -- strategic thinking needs the best model
@@ -1757,11 +1807,17 @@ def start_polling(telegram_config: dict):
                     if voice and not text:
                         file_id = voice.get("file_id")
                         if file_id:
-                            logger.info(f"Voice message received, transcribing...")
-                            text = transcribe_voice(file_id, bot_token)
-                            if text and not text.startswith("["):
-                                # Prefix so the agent knows it was voice
-                                text = f"[Voice message] {text}"
+                            logger.info(f"Voice message received in chat {chat_id}, transcribing...")
+                            transcript = transcribe_voice(file_id, bot_token)
+                            if transcript and not transcript.startswith("["):
+                                # Successful transcription
+                                text = f"[Voice message] {transcript}"
+                                logger.info(f"Voice transcribed: {text[:80]}...")
+                            else:
+                                # Transcription failed -- tell Tom
+                                logger.warning(f"Voice transcription failed: {transcript}")
+                                send_telegram(chat_id, f"Could not transcribe your voice message. {transcript or 'Unknown error.'}\n\nPlease type your message instead.", bot_token)
+                                continue
 
                     # Handle photo messages
                     photo = message.get("photo")

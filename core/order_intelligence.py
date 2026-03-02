@@ -18,6 +18,13 @@ from datetime import datetime, timedelta
 from urllib.parse import urlparse, parse_qs
 from pathlib import Path
 
+try:
+    from zoneinfo import ZoneInfo
+except ImportError:
+    from backports.zoneinfo import ZoneInfo
+
+NZ_TZ = ZoneInfo("Pacific/Auckland")
+
 logger = logging.getLogger(__name__)
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -348,6 +355,26 @@ def classify_order_source(order: dict) -> dict:
     }
 
 
+def _enrich_customer_from_shopify(customer_id: str) -> dict:
+    """Fetch full customer record from Shopify to get accurate orders_count/total_spent."""
+    store_url = _shopify_url()
+    token = os.environ.get("SHOPIFY_ACCESS_TOKEN")
+    if not store_url or not token or not customer_id:
+        return {}
+    try:
+        import requests
+        resp = requests.get(
+            f"https://{store_url}/admin/api/2025-01/customers/{customer_id}.json",
+            headers=_shopify_headers(),
+            timeout=10
+        )
+        if resp.status_code == 200:
+            return resp.json().get("customer", {})
+    except Exception as e:
+        logger.debug(f"Customer enrichment failed for {customer_id}: {e}")
+    return {}
+
+
 def build_customer_profile(order: dict, db_conn: sqlite3.Connection = None) -> dict:
     """
     Build rich customer profile including history from the database,
@@ -358,6 +385,14 @@ def build_customer_profile(order: dict, db_conn: sqlite3.Connection = None) -> d
 
     orders_count = customer.get("orders_count", 1)
     total_spent = float(customer.get("total_spent", "0") or "0")
+
+    # If orders_count is 1 or missing, enrich from Shopify customer endpoint
+    # to catch repeat buyers whose data wasn't embedded in the order
+    if orders_count <= 1 and customer_id:
+        enriched = _enrich_customer_from_shopify(customer_id)
+        if enriched:
+            orders_count = enriched.get("orders_count", orders_count)
+            total_spent = float(enriched.get("total_spent", total_spent) or total_spent)
     first_name = customer.get("first_name", "")
     last_name = customer.get("last_name", "")
     email = customer.get("email", "")
@@ -481,7 +516,10 @@ def fetch_order_intelligence(days: int = 1) -> str:
     import requests
 
     headers = _shopify_headers()
-    since = (datetime.utcnow() - timedelta(days=days)).strftime("%Y-%m-%dT00:00:00Z")
+    # Use NZ timezone so "today" = midnight NZST, not UTC
+    now_nz = datetime.now(NZ_TZ)
+    day_start = now_nz.replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=days - 1)
+    since = day_start.isoformat()
 
     try:
         # Fetch orders with full details
