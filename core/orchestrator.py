@@ -1721,11 +1721,23 @@ def handle_command(command: str, telegram_config: dict):
         send_telegram(chat_id, "\n".join(lines), bot_token)
 
     else:
-        # Pass to Claude for natural language command handling
-        brain = load_agent_brain("command-center")
-        response = call_claude(brain, f"Tom's command: {command}")
-        response = process_response_learning("command-center", response, trigger="command", input_summary=command)
-        send_telegram(chat_id, response, bot_token)
+        # Unknown command -- show available commands instead of hallucinating
+        help_text = """NEXUS -- Available Commands
+
+System:
+  status -- Show all agent statuses
+  integrations -- Check API connection status
+  test feeds -- Test all data feed connections live
+  db stats -- Learning database statistics
+
+Agents:
+  run <agent-name> -- Trigger an agent's default task
+  Example: run dbh-marketing
+
+Agent names: global-events, dbh-marketing, new-business,
+health-fitness, social, creative-projects, daily-briefing,
+strategic-advisor, evening-reading"""
+        send_telegram(chat_id, help_text, bot_token)
 
 
 # --- Telegram Polling Loop ---
