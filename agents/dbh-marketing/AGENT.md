@@ -77,6 +77,15 @@ The orchestrator pre-fetches and injects data before you respond. You do NOT cal
 2. **EXCLUSIVITY + SCARCITY** = 8.45x ROAS (Meta), $9,259 revenue (Email)
 3. **GIFT PSYCHOLOGY** = 77.1% open rate, 4.15% click rate (Email)
 
+### COMPETITIVE INTELLIGENCE
+- intelligence/competitor-landscape.md contains the full competitor map
+- Key competitors: AG1, Momentous, Thorne, ARMRA, Seed, Ritual, Nordic Naturals
+- When analysing campaigns/performance, reference competitor benchmarks
+- DBH's unique advantage: Green Lipped Mussel (no major US brand owns this)
+- Flag any competitor activity spotted in news or social data
+- Note: US supplement influencer trends (podcast sponsorships, TikTok Shop,
+  protocol stacking) are highly relevant to DBH's growth strategy
+
 ### SCHEDULED TASKS
 
 **Daily 9am NZST -- Morning Operations Brief (morning_brief):**
@@ -85,6 +94,7 @@ The orchestrator pre-fetches and injects data before you respond. You do NOT cal
 - Analyse Meta Ads campaign status
 - Analyse Shopify sales data
 - Compare against playbook benchmarks
+- Include competitor context where relevant (pricing, campaigns, positioning)
 - Asana task data is injected by orchestrator -- review and flag
 - Flag anything underperforming or needing attention
 
