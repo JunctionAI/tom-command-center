@@ -1208,9 +1208,41 @@ The daily plan should reference the 90-day execution map from Meridian's intelli
         status_lines.append("'unavailable'. This helps Tom know what to wire up next.")
         task_prompt += "\n".join(status_lines)
 
+    # CRITICAL: Move all injected data from user message into system prompt.
+    # Claude pays far more attention to the system prompt. With 40K tokens of
+    # playbooks in the system prompt and data only in the user message, Claude
+    # was ignoring the injected data and hallucinating "not connected".
+    # Fix: append the data block to the brain (system prompt) and keep the
+    # task instruction clean in the user message.
+    data_block_marker = "=== LIVE PERFORMANCE DATA"
+    if data_block_marker in task_prompt:
+        # Split: everything from the first data header onwards goes to brain
+        marker_pos = task_prompt.index(data_block_marker)
+        data_block = task_prompt[marker_pos:]
+        task_instruction = task_prompt[:marker_pos].rstrip()
+
+        brain += f"\n\n{'='*60}\nLIVE DATA — USE THESE NUMBERS IN YOUR RESPONSE\n{'='*60}\n\n{data_block}"
+        task_prompt = task_instruction
+        logger.info(f"Moved {len(data_block)} chars of live data into system prompt")
+
+    # Send pre-flight data summary to Telegram so Tom can verify what was fetched
+    chat_id = telegram_config["chat_ids"].get(agent_name)
+    bot_token = telegram_config["bot_token"]
+    if data_status and chat_id and chat_id != "CHAT_ID_HERE":
+        ok_count = sum(1 for s in data_status.values() if s == "OK" or s.startswith("OK"))
+        total = len(data_status)
+        if ok_count > 0:
+            summary_parts = []
+            for source, status in data_status.items():
+                icon = "✅" if status == "OK" or status.startswith("OK") else "❌"
+                summary_parts.append(f"{icon} {source}")
+            data_summary = f"Data loaded ({ok_count}/{total}): " + " | ".join(summary_parts)
+            send_telegram(chat_id, data_summary, bot_token)
+
     # Call Claude with full brain + task
     # PREP always uses Opus -- strategic thinking needs the best model
     effective_task_type = "deep_analysis" if agent_name == "strategic-advisor" else task_name
+    logger.info(f"Calling Claude for {agent_name}/{task_name}: brain={len(brain)} chars, prompt={len(task_prompt)} chars")
     response = call_claude(brain, task_prompt, task_type=effective_task_type)
 
     # Process through learning loop (extract insights, clean markers)
@@ -1222,9 +1254,8 @@ The daily plan should reference the 90-day execution map from Meridian's intelli
     )
 
     # Send to Telegram
-    chat_id = telegram_config["chat_ids"].get(agent_name)
     if chat_id and chat_id != "CHAT_ID_HERE":
-        send_telegram(chat_id, response, telegram_config["bot_token"])
+        send_telegram(chat_id, response, bot_token)
     else:
         logger.warning(f"No chat ID configured for {agent_name}, printing to console:")
         print(f"\n{'='*60}")
