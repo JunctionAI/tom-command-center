@@ -74,6 +74,36 @@ def main():
     logger.info("Tom's Command Center -- Starting")
     logger.info("=" * 50)
 
+    # Log ALL integration env var status so we can see what's connected
+    integrations = {
+        "SHOPIFY_STORE_URL":       "Shopify (sales data)",
+        "SHOPIFY_ACCESS_TOKEN":    "Shopify (auth)",
+        "KLAVIYO_API_KEY":         "Klaviyo (email data)",
+        "META_ACCESS_TOKEN":       "Meta Ads (auth)",
+        "META_AD_ACCOUNT_ID":      "Meta Ads (account)",
+        "GOOGLE_ADS_DEVELOPER_TOKEN": "Google Ads",
+        "OPENAI_API_KEY":          "Voice transcription (Whisper)",
+        "ASANA_ACCESS_TOKEN":      "Asana (tasks)",
+        "ASANA_PROJECT_ID":        "Asana (project)",
+        "SLACK_BOT_TOKEN":         "Slack monitoring",
+        "WISE_API_TOKEN":          "Wise (multi-currency)",
+        "XERO_CLIENT_ID":          "Xero (accounting)",
+    }
+    logger.info("--- Integration Status ---")
+    connected = 0
+    missing_list = []
+    for var, label in integrations.items():
+        is_set = bool(os.environ.get(var))
+        status = "CONNECTED" if is_set else "NOT SET"
+        logger.info(f"  [{status}] {label} ({var})")
+        if is_set:
+            connected += 1
+        else:
+            missing_list.append(label)
+    logger.info(f"--- {connected}/{len(integrations)} integrations connected ---")
+    if missing_list:
+        logger.info(f"  Missing: {', '.join(missing_list)}")
+
     from core.orchestrator import load_config, start_polling, get_learning_db
 
     telegram_config, schedule_config = load_config()
