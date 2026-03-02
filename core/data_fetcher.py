@@ -112,7 +112,7 @@ def fetch_shopify_data(days: int = 1) -> str:
 # --- Klaviyo ---
 
 def fetch_klaviyo_data(days: int = 1) -> str:
-    """Fetch recent Klaviyo email campaign performance."""
+    """Fetch recent Klaviyo email campaign performance with metrics."""
     api_key = os.environ.get("KLAVIYO_API_KEY")
 
     if not api_key:
@@ -134,31 +134,101 @@ def fetch_klaviyo_data(days: int = 1) -> str:
             params={"filter": "equals(messages.channel,'email')", "sort": "-send_time"},
             timeout=15
         )
-        campaigns = resp.json().get("data", [])[:5]
+
+        if resp.status_code != 200:
+            error_detail = resp.text[:200]
+            logger.error(f"Klaviyo campaigns API error {resp.status_code}: {error_detail}")
+            return f"[Klaviyo API error {resp.status_code}: {error_detail}]"
+
+        campaigns = resp.json().get("data", [])[:10]
+
+        # Filter to campaigns sent within our date range
+        cutoff = (datetime.now(NZ_TZ) - timedelta(days=days)).isoformat()
+        recent = []
+        for c in campaigns:
+            attrs = c.get("attributes", {})
+            send_time = attrs.get("send_time", "")
+            status = attrs.get("status", "")
+            # Include sent campaigns within the date range
+            if status == "Sent" and send_time and send_time >= cutoff:
+                recent.append(c)
+            # Also include first few regardless for context
+            elif len(recent) < 3:
+                recent.append(c)
 
         lines = [
-            f"KLAVIYO -- Last {days} day(s)",
+            f"KLAVIYO -- Last {days} day(s) (as of {datetime.now(NZ_TZ).strftime('%Y-%m-%d %H:%M NZST')})",
         ]
 
-        if not campaigns:
+        if not recent:
             lines.append("  No recent campaigns found")
             return "\n".join(lines)
 
-        for c in campaigns:
+        for c in recent:
             attrs = c.get("attributes", {})
             name = attrs.get("name", "Unknown")
             status = attrs.get("status", "unknown")
             send_time = attrs.get("send_time", "")
+            campaign_id = c.get("id", "")
 
-            # Get campaign stats via metrics
             lines.append(f"  Campaign: {name}")
             lines.append(f"    Status: {status}")
             if send_time:
-                lines.append(f"    Sent: {send_time[:10]}")
+                lines.append(f"    Sent: {send_time[:16].replace('T', ' ')}")
 
-        # Fetch flow performance (top revenue drivers)
+            # Fetch campaign metrics via campaign values endpoint
+            if campaign_id and status == "Sent":
+                try:
+                    # Use the query endpoint for campaign metrics
+                    metrics_payload = {
+                        "data": {
+                            "type": "campaign-values-report",
+                            "attributes": {
+                                "statistics": [
+                                    "opens", "unique_opens", "open_rate",
+                                    "clicks", "unique_clicks", "click_rate",
+                                    "revenue", "unsubscribes", "recipients"
+                                ],
+                                "timeframe": {"key": "last_30_days"},
+                                "filter": f"equals(campaign_id,\"{campaign_id}\")"
+                            }
+                        }
+                    }
+                    metrics_resp = requests.post(
+                        "https://a.klaviyo.com/api/campaign-values-reports/",
+                        headers={**headers, "Content-Type": "application/json"},
+                        json=metrics_payload,
+                        timeout=15
+                    )
+                    if metrics_resp.status_code == 200:
+                        metrics_data = metrics_resp.json()
+                        results = metrics_data.get("data", {}).get("attributes", {}).get("results", [])
+                        if results:
+                            r = results[0]
+                            stats = r.get("statistics", {})
+                            recipients = stats.get("recipients", 0)
+                            opens = stats.get("unique_opens", 0)
+                            open_rate = stats.get("open_rate", 0)
+                            clicks = stats.get("unique_clicks", 0)
+                            click_rate = stats.get("click_rate", 0)
+                            revenue = stats.get("revenue", 0)
+                            unsubs = stats.get("unsubscribes", 0)
+
+                            lines.append(f"    Recipients: {recipients:,}")
+                            lines.append(f"    Opens: {opens:,} ({open_rate:.1%})")
+                            lines.append(f"    Clicks: {clicks:,} ({click_rate:.1%})")
+                            if revenue:
+                                lines.append(f"    Revenue: ${revenue:,.2f}")
+                            if unsubs:
+                                lines.append(f"    Unsubscribes: {unsubs}")
+                    else:
+                        logger.debug(f"Klaviyo metrics {metrics_resp.status_code} for {campaign_id}")
+                except Exception as me:
+                    logger.debug(f"Klaviyo metrics fetch failed for {name}: {me}")
+
+        # Flow summary
         lines.append("")
-        lines.append("  Active Flows: check Klaviyo dashboard for flow-level revenue")
+        lines.append("  Active Flows: see Klaviyo dashboard for flow-level revenue")
 
         return "\n".join(lines)
 
@@ -179,9 +249,15 @@ def fetch_meta_ads_data(days: int = 1) -> str:
 
     import requests
 
+    # Meta Graph API interprets time_range dates as UTC.
+    # To get a full NZ day, we convert NZ midnight to UTC dates.
     now_nz = datetime.now(NZ_TZ)
-    since = (now_nz - timedelta(days=days)).strftime("%Y-%m-%d")
-    until = now_nz.strftime("%Y-%m-%d")
+    nz_start = now_nz.replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=days - 1)
+    # NZ midnight in UTC is the previous day (NZDT = UTC+13)
+    nz_start_utc = nz_start.astimezone(ZoneInfo("UTC"))
+    nz_end_utc = now_nz.astimezone(ZoneInfo("UTC"))
+    since = nz_start_utc.strftime("%Y-%m-%d")
+    until = nz_end_utc.strftime("%Y-%m-%d")
 
     try:
         # Account-level insights
@@ -189,13 +265,19 @@ def fetch_meta_ads_data(days: int = 1) -> str:
         resp = requests.get(url, params={
             "access_token": access_token,
             "time_range": json.dumps({"since": since, "until": until}),
-            "fields": "spend,impressions,clicks,cpc,cpm,ctr,actions,cost_per_action_type,purchase_roas",
+            "fields": "spend,impressions,clicks,cpc,cpm,ctr,actions,action_values,cost_per_action_type,purchase_roas",
             "level": "account"
         }, timeout=15)
+
+        if resp.status_code != 200:
+            error_msg = resp.json().get("error", {}).get("message", resp.text[:200])
+            logger.error(f"Meta Ads API error {resp.status_code}: {error_msg}")
+            return f"[Meta Ads API error {resp.status_code}: {error_msg}]"
+
         data = resp.json().get("data", [])
 
         if not data:
-            return f"META ADS -- No data for last {days} day(s)"
+            return f"META ADS -- No data for {since} to {until} (NZ day: {nz_start.strftime('%Y-%m-%d')})"
 
         d = data[0]
         spend = float(d.get("spend", 0))
@@ -230,19 +312,31 @@ def fetch_meta_ads_data(days: int = 1) -> str:
         camp_resp = requests.get(camp_url, params={
             "access_token": access_token,
             "time_range": json.dumps({"since": since, "until": until}),
-            "fields": "campaign_name,spend,impressions,actions,purchase_roas",
+            "fields": "campaign_name,spend,impressions,clicks,actions,action_values",
             "level": "campaign",
-            "limit": 5
+            "limit": 10
         }, timeout=15)
-        camp_data = camp_resp.json().get("data", [])
 
-        if camp_data:
-            lines.append("")
-            lines.append("  By Campaign:")
-            for c in camp_data:
-                name = c.get("campaign_name", "Unknown")
-                c_spend = float(c.get("spend", 0))
-                lines.append(f"    {name}: ${c_spend:,.2f} spend")
+        if camp_resp.status_code == 200:
+            camp_data = camp_resp.json().get("data", [])
+            if camp_data:
+                lines.append("")
+                lines.append("  By Campaign:")
+                for c in camp_data:
+                    name = c.get("campaign_name", "Unknown")
+                    c_spend = float(c.get("spend", 0))
+                    c_clicks = int(c.get("clicks", 0))
+                    # Extract campaign purchases + revenue
+                    c_purchases = 0
+                    c_revenue = 0
+                    for a in c.get("actions", []):
+                        if a.get("action_type") == "purchase":
+                            c_purchases = int(a.get("value", 0))
+                    for a in c.get("action_values", []):
+                        if a.get("action_type") == "purchase":
+                            c_revenue = float(a.get("value", 0))
+                    c_roas = c_revenue / c_spend if c_spend > 0 else 0
+                    lines.append(f"    {name}: ${c_spend:,.2f} spend, {c_clicks} clicks, {c_purchases} purchases, ${c_revenue:,.2f} rev, {c_roas:.2f}x ROAS")
 
         return "\n".join(lines)
 

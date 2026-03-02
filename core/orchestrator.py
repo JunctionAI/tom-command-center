@@ -1589,24 +1589,49 @@ def handle_command(command: str, telegram_config: dict):
             send_telegram(chat_id, f"Unknown agent: {agent_to_run}", bot_token)
 
     elif cmd in ("integrations", "env", "connections"):
-        # Show which API integrations are connected
-        checks = {
-            "Shopify": bool(os.environ.get("SHOPIFY_STORE_URL") and os.environ.get("SHOPIFY_ACCESS_TOKEN")),
-            "Klaviyo": bool(os.environ.get("KLAVIYO_API_KEY")),
-            "Meta Ads": bool(os.environ.get("META_ACCESS_TOKEN") and os.environ.get("META_AD_ACCOUNT_ID")),
-            "Google Ads": bool(os.environ.get("GOOGLE_ADS_DEVELOPER_TOKEN")),
-            "Asana (token)": bool(os.environ.get("ASANA_ACCESS_TOKEN")),
-            "Asana (project)": bool(os.environ.get("ASANA_PROJECT_ID")),
-            "Slack": bool(os.environ.get("SLACK_BOT_TOKEN")),
-            "Wise": bool(os.environ.get("WISE_API_TOKEN")),
-            "Xero": bool(os.environ.get("XERO_CLIENT_ID")),
-            "OpenAI (voice)": bool(os.environ.get("OPENAI_API_KEY")),
-        }
+        # Show which API integrations are connected -- tests actual availability
+        checks = {}
+        details = {}
+        checks["Shopify"] = bool(os.environ.get("SHOPIFY_STORE_URL") and os.environ.get("SHOPIFY_ACCESS_TOKEN"))
+        checks["Klaviyo"] = bool(os.environ.get("KLAVIYO_API_KEY"))
+        checks["Meta Ads"] = bool(os.environ.get("META_ACCESS_TOKEN") and os.environ.get("META_AD_ACCOUNT_ID"))
+        checks["Google Ads"] = bool(os.environ.get("GOOGLE_ADS_DEVELOPER_TOKEN"))
+        checks["Asana"] = bool(os.environ.get("ASANA_ACCESS_TOKEN") and (os.environ.get("ASANA_PROJECT_ID") or os.environ.get("ASANA_WORKSPACE_ID")))
+        if os.environ.get("ASANA_ACCESS_TOKEN") and not checks["Asana"]:
+            details["Asana"] = "Token set but no PROJECT_ID or WORKSPACE_ID"
+        checks["Slack"] = bool(os.environ.get("SLACK_BOT_TOKEN"))
+        checks["Wise"] = bool(os.environ.get("WISE_API_TOKEN"))
+        checks["OpenAI (voice)"] = bool(os.environ.get("OPENAI_API_KEY"))
+
+        # Xero: check actual token availability, not just env var
+        if os.environ.get("XERO_CLIENT_ID") and os.environ.get("XERO_CLIENT_SECRET"):
+            try:
+                from core.xero_client import XeroClient
+                xc = XeroClient()
+                if xc.available:
+                    checks["Xero"] = True
+                    details["Xero"] = "Connected (tokens valid)"
+                else:
+                    checks["Xero"] = False
+                    details["Xero"] = "Credentials set but tokens missing/expired -- needs re-auth"
+            except Exception as xe:
+                checks["Xero"] = False
+                details["Xero"] = f"Error: {str(xe)[:60]}"
+        elif os.environ.get("XERO_CLIENT_ID"):
+            checks["Xero"] = False
+            details["Xero"] = "XERO_CLIENT_SECRET missing"
+        else:
+            checks["Xero"] = False
+            details["Xero"] = "XERO_CLIENT_ID not set"
+
         lines = ["NEXUS -- Integration Status\n"]
         for name, connected in checks.items():
             icon = "OK" if connected else "!!"
-            status = "Connected" if connected else "NOT SET -- add to Railway env vars"
-            lines.append(f"[{icon}] {name}: {status}")
+            if name in details:
+                lines.append(f"[{icon}] {name}: {details[name]}")
+            else:
+                status = "Connected" if connected else "NOT SET -- add to Railway env vars"
+                lines.append(f"[{icon}] {name}: {status}")
         connected_count = sum(1 for v in checks.values() if v)
         lines.append(f"\n{connected_count}/{len(checks)} integrations active")
         send_telegram(chat_id, "\n".join(lines), bot_token)

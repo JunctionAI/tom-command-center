@@ -11,6 +11,11 @@ from datetime import datetime, timedelta
 logger = logging.getLogger(__name__)
 
 
+class AsanaError(Exception):
+    """Raised when Asana API calls fail (auth, network, config)."""
+    pass
+
+
 class AsanaClient:
     """Lightweight Asana API client using requests (no SDK needed)."""
 
@@ -37,6 +42,12 @@ class AsanaClient:
         import requests
         resp = requests.get(f"{self.BASE_URL}/{path}", headers=self.headers,
                            params=params, timeout=15)
+        if resp.status_code == 401:
+            raise AsanaError("Authentication failed -- ASANA_ACCESS_TOKEN may be expired or invalid")
+        if resp.status_code == 403:
+            raise AsanaError(f"Access denied to {path} -- check token permissions")
+        if resp.status_code == 404:
+            raise AsanaError(f"Not found: {path} -- check ASANA_PROJECT_ID is correct")
         resp.raise_for_status()
         return resp.json().get("data", [])
 
@@ -57,9 +68,13 @@ class AsanaClient:
     # --- Task Queries ---
 
     def get_project_tasks(self, completed_since: str = None) -> list:
-        """Get all tasks in the configured project, or from workspace if no project set."""
+        """Get all tasks in the configured project, or from workspace if no project set.
+
+        Returns list of tasks on success.
+        Raises AsanaError on API failures so callers can distinguish 0 tasks from errors.
+        """
         if not self.available:
-            return []
+            raise AsanaError("ASANA_ACCESS_TOKEN not set")
 
         params = {
             "opt_fields": "name,completed,due_on,assignee.name,notes,memberships.section.name,completed_at",
@@ -67,22 +82,18 @@ class AsanaClient:
         if completed_since:
             params["completed_since"] = completed_since
 
-        try:
-            if self.project_id:
-                tasks = self._get(f"projects/{self.project_id}/tasks", params)
-            elif self.workspace_id:
-                # No project ID -- get all tasks assigned to me in the workspace
-                params["workspace"] = self.workspace_id
-                params["assignee"] = "me"
-                tasks = self._get("tasks", params)
-            else:
-                logger.warning("Asana: No ASANA_PROJECT_ID or ASANA_WORKSPACE_ID set")
-                return []
-            logger.info(f"Asana: fetched {len(tasks)} tasks")
-            return tasks
-        except Exception as e:
-            logger.error(f"Asana fetch error: {e}")
-            return []
+        if self.project_id:
+            tasks = self._get(f"projects/{self.project_id}/tasks", params)
+        elif self.workspace_id:
+            # No project ID -- get all tasks assigned to me in the workspace
+            params["workspace"] = self.workspace_id
+            params["assignee"] = "me"
+            tasks = self._get("tasks", params)
+        else:
+            raise AsanaError("ASANA_PROJECT_ID and ASANA_WORKSPACE_ID both missing -- cannot fetch tasks")
+
+        logger.info(f"Asana: fetched {len(tasks)} tasks")
+        return tasks
 
     def get_tasks_due_today(self) -> list:
         """Get tasks due today or overdue."""
@@ -142,7 +153,11 @@ class AsanaClient:
     # --- Briefing Formatters ---
 
     def format_task_summary(self) -> str:
-        """Format a task summary for the morning briefing."""
+        """Format a task summary for the morning briefing.
+
+        Returns clear error messages when API fails, so agents can tell Tom
+        what's wrong instead of silently showing 0 tasks.
+        """
         if not self.available:
             return "[Asana data unavailable -- set ASANA_ACCESS_TOKEN]"
 
@@ -191,9 +206,12 @@ class AsanaClient:
 
             return "\n".join(lines)
 
-        except Exception as e:
-            logger.error(f"Asana summary error: {e}")
+        except AsanaError as e:
+            logger.error(f"Asana config/auth error: {e}")
             return f"[Asana error: {str(e)}]"
+        except Exception as e:
+            logger.error(f"Asana unexpected error: {e}")
+            return f"[Asana API error: {str(e)} -- check Railway logs for details]"
 
 
 # --- CLI ---
