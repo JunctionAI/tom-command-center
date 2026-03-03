@@ -1,14 +1,22 @@
 # CONTEXT.md — Compass State
-## Last Updated: March 1, 2026
+## Last Updated: March 3, 2026
+## Compass as Therapeutic Thinking Partner on Relationships & Social Life
 
-## TOM'S SOCIAL PERSONALITY
+## TOM'S SOCIAL & RELATIONSHIP BASELINE
+**Current state (as of March 2026):**
+- Tom is uncertain about whether social expansion matters right now
+- He doesn't know what he wants in relationships (partner? close friends? professional network?)
+- He healed from teenage social anxiety but now experiences isolation
+- He's building ambitious businesses (DBH, PG, personal brand) and wondering how social fits
+- He wants to think this through with a therapist-like guide (not just activity planning)
+
+**Tom's Social Personality:**
 - Introvert-leaning. Spending too much time socialising is draining.
-- But still open to it sometimes — on his terms, with the right people.
 - Quality over quantity. Deep connections with a few > surface with many.
-- His close mates tend to bring people around and introduce new connections naturally.
-- Doesn't need to be pushed hard on social stuff — gentle nudges, not guilt trips.
-- Currently focused on building "Alternate" cultural brand which will naturally 
-  create social/community connections around events, film, AI, creativity.
+- Authenticity matters. Forced socialising feels worse than solitude.
+- His close mates bring people around naturally (doesn't need to force it).
+- No need for guilt trips — he's self-aware and will reflect honestly.
+- Currently focused on building personal brand + DBH growth + PG knowledge
 
 ## INNER CIRCLE (5 people — flatmates + closest)
 - Trent — Flatmate. Close mate. See daily (live together).
@@ -26,17 +34,43 @@
 - Alternate launch event (planning stage — no date yet)
 - Potential parties/cultural events tied to Alternate brand
 
-## SOCIAL PRIORITIES
-- Don't over-schedule. Tom is coming off an intense AI sprint and needs recovery.
-- The Alternate brand will create natural social opportunities — events, creative 
-  collabs, parties. This is Tom's preferred way to socialise: through shared creative 
-  energy, not forced catch-ups.
-- Ollie and Zach are the key people to stay connected with outside the flat.
-- Physical activity (gym, runs) could double as social time if done with mates.
+## KEY RELATIONSHIPS
+**Flatmates (Daily contact):**
+- Trent — Close mate, live together
+- Barnaby — Close mate, live together
+- Tyler — Becoming closer, live together, has been battling brain recovery (useful context for Asclepius bot)
 
-## APPROACH FOR THIS AGENT
-- Light touch. Tom knows himself well on this front.
-- Mainly: flag if he hasn't seen Ollie or Zach in 3+ weeks
-- Help plan Alternate events when he's ready
-- Draft messages when he asks, using Carnegie principles (lead with their interests)
-- Don't be annoying about socialising. Tom will push back.
+**Close friends (Outside flat):**
+- Ollie Schmidt — Pro MMA fighter, close mate [Last seen: TBD]
+- Zachary Ody — Creative collaborator, film/Alternate projects [Last seen: recently]
+
+## ROMANTIC RELATIONSHIP VISION
+[To be explored in reflection sessions]
+- Does Tom want a long-term partner?
+- What would that look like for him?
+- What blocks exist (busyness? fear? unclear what he wants?)
+- This should emerge organically through Thursday reflection sessions
+
+## FRIENDSHIP PHILOSOPHY
+[To be explored]
+- How many close friends does Tom actually want?
+- How often does he want to see them?
+- What makes a friendship meaningful to him?
+- Is isolation currently a choice or a symptom?
+
+## REFLECTION SESSION NOTES
+[Updated after each Thursday 6pm session]
+- [Date]: Tom explored... [Key question/insight]
+- [Date]: Tom decided... [Clarity reached, if any]
+- [Date]: Tom is wrestling with... [Ongoing tension/exploration]
+
+## PROFESSIONAL/NETWORK CONSIDERATIONS
+- Personal brand building + Alternate brand will create natural social/networking opportunities
+- Founder network (Tony, other founders) is part of his ecosystem
+- PG growth strategy involves building HNW relationships (different from personal social life, but related)
+
+## COMPASS APPROACH
+- Primary: Help Tom think clearly about what he actually wants
+- Secondary: Support light social maintenance if it aligns with his values
+- Not pushy. Authentic exploration > forced activity.
+- Remember: Tom is ambitious and can lose the human side. Gently noting that is valuable.

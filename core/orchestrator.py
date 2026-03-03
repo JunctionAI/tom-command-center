@@ -39,6 +39,10 @@ AGENT_DISPLAY = {
     "strategic-advisor": "PREP",
     "evening-reading":   "ASI",
     "beacon":            "Beacon",
+    "odysseus-money":    "Odysseus",
+    "strategos-pg":      "Strategos",
+    "asclepius-brain":   "Asclepius",
+    "marcus-stoic":      "Marcus",
 }
 
 logging.basicConfig(
@@ -220,24 +224,66 @@ def load_agent_brain(agent_name: str) -> str:
 
 
 def update_agent_state(agent_name: str, new_info: str):
-    """Append new information to an agent's state file."""
-    state_file = AGENTS_DIR / agent_name / "state" / "CONTEXT.md"
-    if state_file.exists():
-        current = state_file.read_text(encoding='utf-8')
-        # Update the "Last Updated" line
-        timestamp = datetime.now().strftime("%B %d, %Y %H:%M")
-        if "## Last Updated:" in current:
-            lines = current.split("\n")
-            for i, line in enumerate(lines):
-                if line.startswith("## Last Updated:"):
-                    lines[i] = f"## Last Updated: {timestamp}"
-                    break
-            current = "\n".join(lines)
+    """
+    Update an agent's CONTEXT.md with new state information.
 
-        # Append new info
-        current += f"\n\n## Update {timestamp}\n{new_info}"
-        state_file.write_text(current, encoding='utf-8')
-        logger.info(f"Updated state for {agent_name}")
+    Strategy: CONTEXT.md has two zones:
+    1. FOUNDATION (everything above "## LIVE UPDATES") -- manually written, never touched
+    2. LIVE UPDATES (below the marker) -- rolling log of recent state updates, max 20 entries
+
+    Also stores the update in intelligence.db for long-term pattern detection.
+    """
+    state_file = AGENTS_DIR / agent_name / "state" / "CONTEXT.md"
+    if not state_file.exists():
+        logger.warning(f"No state file for {agent_name}")
+        return
+
+    current = state_file.read_text(encoding='utf-8')
+    timestamp = datetime.now().strftime("%B %d, %Y %H:%M")
+
+    # Update the "Last Updated" line
+    if "## Last Updated:" in current:
+        lines = current.split("\n")
+        for i, line in enumerate(lines):
+            if line.startswith("## Last Updated:"):
+                lines[i] = f"## Last Updated: {timestamp}"
+                break
+        current = "\n".join(lines)
+
+    # Split into foundation + live updates
+    live_marker = "## LIVE UPDATES"
+    if live_marker in current:
+        foundation = current[:current.index(live_marker)]
+        live_section = current[current.index(live_marker):]
+        # Parse existing updates (each starts with "- [")
+        existing_updates = [line for line in live_section.split("\n")
+                           if line.startswith("- [")]
+    else:
+        foundation = current
+        existing_updates = []
+
+    # Add new update, keep max 20 (rolling window)
+    existing_updates.insert(0, f"- [{timestamp}] {new_info.strip()}")
+    existing_updates = existing_updates[:20]
+
+    # Rebuild file: foundation stays intact, live updates are rolling
+    new_content = foundation.rstrip() + f"\n\n{live_marker}\n" + "\n".join(existing_updates) + "\n"
+    state_file.write_text(new_content, encoding='utf-8')
+    logger.info(f"Updated state for {agent_name}")
+
+    # Store in intelligence.db learning loop for long-term patterns
+    try:
+        from core.learning_loop import set_state, log_event
+        set_state(agent_name, f"update_{timestamp.replace(' ', '_').replace(',', '')}", new_info.strip()[:500])
+        log_event(
+            agent=agent_name,
+            event_type="state.update",
+            severity="INFO",
+            title=f"State update from {agent_name}",
+            description=new_info.strip()[:500]
+        )
+    except Exception as e:
+        logger.debug(f"Learning loop state store failed (non-fatal): {e}")
 
 
 # --- Session Logging (NEW) ---
@@ -469,6 +515,26 @@ def process_response_learning(agent_name: str, response: str, trigger: str = "ch
             dl.close()
         except Exception as e:
             logger.warning(f"Decision logging failed (non-fatal): {e}")
+
+        # Bridge: also store extracted insights in intelligence.db (learning_loop)
+        # This is the "real" learning database that feeds regenerate_context_md()
+        try:
+            if markers.get('insights'):
+                from core.learning_loop import add_insight
+                for ins in markers['insights']:
+                    if isinstance(ins, dict):
+                        add_insight(
+                            agent=agent_name,
+                            domain=ins.get('category', 'general'),
+                            insight=ins.get('content', str(ins)),
+                            evidence=ins.get('evidence', ''),
+                            source=f"{trigger}_{task or 'chat'}",
+                        )
+                    elif isinstance(ins, str):
+                        add_insight(agent=agent_name, domain='general',
+                                    insight=ins, source=f"{trigger}_{task or 'chat'}")
+        except Exception as e:
+            logger.debug(f"Learning loop insight bridge failed (non-fatal): {e}")
 
         # Clean markers from response
         return InsightExtractor.clean_response(response)
@@ -959,7 +1025,8 @@ def run_scheduled_task(agent_name: str, task_name: str, telegram_config: dict):
                     f"_Learning accumulates — next briefing will use updated intelligence._"
                 )
                 bot_token = telegram_config.get("bot_token", os.environ.get("TELEGRAM_BOT_TOKEN", ""))
-                send_telegram(chat_id, status_msg, bot_token)
+                from core.notification_router import route_notification
+                route_notification(chat_id, status_msg, bot_token, severity="INFO", agent=agent_name)
 
             logger.info(f"Intelligence sync complete: {order_count} orders persisted")
         except Exception as e:
@@ -975,7 +1042,8 @@ def run_scheduled_task(agent_name: str, task_name: str, telegram_config: dict):
             chat_id = telegram_config.get("chat_ids", {}).get(agent_name, "")
             if chat_id:
                 bot_token = telegram_config.get("bot_token", os.environ.get("TELEGRAM_BOT_TOKEN", ""))
-                send_telegram(chat_id, result, bot_token)
+                from core.notification_router import route_notification
+                route_notification(chat_id, result, bot_token, severity="INFO", agent=agent_name)
 
             logger.info(f"Replenishment scan complete")
         except Exception as e:
@@ -1002,7 +1070,9 @@ def run_scheduled_task(agent_name: str, task_name: str, telegram_config: dict):
             chat_id = telegram_config.get("chat_ids", {}).get(agent_name, "")
             if chat_id and result:
                 bot_token = telegram_config.get("bot_token", os.environ.get("TELEGRAM_BOT_TOKEN", ""))
-                send_telegram(chat_id, f"Thought Leader Intelligence\n\n{result}", bot_token)
+                from core.notification_router import route_notification
+                route_notification(chat_id, f"Thought Leader Intelligence\n\n{result}", bot_token,
+                                   severity="INFO", agent=agent_name)
 
             logger.info(f"Thought leader extraction complete")
         except Exception as e:
@@ -1099,18 +1169,105 @@ def run_scheduled_task(agent_name: str, task_name: str, telegram_config: dict):
             logger.error(f"LTV analysis failed: {e}")
         return
 
+    # --- Auto-optimizer (budget adjustments, A/B winners, campaign drafts, 11:45pm) ---
+    if task_name == "auto_optimize":
+        try:
+            from core.auto_optimizer import run_auto_optimization
+            result = run_auto_optimization()
+
+            chat_id = telegram_config.get("chat_ids", {}).get(agent_name, "")
+            if chat_id:
+                bot_token = telegram_config.get("bot_token", os.environ.get("TELEGRAM_BOT_TOKEN", ""))
+                from core.notification_router import route_notification
+                route_notification(chat_id, result, bot_token, agent=agent_name)
+
+            logger.info("Auto-optimizer complete")
+        except Exception as e:
+            logger.error(f"Auto-optimizer failed: {e}")
+        return
+
+    # --- AI citation monitoring (weekly, checks Perplexity for DBH mentions) ---
+    if task_name == "citation_check":
+        try:
+            from core.citation_monitor import run_citation_check
+            result = run_citation_check()
+
+            chat_id = telegram_config.get("chat_ids", {}).get("command-center", "")
+            if chat_id:
+                bot_token = telegram_config.get("bot_token", os.environ.get("TELEGRAM_BOT_TOKEN", ""))
+                from core.notification_router import route_notification
+                route_notification(chat_id, result, bot_token,
+                                   severity="NOTABLE", agent="beacon")
+
+            logger.info("Citation check complete")
+        except Exception as e:
+            logger.error(f"Citation check failed: {e}")
+        return
+
+    # --- GSC feedback for Beacon (weekly, injects ranking data into Beacon context) ---
+    if task_name == "gsc_feedback":
+        try:
+            from core.gsc_client import GSCClient
+            gsc = GSCClient()
+            if gsc.available:
+                feedback = gsc.get_beacon_feedback()
+                briefing = gsc.format_for_briefing()
+
+                # Update Beacon's CONTEXT.md with latest GSC data
+                beacon_context = AGENTS_DIR / "beacon" / "state" / "CONTEXT.md"
+                if beacon_context.exists():
+                    content = beacon_context.read_text(encoding='utf-8')
+                    # Append or replace GSC section
+                    gsc_marker = "## GSC Performance"
+                    if gsc_marker in content:
+                        content = content[:content.index(gsc_marker)]
+                    content += f"\n{gsc_marker}\n*Updated: {datetime.now().strftime('%Y-%m-%d %H:%M')}*\n\n{briefing}\n"
+                    beacon_context.write_text(content, encoding='utf-8')
+
+                chat_id = telegram_config.get("chat_ids", {}).get("command-center", "")
+                if chat_id:
+                    bot_token = telegram_config.get("bot_token", os.environ.get("TELEGRAM_BOT_TOKEN", ""))
+                    from core.notification_router import route_notification
+                    route_notification(chat_id, f"GSC Feedback Updated\n\n{briefing}", bot_token,
+                                       severity="INFO", agent="beacon")
+
+                logger.info("GSC feedback injected into Beacon context")
+            else:
+                logger.warning("GSC client not available -- credentials missing")
+        except Exception as e:
+            logger.error(f"GSC feedback failed: {e}")
+        return
+
+    # --- llms.txt regeneration (monthly, regenerates llms.txt for AEO) ---
+    if task_name == "llms_txt_update":
+        try:
+            from core.llms_txt_generator import save_llms_txt
+            result = save_llms_txt()
+
+            chat_id = telegram_config.get("chat_ids", {}).get("command-center", "")
+            if chat_id:
+                bot_token = telegram_config.get("bot_token", os.environ.get("TELEGRAM_BOT_TOKEN", ""))
+                from core.notification_router import route_notification
+                route_notification(chat_id, f"llms.txt updated\n\n{result}", bot_token,
+                                   severity="INFO", agent="beacon")
+
+            logger.info("llms.txt regenerated")
+        except Exception as e:
+            logger.error(f"llms.txt generation failed: {e}")
+        return
+
     brain = load_agent_brain(agent_name)
 
     # Build task-specific prompt
     task_prompts = {
         "morning_protocol": "Execute your morning protocol. Generate today's training plan, meal plan, and any notes. Use the format specified in your AGENT.md.",
         "morning_briefing": "Generate the daily master briefing NOW. You have all agent states and LIVE DATA injected below this prompt — Shopify revenue, Klaviyo emails, Meta Ads, Asana tasks, financial data. USE THE ACTUAL NUMBERS from the injected data. Do NOT say 'unavailable' or 'not connected' — the data IS below. If a specific source shows an error in brackets like [Shopify error: ...], report that specific error. Deliver the full briefing using the exact format from your AGENT.md. Never ask permission or offer options — just brief.",
-        "morning_brief": "Generate your morning operations brief NOW using the LIVE DATA injected below this prompt. The orchestrator has already fetched Shopify, Klaviyo, Meta, and Asana data for you — it appears below. Use ACTUAL NUMBERS from the injected data. Do NOT say 'data unavailable' or 'not yet connected' — the data IS here. If a specific data source shows an error in brackets like [Klaviyo error: ...], report that specific error. Flag issues, list priorities. Use the format specified in your AGENT.md.",
+        "morning_brief": "Generate your morning operations brief NOW using the LIVE DATA injected below this prompt. The orchestrator has already fetched Shopify, Klaviyo, Meta, and Asana data for you — it appears below. Use ACTUAL NUMBERS from the injected data. Do NOT say 'data unavailable' or 'not yet connected' — the data IS here. If a specific data source shows an error in brackets like [Klaviyo error: ...], report that specific error. Flag issues, list priorities. Use the format specified in your AGENT.md.\n\nIMPORTANT: If you identify a campaign opportunity or creative need, emit [BRIEF: description of insight] and the system will auto-generate a designer-ready brief for Roie and create an Asana task.",
         "scan": "Execute your monitoring scan. Search for updates on your watchlist topics. Report only what's NEW since your last scan. Use the format specified in your AGENT.md.",
         "model_scan": "Execute your AI model release scan. Search for new video model announcements, updates to tracked models. If anything could handle action sequences, mark as CRITICAL. Use the format specified in your AGENT.md.",
         "weekly_plan": "Generate your weekly social plan. Review contact list, flag overdue catch-ups, suggest activities. Use the format specified in your AGENT.md.",
         "midweek_checkin": "Mid-week social check-in. Review what was planned, what happened, anything coming up this weekend.",
-        "weekly_review": "Execute your weekly performance review. Full data pull, compare to targets, identify patterns, recommend optimisations. Use the format specified in your AGENT.md.",
+        "weekly_review": "Execute your weekly performance review. Full data pull, compare to targets, identify patterns, recommend optimisations. Use the format specified in your AGENT.md.\n\nIMPORTANT: If you identify a campaign opportunity or creative need, emit [BRIEF: description of insight] and the system will auto-generate a designer-ready brief for Roie and create an Asana task.",
         "weekly_deep_dive": "Execute your weekly deep analysis. Pick the most important developing story and provide in-depth analysis. Use the format specified in your AGENT.md.",
         "evening_reading": "",  # Placeholder -- replaced below with knowledge engine output
         "content_generation": "Generate tonight's SEO/AEO article following your nightly workflow. Check your CONTEXT.md for the current keyword priority, select the next topic, and generate a full article using one of your proven content formulas. Include the complete article HTML, meta description, FAQ section, and JSON-LD schema. Save instructions and Shopify draft details should be in your output. After your article, emit a [STATE UPDATE:] with the article title and next priority keyword.",
@@ -1518,7 +1675,8 @@ The daily plan should reference the 90-day execution map from Meridian's intelli
                 icon = "✅" if status == "OK" or status.startswith("OK") else "❌"
                 summary_parts.append(f"{icon} {source}")
             data_summary = f"Data loaded ({ok_count}/{total}): " + " | ".join(summary_parts)
-            send_telegram(chat_id, data_summary, bot_token)
+            from core.notification_router import route_notification
+            route_notification(chat_id, data_summary, bot_token, severity="INFO", agent=agent_name)
 
     # Call Claude with full brain + task
     # PREP always uses Opus -- strategic thinking needs the best model
@@ -1539,6 +1697,53 @@ The daily plan should reference the 90-day execution map from Meridian's intelli
         task=task_name,
         input_summary=task_prompt
     )
+
+    # Brief generator: auto-generate design briefs when Meridian detects campaign opportunities
+    # Triggers on [BRIEF: insight text] markers in agent responses
+    if agent_name in ("dbh-marketing", "strategic-advisor"):
+        try:
+            import re as _brief_re
+            brief_matches = _brief_re.findall(r'\[BRIEF:\s*(.*?)\]', response, _brief_re.DOTALL)
+            if brief_matches:
+                from core.brief_generator import BriefGenerator
+                bg = BriefGenerator()
+                for insight in brief_matches:
+                    try:
+                        brief_id, brief_md = bg.generate_brief_from_insight(
+                            insight=insight.strip(),
+                            assigned_to="Roie",
+                            platforms=["meta_feed", "email_hero"]
+                        )
+                        logger.info(f"Auto-generated brief {brief_id} from {agent_name} insight")
+
+                        # Create Asana task for Roie
+                        try:
+                            from core.asana_writer import AsanaWriter
+                            aw = AsanaWriter()
+                            if aw.available:
+                                aw.create_task(
+                                    name=f"Design Brief: {insight.strip()[:80]}",
+                                    notes=f"Auto-generated from {AGENT_DISPLAY.get(agent_name, agent_name)} intelligence.\n\nBrief ID: {brief_id}\nReview the full brief in briefs.db or run: python brief_generator.py view {brief_id}",
+                                    assignee="Roie",
+                                    due_days=14
+                                )
+                        except Exception as asana_e:
+                            logger.warning(f"Asana task for brief failed (non-fatal): {asana_e}")
+
+                        # Notify on command-center
+                        nexus_chat = telegram_config.get("chat_ids", {}).get("command-center", "")
+                        if nexus_chat:
+                            from core.notification_router import route_notification
+                            route_notification(nexus_chat,
+                                               f"Design Brief Auto-Generated\n\nBrief: {brief_id}\nInsight: {insight.strip()[:200]}\nAssigned: Roie\nDeadline: 14 days\n\nReview: python brief_generator.py view {brief_id}",
+                                               bot_token, severity="NOTABLE", agent=agent_name)
+                    except Exception as brief_e:
+                        logger.warning(f"Brief generation failed for insight: {brief_e}")
+                bg.close()
+                # Clean markers from response before sending to Telegram
+                response = _brief_re.sub(r'\[BRIEF:\s*.*?\]', '', response, flags=_brief_re.DOTALL).strip()
+        except Exception as bg_e:
+            logger.warning(f"Brief generator integration failed (non-fatal): {bg_e}")
 
     # Beacon post-processing: save article + create Shopify draft
     if agent_name == "beacon" and task_name == "content_generation":
@@ -1590,7 +1795,10 @@ The daily plan should reference the 90-day execution map from Meridian's intelli
                                f"Beacon: article generated and saved.\nReview drafts in Shopify admin.",
                                bot_token, severity="INFO", agent="beacon")
     elif send_chat_id and send_chat_id != "CHAT_ID_HERE":
-        send_telegram(send_chat_id, response, bot_token)
+        from core.notification_router import route_notification
+        # Morning/weekly briefings are IMPORTANT, scans are NOTABLE, other tasks INFO
+        _sched_severity = "IMPORTANT" if task_name in ("morning_briefing", "morning_brief", "morning_protocol", "weekly_review", "weekly_deep_dive", "weekly_plan", "evening_reading") else "NOTABLE" if task_name in ("scan", "model_scan") else "INFO"
+        route_notification(send_chat_id, response, bot_token, severity=_sched_severity, agent=agent_name)
     else:
         logger.warning(f"No chat ID configured for {agent_name}, printing to console:")
         print(f"\n{'='*60}")
@@ -1714,8 +1922,9 @@ def handle_incoming_message(chat_id: str, message_text: str, telegram_config: di
         brain = load_agent_brain(agent_name)
 
         if not brain:
-            send_telegram(chat_id, f"[{agent_name}] Brain failed to load. Check AGENT.md exists.",
-                          telegram_config["bot_token"])
+            from core.notification_router import route_notification
+            route_notification(chat_id, f"[{agent_name}] Brain failed to load. Check AGENT.md exists.",
+                               telegram_config["bot_token"], severity="CRITICAL", agent=agent_name)
             return
 
         # PREP (strategic-advisor) gets all agent states + data injected
@@ -1783,7 +1992,9 @@ Save: decisions made, preferences learned, context shared, strategy shifts.
 If you discover something another agent should know, emit:
 [EVENT: event.type|SEVERITY|description or json payload]
 If something needs to be done, emit:
-[TASK: title|priority|description]"""
+[TASK: title|priority|description]
+If you identify a campaign opportunity or creative need (Meridian/PREP only), emit:
+[BRIEF: description of insight]"""
 
             response = call_claude(brain, user_prompt, task_type=task_type)
 
@@ -1791,9 +2002,10 @@ If something needs to be done, emit:
         if response.startswith("API Error:"):
             logger.error(f"Claude API failed for {agent_name}: {response}")
             agent_display = AGENT_DISPLAY.get(agent_name, agent_name)
-            send_telegram(chat_id,
-                          f"{agent_display} is having trouble right now -- API returned an error. Try again in a moment.",
-                          telegram_config["bot_token"])
+            from core.notification_router import route_notification
+            route_notification(chat_id,
+                               f"{agent_display} is having trouble right now -- API returned an error. Try again in a moment.",
+                               telegram_config["bot_token"], severity="IMPORTANT", agent=agent_name)
             return
 
         # Extract and save ALL state updates (handles multiple markers properly)
@@ -1809,6 +2021,31 @@ If something needs to be done, emit:
             input_summary=message_text
         )
 
+        # Brief generator: auto-generate briefs from [BRIEF:] markers in chat responses
+        if agent_name in ("dbh-marketing", "strategic-advisor"):
+            try:
+                import re as _brief_re
+                brief_matches = _brief_re.findall(r'\[BRIEF:\s*(.*?)\]', clean_response, _brief_re.DOTALL)
+                if brief_matches:
+                    from core.brief_generator import BriefGenerator
+                    bg = BriefGenerator()
+                    for insight in brief_matches:
+                        try:
+                            brief_id, _ = bg.generate_brief_from_insight(insight=insight.strip(), assigned_to="Roie")
+                            logger.info(f"Auto-generated brief {brief_id} from chat with {agent_name}")
+                            nexus_chat = telegram_config.get("chat_ids", {}).get("command-center", "")
+                            if nexus_chat:
+                                from core.notification_router import route_notification
+                                route_notification(nexus_chat,
+                                                   f"Design Brief Auto-Generated\nBrief: {brief_id}\nInsight: {insight.strip()[:200]}",
+                                                   telegram_config["bot_token"], severity="NOTABLE", agent=agent_name)
+                        except Exception as brief_e:
+                            logger.warning(f"Brief generation failed: {brief_e}")
+                    bg.close()
+                    clean_response = _brief_re.sub(r'\[BRIEF:\s*.*?\]', '', clean_response, flags=_brief_re.DOTALL).strip()
+            except Exception as bg_e:
+                logger.warning(f"Brief generator integration failed (non-fatal): {bg_e}")
+
         # Send response
         sent = send_telegram(chat_id, clean_response, telegram_config["bot_token"])
         if sent:
@@ -1821,6 +2058,7 @@ If something needs to be done, emit:
         logger.error(f"HANDLER CRASH for {agent_name}: {e}", exc_info=True)
         try:
             agent_display = AGENT_DISPLAY.get(agent_name, agent_name)
+            # Use send_telegram directly for crash errors -- must always reach Tom immediately
             send_telegram(chat_id,
                           f"{agent_display} encountered an internal error: {str(e)[:200]}\n\nPlease try again.",
                           telegram_config["bot_token"])
@@ -1844,7 +2082,8 @@ def handle_photo_message(chat_id: str, photo_sizes: list, caption: str,
         # Download the photo
         image_b64, media_type = download_telegram_photo(photo_sizes, bot_token)
         if not image_b64:
-            send_telegram(chat_id, "[Could not download photo]", bot_token)
+            from core.notification_router import route_notification
+            route_notification(chat_id, "[Could not download photo]", bot_token, severity="IMPORTANT", agent=agent_name)
             return
 
         # Load agent brain
@@ -1868,7 +2107,9 @@ def handle_photo_message(chat_id: str, photo_sizes: list, caption: str,
         # Check for API errors
         if response.startswith("API Error:"):
             logger.error(f"Claude Vision API failed for {agent_name}: {response}")
-            send_telegram(chat_id, "Couldn't process that image right now -- API error. Try again.", bot_token)
+            from core.notification_router import route_notification
+            route_notification(chat_id, "Couldn't process that image right now -- API error. Try again.",
+                               bot_token, severity="IMPORTANT", agent=agent_name)
             return
 
         # Extract and save state updates (proper multi-marker handling)
@@ -1936,7 +2177,8 @@ def handle_command(command: str, telegram_config: dict):
             except Exception:
                 pass
 
-        send_telegram(chat_id, "\n".join(status_lines), bot_token)
+        from core.notification_router import route_notification
+        route_notification(chat_id, "\n".join(status_lines), bot_token, severity="INFO", agent="command-center")
 
     elif cmd.startswith("run "):
         agent_to_run = cmd.split("run ", 1)[1].strip()
@@ -1952,7 +2194,8 @@ def handle_command(command: str, telegram_config: dict):
             send_telegram(chat_id, f"Triggering {agent_to_run}/{task_name}...", bot_token)
             run_scheduled_task(agent_to_run, task_name, telegram_config)
         else:
-            send_telegram(chat_id, f"Unknown agent: {agent_to_run}", bot_token)
+            from core.notification_router import route_notification
+            route_notification(chat_id, f"Unknown agent: {agent_to_run}", bot_token, severity="INFO", agent="command-center")
 
     elif cmd in ("integrations", "env", "connections"):
         # Show which API integrations are connected -- tests actual availability
@@ -2000,7 +2243,8 @@ def handle_command(command: str, telegram_config: dict):
                 lines.append(f"[{icon}] {name}: {status}")
         connected_count = sum(1 for v in checks.values() if v)
         lines.append(f"\n{connected_count}/{len(checks)} integrations active")
-        send_telegram(chat_id, "\n".join(lines), bot_token)
+        from core.notification_router import route_notification
+        route_notification(chat_id, "\n".join(lines), bot_token, severity="INFO", agent="command-center")
 
     elif cmd == "db stats":
         # Show learning database statistics
@@ -2010,9 +2254,11 @@ def handle_command(command: str, telegram_config: dict):
             for table in ['insights', 'decisions', 'metrics', 'patterns', 'interactions']:
                 count = db.conn.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
                 lines.append(f"  {table}: {count} rows")
-            send_telegram(chat_id, "\n".join(lines), bot_token)
+            from core.notification_router import route_notification
+            route_notification(chat_id, "\n".join(lines), bot_token, severity="INFO", agent="command-center")
         else:
-            send_telegram(chat_id, "Learning DB not available", bot_token)
+            from core.notification_router import route_notification
+            route_notification(chat_id, "Learning DB not available", bot_token, severity="INFO", agent="command-center")
 
     elif cmd == "test feeds":
         # Diagnostic: test all data feed connections
@@ -2109,7 +2355,52 @@ def handle_command(command: str, telegram_config: dict):
         skip_count = sum(1 for l in lines if "[--]" in l)
         lines.append(f"\nSummary: {ok_count} connected, {skip_count} not configured, {fail_count} errors")
 
-        send_telegram(chat_id, "\n".join(lines), bot_token)
+        from core.notification_router import route_notification
+        route_notification(chat_id, "\n".join(lines), bot_token, severity="INFO", agent="command-center")
+
+    elif cmd == "briefs":
+        # List active design briefs
+        try:
+            from core.brief_generator import BriefGenerator
+            bg = BriefGenerator()
+            briefs = bg.list_briefs()
+            if briefs:
+                lines = ["Design Briefs\n"]
+                for b in briefs[:10]:
+                    title = b["title"][:50] + "..." if len(b["title"]) > 50 else b["title"]
+                    lines.append(f"  [{b['status']}] {title}\n  ID: {b['brief_id']}\n  Assigned: {b['assigned_to']}\n")
+                from core.notification_router import route_notification
+                route_notification(chat_id, "\n".join(lines), bot_token, severity="INFO", agent="command-center")
+            else:
+                from core.notification_router import route_notification
+                route_notification(chat_id, "No design briefs yet. Meridian will auto-generate them when campaign opportunities are detected.", bot_token, severity="INFO", agent="command-center")
+            bg.close()
+        except Exception as e:
+            from core.notification_router import route_notification
+            route_notification(chat_id, f"Brief generator error: {e}", bot_token, severity="INFO", agent="command-center")
+
+    elif cmd.startswith("undo "):
+        # Undo an auto-optimizer action
+        action_id = cmd.split("undo ", 1)[1].strip()
+        try:
+            from core.auto_optimizer import undo_optimizer_action
+            result = undo_optimizer_action(int(action_id))
+            from core.notification_router import route_notification
+            route_notification(chat_id, f"Undo result: {result}", bot_token, severity="IMPORTANT", agent="command-center")
+        except Exception as e:
+            from core.notification_router import route_notification
+            route_notification(chat_id, f"Undo failed: {e}", bot_token, severity="INFO", agent="command-center")
+
+    elif cmd == "citations":
+        # Show latest citation monitoring report
+        try:
+            from core.citation_monitor import get_weekly_citation_report
+            report = get_weekly_citation_report()
+            from core.notification_router import route_notification
+            route_notification(chat_id, report, bot_token, severity="INFO", agent="command-center")
+        except Exception as e:
+            from core.notification_router import route_notification
+            route_notification(chat_id, f"Citation report error: {e}", bot_token, severity="INFO", agent="command-center")
 
     else:
         # Unknown command -- show available commands instead of hallucinating
@@ -2120,6 +2411,8 @@ System:
   integrations -- Check API connection status
   test feeds -- Test all data feed connections live
   db stats -- Learning database statistics
+  briefs -- List active design briefs
+  undo <action_id> -- Undo an auto-optimizer action
 
 Agents:
   run <agent-name> -- Trigger an agent's default task
@@ -2127,8 +2420,9 @@ Agents:
 
 Agent names: global-events, dbh-marketing, new-business,
 health-fitness, social, creative-projects, daily-briefing,
-strategic-advisor, evening-reading"""
-        send_telegram(chat_id, help_text, bot_token)
+strategic-advisor, evening-reading, beacon"""
+        from core.notification_router import route_notification
+        route_notification(chat_id, help_text, bot_token, severity="INFO", agent="command-center")
 
 
 # --- Telegram Polling Loop ---
@@ -2243,7 +2537,8 @@ def start_polling(telegram_config: dict):
                             else:
                                 # Transcription failed -- tell Tom
                                 logger.warning(f"Voice transcription failed: {transcript}")
-                                send_telegram(chat_id, f"Could not transcribe your voice message. {transcript or 'Unknown error.'}\n\nPlease type your message instead.", bot_token)
+                                from core.notification_router import route_notification
+                                route_notification(chat_id, f"Could not transcribe your voice message. {transcript or 'Unknown error.'}\n\nPlease type your message instead.", bot_token, severity="INFO", agent="command-center")
                                 continue
 
                     # Handle photo messages

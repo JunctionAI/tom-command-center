@@ -1,0 +1,1031 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Operator's Guide — Tom's Command Center</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  :root {
+    --bg: #0a0a0f;
+    --bg-card: #12121a;
+    --bg-card-hover: #1a1a26;
+    --bg-code: #1e1e2e;
+    --border: #2a2a3a;
+    --border-glow: #3b82f6;
+    --text: #e4e4ef;
+    --text-muted: #8888a0;
+    --text-dim: #55556a;
+    --accent: #3b82f6;
+    --accent-light: #60a5fa;
+    --green: #22c55e;
+    --green-dim: #15803d;
+    --amber: #f59e0b;
+    --red: #ef4444;
+    --purple: #a855f7;
+    --cyan: #06b6d4;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    font-size: 15px;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* --- Hero --- */
+  .hero {
+    position: relative;
+    padding: 80px 40px 60px;
+    text-align: center;
+    overflow: hidden;
+    border-bottom: 1px solid var(--border);
+  }
+  .hero::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle at 50% 80%, rgba(59,130,246,0.08) 0%, transparent 50%);
+    pointer-events: none;
+  }
+  .hero-label {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 20px;
+    padding: 6px 16px;
+    border: 1px solid rgba(59,130,246,0.3);
+    border-radius: 20px;
+    background: rgba(59,130,246,0.06);
+  }
+  .hero h1 {
+    font-size: 48px;
+    font-weight: 800;
+    letter-spacing: -1.5px;
+    margin-bottom: 16px;
+    background: linear-gradient(135deg, #fff 0%, #60a5fa 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .hero p {
+    font-size: 18px;
+    color: var(--text-muted);
+    max-width: 560px;
+    margin: 0 auto 30px;
+  }
+  .hero-stats {
+    display: flex;
+    justify-content: center;
+    gap: 40px;
+    flex-wrap: wrap;
+  }
+  .hero-stat {
+    text-align: center;
+  }
+  .hero-stat .num {
+    font-size: 28px;
+    font-weight: 800;
+    color: #fff;
+    display: block;
+  }
+  .hero-stat .label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--text-dim);
+  }
+
+  /* --- Nav --- */
+  .nav {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: rgba(10,10,15,0.85);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border);
+    padding: 0 40px;
+    overflow-x: auto;
+    white-space: nowrap;
+    scrollbar-width: none;
+  }
+  .nav::-webkit-scrollbar { display: none; }
+  .nav-inner {
+    display: flex;
+    gap: 0;
+    max-width: 1000px;
+    margin: 0 auto;
+  }
+  .nav a {
+    display: inline-block;
+    padding: 14px 16px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-muted);
+    text-decoration: none;
+    letter-spacing: 0.5px;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+  }
+  .nav a:hover {
+    color: #fff;
+    border-bottom-color: var(--accent);
+  }
+
+  /* --- Content --- */
+  .content {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 0 40px 120px;
+  }
+
+  /* --- Module --- */
+  .module {
+    margin-top: 80px;
+    scroll-margin-top: 60px;
+  }
+  .module-num {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 8px;
+  }
+  .module h2 {
+    font-size: 32px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    margin-bottom: 12px;
+    color: #fff;
+  }
+  .module > p:first-of-type {
+    font-size: 16px;
+    color: var(--text-muted);
+    margin-bottom: 36px;
+    border-left: 3px solid var(--border);
+    padding-left: 16px;
+  }
+
+  h3 {
+    font-size: 18px;
+    font-weight: 700;
+    color: #fff;
+    margin: 36px 0 12px;
+  }
+
+  p { margin-bottom: 14px; }
+
+  strong { color: #fff; font-weight: 600; }
+
+  /* --- Cards --- */
+  .card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    margin: 20px 0;
+    transition: border-color 0.2s;
+  }
+  .card:hover { border-color: #3a3a4e; }
+  .card-title {
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 8px;
+    font-size: 15px;
+  }
+  .card p { color: var(--text-muted); font-size: 14px; margin-bottom: 8px; }
+
+  /* --- Brain Stack --- */
+  .brain-stack {
+    list-style: none;
+    counter-reset: brain;
+  }
+  .brain-stack li {
+    counter-increment: brain;
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    padding: 14px 0;
+    border-bottom: 1px solid rgba(42,42,58,0.5);
+  }
+  .brain-stack li:last-child { border-bottom: none; }
+  .brain-stack li::before {
+    content: counter(brain);
+    flex-shrink: 0;
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    background: rgba(59,130,246,0.12);
+    color: var(--accent-light);
+    font-size: 12px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .brain-stack .file { color: var(--cyan); font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 500; }
+  .brain-stack .desc { color: var(--text-muted); font-size: 13px; margin-left: 4px; }
+
+  /* --- Code --- */
+  code {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    background: var(--bg-code);
+    padding: 2px 7px;
+    border-radius: 5px;
+    color: var(--cyan);
+  }
+  pre {
+    background: var(--bg-code);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px 24px;
+    overflow-x: auto;
+    margin: 16px 0;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    line-height: 1.8;
+    color: var(--text-muted);
+  }
+
+  /* --- Rules --- */
+  .rule {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px 24px 24px 24px;
+    margin: 20px 0;
+    position: relative;
+    overflow: hidden;
+  }
+  .rule::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    background: var(--accent);
+    border-radius: 4px 0 0 4px;
+  }
+  .rule h4 {
+    font-size: 15px;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 10px;
+    padding-left: 4px;
+  }
+  .rule p { font-size: 14px; padding-left: 4px; }
+
+  /* --- Good/Bad examples --- */
+  .example-bad, .example-good {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 10px 14px;
+    border-radius: 8px;
+    margin: 8px 0;
+    font-size: 14px;
+  }
+  .example-bad {
+    background: rgba(239,68,68,0.08);
+    border: 1px solid rgba(239,68,68,0.15);
+    color: #fca5a5;
+  }
+  .example-good {
+    background: rgba(34,197,94,0.08);
+    border: 1px solid rgba(34,197,94,0.15);
+    color: #86efac;
+  }
+  .example-bad::before { content: '\2717'; color: var(--red); font-weight: 700; }
+  .example-good::before { content: '\2713'; color: var(--green); font-weight: 700; }
+
+  /* --- Schedule Table --- */
+  .schedule {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 20px 0;
+    font-size: 14px;
+  }
+  .schedule th {
+    text-align: left;
+    padding: 10px 14px;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--text-dim);
+    border-bottom: 1px solid var(--border);
+  }
+  .schedule td {
+    padding: 10px 14px;
+    border-bottom: 1px solid rgba(42,42,58,0.4);
+    color: var(--text-muted);
+  }
+  .schedule td:first-child { color: var(--amber); font-weight: 600; font-family: 'JetBrains Mono', monospace; font-size: 13px; }
+  .schedule td:nth-child(2) { color: #fff; font-weight: 500; }
+
+  /* --- Agent Grid --- */
+  .agent-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin: 20px 0;
+  }
+  .agent-chip {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+    transition: border-color 0.2s;
+  }
+  .agent-chip:hover { border-color: var(--accent); }
+  .agent-chip .name {
+    font-weight: 700;
+    color: #fff;
+    font-size: 14px;
+    margin-bottom: 4px;
+  }
+  .agent-chip .desc {
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+  .agent-chip .channel {
+    font-size: 11px;
+    color: var(--text-dim);
+    font-family: 'JetBrains Mono', monospace;
+    margin-top: 6px;
+  }
+
+  /* --- Troubleshooting --- */
+  .trouble {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    margin: 16px 0;
+    overflow: hidden;
+  }
+  .trouble-header {
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .trouble-header:hover { background: var(--bg-card-hover); }
+  .trouble-header .icon {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .trouble-header .symptom {
+    font-weight: 600;
+    color: #fff;
+    font-size: 14px;
+  }
+  .trouble-body {
+    padding: 0 20px 16px;
+    font-size: 14px;
+    color: var(--text-muted);
+  }
+  .trouble-body ol {
+    padding-left: 20px;
+    margin-top: 8px;
+  }
+  .trouble-body li { margin-bottom: 6px; }
+
+  /* --- Callout --- */
+  .callout {
+    background: linear-gradient(135deg, rgba(59,130,246,0.08), rgba(168,85,247,0.06));
+    border: 1px solid rgba(59,130,246,0.2);
+    border-radius: 12px;
+    padding: 28px;
+    margin: 32px 0;
+    text-align: center;
+  }
+  .callout p {
+    font-size: 18px;
+    font-weight: 600;
+    color: #fff;
+    margin-bottom: 8px;
+  }
+  .callout .sub {
+    font-size: 14px;
+    color: var(--text-muted);
+    font-weight: 400;
+  }
+
+  /* --- Flow diagram --- */
+  .flow {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    margin: 24px 0;
+  }
+  .flow-step {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 12px 0;
+  }
+  .flow-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    position: relative;
+  }
+  .flow-dot::after {
+    content: '';
+    position: absolute;
+    top: 10px;
+    left: 4px;
+    width: 2px;
+    height: 28px;
+    background: var(--border);
+  }
+  .flow-step:last-child .flow-dot::after { display: none; }
+  .flow-text { font-size: 14px; color: var(--text-muted); }
+  .flow-text strong { color: #fff; }
+
+  /* --- Nexus Commands --- */
+  .cmd-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin: 16px 0;
+  }
+  .cmd {
+    background: var(--bg-code);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+  }
+  .cmd .name {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    color: var(--green);
+    font-weight: 500;
+  }
+  .cmd .what {
+    font-size: 12px;
+    color: var(--text-dim);
+    margin-top: 4px;
+  }
+
+  /* --- Maintenance Schedule --- */
+  .maint {
+    display: grid;
+    gap: 12px;
+    margin: 20px 0;
+  }
+  .maint-row {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 20px;
+  }
+  .maint-freq {
+    flex-shrink: 0;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding: 4px 10px;
+    border-radius: 6px;
+    min-width: 80px;
+    text-align: center;
+  }
+  .maint-freq.daily { background: rgba(34,197,94,0.12); color: var(--green); }
+  .maint-freq.weekly { background: rgba(59,130,246,0.12); color: var(--accent-light); }
+  .maint-freq.fortnightly { background: rgba(168,85,247,0.12); color: var(--purple); }
+  .maint-freq.monthly { background: rgba(245,158,11,0.12); color: var(--amber); }
+  .maint-freq.quarterly { background: rgba(239,68,68,0.12); color: var(--red); }
+  .maint-detail {
+    font-size: 14px;
+    color: var(--text-muted);
+  }
+  .maint-detail strong { color: #fff; }
+
+  /* --- Footer --- */
+  .footer {
+    text-align: center;
+    padding: 40px;
+    border-top: 1px solid var(--border);
+    margin-top: 80px;
+  }
+  .footer p { color: var(--text-dim); font-size: 13px; }
+
+  /* --- Responsive --- */
+  @media (max-width: 640px) {
+    .hero h1 { font-size: 32px; }
+    .hero { padding: 50px 20px 40px; }
+    .content { padding: 0 20px 80px; }
+    .agent-grid, .cmd-grid { grid-template-columns: 1fr; }
+    .hero-stats { gap: 20px; }
+    .maint-row { flex-direction: column; gap: 8px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-label">Tom's Command Center</div>
+  <h1>The Operator's Guide</h1>
+  <p>How to run, feed, and improve your AI operating system. The machine runs 27 tasks per day. This guide makes you the best operator it's ever had.</p>
+  <div class="hero-stats">
+    <div class="hero-stat"><span class="num">11</span><span class="label">Agents</span></div>
+    <div class="hero-stat"><span class="num">27</span><span class="label">Cron Tasks</span></div>
+    <div class="hero-stat"><span class="num">37</span><span class="label">Modules</span></div>
+    <div class="hero-stat"><span class="num">27K</span><span class="label">Lines of Code</span></div>
+  </div>
+</div>
+
+<!-- NAV -->
+<div class="nav">
+  <div class="nav-inner">
+    <a href="#memory">Memory</a>
+    <a href="#feedback">Feedback</a>
+    <a href="#daily">Daily Routine</a>
+    <a href="#sharp">Stay Sharp</a>
+    <a href="#pipeline">Pipeline</a>
+    <a href="#trouble">Troubleshooting</a>
+    <a href="#roster">Agents</a>
+    <a href="#quality">Quality</a>
+    <a href="#knowledge">Knowledge</a>
+    <a href="#philosophy">Philosophy</a>
+  </div>
+</div>
+
+<div class="content">
+
+<!-- MODULE 1 -->
+<div class="module" id="memory">
+  <div class="module-num">Module 01</div>
+  <h2>How Agent Memory Works</h2>
+  <p>Every agent has three memory systems working together. Understanding these is the single most important thing for making the system excellent.</p>
+
+  <h3>The Brain Stack</h3>
+  <p>Every time an agent responds &mdash; scheduled task or your message &mdash; it loads its "brain" in this exact order:</p>
+
+  <div class="card">
+    <ol class="brain-stack">
+      <li><span class="file">AGENT.md</span><span class="desc">&mdash; Who am I? What are my rules?</span></li>
+      <li><span class="file">knowledge.md</span><span class="desc">&mdash; What have I learned about Tom over time?</span></li>
+      <li><span class="file">session-log-yesterday</span><span class="desc">&mdash; Quick summary of yesterday's interactions</span></li>
+      <li><span class="file">training/*.md</span><span class="desc">&mdash; Deep domain knowledge, mental models</span></li>
+      <li><span class="file">playbooks/*.md</span><span class="desc">&mdash; PROVEN patterns with real DBH data</span></li>
+      <li><span class="file">skills/*.md</span><span class="desc">&mdash; General best practices</span></li>
+      <li><span class="file">intelligence/*.md</span><span class="desc">&mdash; Latest research (newest first)</span></li>
+      <li><span class="file">CONTEXT.md</span><span class="desc">&mdash; What's happening RIGHT NOW</span></li>
+      <li><span class="file">shared/strategy/</span><span class="desc">&mdash; 90-day plan (PREP, Oracle, Meridian, Beacon)</span></li>
+      <li><span class="file">pending events</span><span class="desc">&mdash; Cross-agent events waiting to be consumed</span></li>
+    </ol>
+  </div>
+
+  <div class="callout">
+    <p>Priority Rule</p>
+    <span class="sub">Playbooks beat skills. Skills beat general knowledge. If a playbook says "X works" based on real DBH data, the agent follows the playbook.</span>
+  </div>
+
+  <h3>The Three Memory Systems</h3>
+
+  <div class="card">
+    <div class="card-title">1. CONTEXT.md &mdash; Short-Term Memory</div>
+    <p><strong>FOUNDATION</strong> (top section) &mdash; Manually written by you or Claude Code. Revenue baselines, current goals, active campaigns. You maintain this.</p>
+    <p><strong>LIVE UPDATES</strong> (bottom section) &mdash; Auto-populated from <code>[STATE UPDATE:]</code> markers. Rolling window of last 20 updates. Old ones drop off automatically.</p>
+    <p>If CONTEXT.md gets stale, the agent operates on old assumptions. When reality shifts, update the foundation.</p>
+  </div>
+
+  <div class="card">
+    <div class="card-title">2. intelligence.db &mdash; Long-Term Memory</div>
+    <p>Structured learning database. Stores insights with confidence levels: EMERGING &rarr; PROVEN (3+ validations) &rarr; DISPROVEN (2+ failures).</p>
+    <p>Also stores: ROAS data, citation checks, auto-optimizer actions, cross-agent events, metrics over time.</p>
+    <p>This accumulates automatically. You don't touch it. Over time, it makes every agent smarter.</p>
+  </div>
+
+  <div class="card">
+    <div class="card-title">3. event_bus.db &mdash; Cross-Agent Communication</div>
+    <p>When one agent discovers something another should know, it publishes an event. PREP and Oracle see everything. Meridian sees campaign/customer/inventory events.</p>
+    <p>Fully automatic. No management needed.</p>
+  </div>
+</div>
+
+<!-- MODULE 2 -->
+<div class="module" id="feedback">
+  <div class="module-num">Module 02</div>
+  <h2>How to Give Feedback That Sticks</h2>
+  <p>Your corrections are the highest-quality signal in the system. Here's how to make them count.</p>
+
+  <div class="rule">
+    <h4>Rule 1: Reply in the Right Channel</h4>
+    <p>Every agent has its own Telegram channel. Reply where you saw the message. The agent receives your reply with its full brain loaded and will process your feedback immediately.</p>
+  </div>
+
+  <div class="rule">
+    <h4>Rule 2: Be Specific About What's Wrong</h4>
+    <div class="example-bad">That was wrong</div>
+    <div class="example-good">The revenue number you quoted was $34K but Shopify shows $41K. Always use Shopify as source of truth for revenue.</div>
+    <div class="example-bad">Don't do that again</div>
+    <div class="example-good">Never suggest discounting Marine Collagen below $49. Our margin doesn't support it.</div>
+    <p style="margin-top:12px;">Specific feedback becomes a <code>[STATE UPDATE:]</code> that persists. Vague feedback gets lost.</p>
+  </div>
+
+  <div class="rule">
+    <h4>Rule 3: Tell the Agent to Remember</h4>
+    <p>If something is important enough to persist, say so explicitly:</p>
+    <div class="example-good">"Remember this: Tom's workout time is ALWAYS after 7:30pm. Never suggest morning workouts."</div>
+    <div class="example-good">"Save this permanently: Sea Cucumber is our #1 product by revenue, not GLM."</div>
+    <div class="example-good">"Update your context: We launched the Pure Pets campaign on March 15 at $20/day."</div>
+  </div>
+
+  <div class="rule">
+    <h4>Rule 4: Correct the Foundation When Reality Shifts</h4>
+    <p><strong>Option A:</strong> Tell the agent directly in Telegram &mdash; "Update your foundation: our monthly revenue baseline is now $50K not $40K."</p>
+    <p><strong>Option B:</strong> Edit CONTEXT.md via Claude Code. Change the FOUNDATION section. Next time the agent wakes, it reads the new version.</p>
+    <p style="margin-top:10px;"><strong>When to do this:</strong> Revenue shifts, new campaigns launch, team changes, strategy pivots, personal changes.</p>
+  </div>
+
+  <div class="rule">
+    <h4>Rule 5: Use Nexus for System-Wide Commands</h4>
+    <div class="cmd-grid">
+      <div class="cmd"><div class="name">status</div><div class="what">All agent health</div></div>
+      <div class="cmd"><div class="name">integrations</div><div class="what">API connection check</div></div>
+      <div class="cmd"><div class="name">run dbh-marketing</div><div class="what">Force a brief NOW</div></div>
+      <div class="cmd"><div class="name">run evening-reading</div><div class="what">Force tonight's reading</div></div>
+      <div class="cmd"><div class="name">briefs</div><div class="what">Active design briefs</div></div>
+      <div class="cmd"><div class="name">undo 15</div><div class="what">Undo optimizer action</div></div>
+      <div class="cmd"><div class="name">citations</div><div class="what">AI mention report</div></div>
+      <div class="cmd"><div class="name">db stats</div><div class="what">Learning DB stats</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- MODULE 3 -->
+<div class="module" id="daily">
+  <div class="module-num">Module 03</div>
+  <h2>Your Daily Routine</h2>
+  <p>The system runs 27 tasks per day automatically. Here's the human layer that makes it excellent.</p>
+
+  <h3>Morning (5 minutes)</h3>
+  <table class="schedule">
+    <tr><th>Time</th><th>What</th><th>Action</th></tr>
+    <tr><td>7:00am</td><td>Oracle master brief</td><td>Scan. This tells you what matters today.</td></tr>
+    <tr><td>7:30am</td><td>PREP strategic brief</td><td>Read if facing a decision. Skip on quiet days.</td></tr>
+    <tr><td>9:00am</td><td>Meridian DBH brief</td><td>Check the numbers. Reply to correct anything wrong.</td></tr>
+    <tr><td>After</td><td>Asana</td><td>Check auto-created tasks. Action or dismiss.</td></tr>
+  </table>
+
+  <h3>During the Day (as needed)</h3>
+  <div class="card">
+    <p><strong>Creative idea or campaign thought?</strong> &rarr; Message Meridian. Strong insights auto-generate design briefs for Roie.</p>
+    <p><strong>Strategic analysis needed?</strong> &rarr; Message PREP. Uses Opus with full life + business context.</p>
+    <p><strong>Need a perspective shift?</strong> &rarr; Message ASI. Life mentor with 120+ concept library.</p>
+    <p><strong>What's happening in the world?</strong> &rarr; Message Atlas.</p>
+  </div>
+
+  <h3>Evening (2 minutes)</h3>
+  <div class="card">
+    <p><strong>8:30pm:</strong> ASI delivers your evening reading. A deep-thought piece from your knowledge engine. Read it. Respond if it sparks something. ASI learns what resonates.</p>
+    <p>The overnight chain fires automatically after you sleep. By morning: fresh data, new articles, updated ROAS, enriched customer intelligence.</p>
+  </div>
+
+  <h3>Monday (30-60 minutes)</h3>
+  <table class="schedule">
+    <tr><th>Step</th><th>What</th><th>Details</th></tr>
+    <tr><td>1</td><td>Tony report</td><td>Check ~/dbh-aios/reports/tony-reports/. Edit if needed. Email to Tony.</td></tr>
+    <tr><td>2</td><td>Weekly review</td><td>Meridian's 9am Monday brief has week-over-week trends.</td></tr>
+    <tr><td>3</td><td>Decisions</td><td>Scale/hold/kill Meta campaigns based on verified ROAS.</td></tr>
+    <tr><td>4</td><td>Auto-optimizer</td><td>Review weekend actions. Undo anything you disagree with.</td></tr>
+  </table>
+</div>
+
+<!-- MODULE 4 -->
+<div class="module" id="sharp">
+  <div class="module-num">Module 04</div>
+  <h2>How to Keep the System Sharp</h2>
+  <p>Three things decay over time: CONTEXT.md foundations, playbooks, and the strategy brief. Here's your maintenance schedule.</p>
+
+  <div class="maint">
+    <div class="maint-row">
+      <span class="maint-freq daily">Daily</span>
+      <div class="maint-detail"><strong>2 min.</strong> Scan briefings. Correct any wrong facts by replying in the channel.</div>
+    </div>
+    <div class="maint-row">
+      <span class="maint-freq weekly">Weekly</span>
+      <div class="maint-detail"><strong>15 min.</strong> Pick one agent. Read its CONTEXT.md. Ask: "Is this still true?" Update if not. Also: review Beacon's SEO drafts in Shopify. Publish the good ones.</div>
+    </div>
+    <div class="maint-row">
+      <span class="maint-freq fortnightly">2 Weeks</span>
+      <div class="maint-detail"><strong>30 min.</strong> Review Beacon output in bulk. Publish good articles. Note topics that need improvement.</div>
+    </div>
+    <div class="maint-row">
+      <span class="maint-freq monthly">Monthly</span>
+      <div class="maint-detail"><strong>2 hrs with Claude Code.</strong> Playbook update ritual (pull data, update PROVEN/EMERGING/DISPROVEN). Strategy brief update. Check <code>db stats</code> in Nexus. Review auto-optimizer history. Update CONTEXT.md foundations for Meridian, PREP, Beacon.</div>
+    </div>
+    <div class="maint-row">
+      <span class="maint-freq quarterly">Quarterly</span>
+      <div class="maint-detail"><strong>Half day with Claude Code.</strong> Full playbook review. Agent roster review. Skill file updates. CPA:LTV deep dive. Promote EMERGING insights to PROVEN.</div>
+    </div>
+  </div>
+</div>
+
+<!-- MODULE 5 -->
+<div class="module" id="pipeline">
+  <div class="module-num">Module 05</div>
+  <h2>The Intelligence Pipeline</h2>
+  <p>Understanding how data flows through the system helps you spot where things break and how to feed the machine better data.</p>
+
+  <h3>Data Flow</h3>
+  <div class="flow">
+    <div class="flow-step"><div class="flow-dot" style="background:var(--cyan)"></div><div class="flow-text"><strong>External APIs</strong> &mdash; Shopify, Klaviyo, Meta, Google Ads pull raw performance data</div></div>
+    <div class="flow-step"><div class="flow-dot" style="background:var(--accent)"></div><div class="flow-text"><strong>data_fetcher.py</strong> &mdash; Formats data into text blocks for injection</div></div>
+    <div class="flow-step"><div class="flow-dot" style="background:var(--purple)"></div><div class="flow-text"><strong>orchestrator.py</strong> &mdash; Loads agent brain + injects data into prompt</div></div>
+    <div class="flow-step"><div class="flow-dot" style="background:var(--amber)"></div><div class="flow-text"><strong>Claude API</strong> &mdash; Agent generates response with full context</div></div>
+    <div class="flow-step"><div class="flow-dot" style="background:var(--green)"></div><div class="flow-text"><strong>process_response_learning()</strong> &mdash; Extracts markers from response</div></div>
+    <div class="flow-step"><div class="flow-dot" style="background:var(--red)"></div><div class="flow-text"><strong>Telegram</strong> &mdash; Cleaned response delivered to you</div></div>
+  </div>
+
+  <h3>What Gets Extracted from Every Response</h3>
+  <div class="card">
+    <p><code>[STATE UPDATE:]</code> &rarr; CONTEXT.md (rolling 20) + intelligence.db (permanent)</p>
+    <p><code>[EVENT:]</code> &rarr; event_bus.db &rarr; consumed by subscribed agents next wake</p>
+    <p><code>[INSIGHT:]</code> &rarr; learning.db + intelligence.db (confidence progression)</p>
+    <p><code>[TASK:]</code> &rarr; Asana task auto-created with assignee and due date</p>
+    <p><code>[BRIEF:]</code> &rarr; Design brief generated &rarr; briefs.db + Asana task for Roie</p>
+  </div>
+
+  <h3>How Agents Learn Over Time</h3>
+  <div class="flow">
+    <div class="flow-step"><div class="flow-dot" style="background:var(--text-dim)"></div><div class="flow-text">Agent processes data and generates insight</div></div>
+    <div class="flow-step"><div class="flow-dot" style="background:var(--amber)"></div><div class="flow-text">Insight stored as <strong>EMERGING</strong> (first observation)</div></div>
+    <div class="flow-step"><div class="flow-dot" style="background:var(--accent)"></div><div class="flow-text">Next time agent sees similar data, references stored insight</div></div>
+    <div class="flow-step"><div class="flow-dot" style="background:var(--green)"></div><div class="flow-text">After 3+ validations &rarr; <strong>PROVEN</strong> (high confidence)</div></div>
+    <div class="flow-step"><div class="flow-dot" style="background:var(--red)"></div><div class="flow-text">If fails 2x &rarr; <strong>DISPROVEN</strong> (never repeat)</div></div>
+    <div class="flow-step"><div class="flow-dot" style="background:var(--purple)"></div><div class="flow-text">PROVEN insights feed into monthly playbook updates</div></div>
+  </div>
+</div>
+
+<!-- MODULE 6 -->
+<div class="module" id="trouble">
+  <div class="module-num">Module 06</div>
+  <h2>When Things Go Wrong</h2>
+  <p>Every system has failure modes. Here's how to diagnose and fix the most common ones.</p>
+
+  <div class="trouble">
+    <div class="trouble-header"><div class="icon" style="background:var(--amber)"></div><span class="symptom">Agent gives stale information</span></div>
+    <div class="trouble-body">The agent's CONTEXT.md is outdated. Fix: message the agent directly with the correct info. Or edit CONTEXT.md in Claude Code. Reality shifted but the file didn't.</div>
+  </div>
+
+  <div class="trouble">
+    <div class="trouble-header"><div class="icon" style="background:var(--amber)"></div><span class="symptom">Agent contradicts itself</span></div>
+    <div class="trouble-body">Check the playbook. If the playbook says discounting is disproven, the agent should follow it. If fresh data contradicts the playbook, it's time for a playbook update &mdash; the new data might reveal a context-dependent truth.</div>
+  </div>
+
+  <div class="trouble">
+    <div class="trouble-header"><div class="icon" style="background:var(--red)"></div><span class="symptom">Auto-optimizer made a bad decision</span></div>
+    <div class="trouble-body">
+      <ol>
+        <li>Go to command-center Telegram channel</li>
+        <li>Type: <code>undo &lt;action_id&gt;</code> (the notification included the ID)</li>
+        <li>Message Meridian explaining why: "Don't scale [campaign] &mdash; creative is fatiguing."</li>
+        <li>The system stores your correction as a state update</li>
+      </ol>
+    </div>
+  </div>
+
+  <div class="trouble">
+    <div class="trouble-header"><div class="icon" style="background:var(--amber)"></div><span class="symptom">ROAS tracker flags a false positive</span></div>
+    <div class="trouble-body">
+      <ol>
+        <li>Resume the campaign manually in Meta Ads Manager</li>
+        <li>Message Meridian: "GLM campaign ROAS dipped due to weekend. Resume it."</li>
+        <li>If weekends consistently cause dips, we can exclude them from the 3-day rule</li>
+      </ol>
+    </div>
+  </div>
+
+  <div class="trouble">
+    <div class="trouble-header"><div class="icon" style="background:var(--red)"></div><span class="symptom">Agent doesn't respond</span></div>
+    <div class="trouble-body">
+      <ol>
+        <li>Check Nexus: <code>status</code> &mdash; is the system running?</li>
+        <li>Check Nexus: <code>integrations</code> &mdash; are APIs connected?</li>
+        <li>Check Railway logs for errors</li>
+        <li>If brain loading failed, you'll see a specific error. Check the agent's AGENT.md exists.</li>
+      </ol>
+    </div>
+  </div>
+
+  <div class="trouble">
+    <div class="trouble-header"><div class="icon" style="background:var(--amber)"></div><span class="symptom">Tony report has wrong numbers</span></div>
+    <div class="trouble-body">
+      <ol>
+        <li>DON'T send it to Tony yet</li>
+        <li>Check Shopify admin for the real number</li>
+        <li>Edit the report file: ~/dbh-aios/reports/tony-reports/tony-report-latest.md</li>
+        <li>Message PREP: "Tony report had revenue wrong. Shopify shows $X not $Y."</li>
+        <li>Send the corrected version</li>
+      </ol>
+    </div>
+  </div>
+</div>
+
+<!-- MODULE 7 -->
+<div class="module" id="roster">
+  <div class="module-num">Module 07</div>
+  <h2>The Agent Roster</h2>
+  <p>11 agents, each with a distinct role. Know who to talk to and you'll never waste a message.</p>
+
+  <h3>Who to Talk To</h3>
+  <div class="agent-grid">
+    <div class="agent-chip">
+      <div class="name">Meridian</div>
+      <div class="desc">DBH numbers, campaign ops, marketing intelligence</div>
+      <div class="channel">dbh-marketing</div>
+    </div>
+    <div class="agent-chip">
+      <div class="name">PREP</div>
+      <div class="desc">Strategic analysis, life decisions, big-picture thinking</div>
+      <div class="channel">strategic-advisor</div>
+    </div>
+    <div class="agent-chip">
+      <div class="name">Oracle</div>
+      <div class="desc">Cross-domain morning briefing, daily synthesis</div>
+      <div class="channel">daily-briefing</div>
+    </div>
+    <div class="agent-chip">
+      <div class="name">Atlas</div>
+      <div class="desc">Geopolitical intelligence, world events</div>
+      <div class="channel">global-events</div>
+    </div>
+    <div class="agent-chip">
+      <div class="name">Lens</div>
+      <div class="desc">AI model releases, creative tech monitoring</div>
+      <div class="channel">creative-projects</div>
+    </div>
+    <div class="agent-chip">
+      <div class="name">Titan</div>
+      <div class="desc">Training plans, meal plans, fitness tracking</div>
+      <div class="channel">health-fitness</div>
+    </div>
+    <div class="agent-chip">
+      <div class="name">Compass</div>
+      <div class="desc">Social life, catch-ups, weekend plans</div>
+      <div class="channel">social</div>
+    </div>
+    <div class="agent-chip">
+      <div class="name">ASI</div>
+      <div class="desc">Life mentor, evening readings, deep thought</div>
+      <div class="channel">evening-reading</div>
+    </div>
+    <div class="agent-chip">
+      <div class="name">Venture</div>
+      <div class="desc">Tech/startup intelligence, new business</div>
+      <div class="channel">new-business</div>
+    </div>
+    <div class="agent-chip">
+      <div class="name">Nexus</div>
+      <div class="desc">System admin, commands, status checks</div>
+      <div class="channel">command-center</div>
+    </div>
+    <div class="agent-chip" style="grid-column: span 2;">
+      <div class="name">Beacon</div>
+      <div class="desc">Autonomous SEO agent. Generates 1 article/night. Notifications via command-center.</div>
+      <div class="channel">No dedicated channel &mdash; uses command-center</div>
+    </div>
+  </div>
+
+  <h3>Which Agents Write to External Systems</h3>
+  <div class="card">
+    <p><strong>Meridian</strong> &rarr; Meta budget changes, Klaviyo events, Shopify tags, Asana tasks, design briefs</p>
+    <p><strong>Beacon</strong> &rarr; Shopify blog drafts</p>
+    <p><strong>Auto-optimizer</strong> &rarr; Meta budgets, A/B winners, Klaviyo campaign drafts</p>
+    <p><strong>Rule engine</strong> &rarr; Asana tasks</p>
+    <p style="margin-top:10px;color:var(--text-dim)">All other agents (Atlas, Lens, Venture, Titan, Compass, ASI, Oracle) only read data and give intelligence. They influence through events and recommendations.</p>
+  </div>
+</div>
+
+<!-- MODULE 8 -->
+<div class="module" id="quality">
+  <div class="module-num">Module 08</div>
+  <h2>Maintaining Quality Over Time</h2>
+  <p>The system compounds &mdash; but only if you prevent the three types of decay.</p>
+
+  <div class="card">
+    <div class="card-title">1. CONTEXT.md Foundations Decay</div>
+    <p>Reality shifts faster than files get updated. A revenue baseline from 2 months ago makes every recommendation wrong.</p>
+  </div>
+  <div class="card">
+    <div class="card-title">2. Playbooks Decay</div>
+    <p>Patterns that were PROVEN last quarter may not work this quarter. Platforms change. Audiences shift. Competitors adapt.</p>
+  </div>
+  <div class="card">
+    <div class="card-title">3. Strategy Decay</div>
+    <p>The 90-day plan is a living document. When a campaign launches, a milestone hits, or a pivot happens, update it.</p>
+  </div>
+
+  <div class="callout">
+    <p>The Fix is Simple</p>
+    <span class="sub">When you know something the system doesn't, tell it. That's the entire quality maintenance strategy.</span>
+  </div>
+</div>
+
+<!-- MODULE 9 -->
+<div class="module" id="knowledge">
+  <div class="module-num">Module 09</div>
+  <h2>How to Add New Knowledge</h2>
+  <p>The system is designed to grow. Here's how to add new capabilities without breaking anything.</p>
+
+  <div class="card">
+    <div class="card-title">Add a Skill to an Agent</div>
+    <p>Write a markdown file. Save to <code>agents/{agent}/skills/new-skill.md</code>. Next time the agent wakes, it reads it automatically. No restart needed.</p>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Add a Playbook</div>
+    <p>Write it with PROVEN / EMERGING / DISPROVEN sections. Save to <code>agents/{agent}/playbooks/</code>. Every claim must reference specific campaign data with real numbers.</p>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Update the Strategy</div>
+    <p>Edit <code>agents/shared/strategy/90-day-brief.md</code>. All four strategic agents (PREP, Oracle, Meridian, Beacon) see it immediately. One file, four agents.</p>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Add a New Agent</div>
+    <p>1. Create folder: <code>agents/new-agent/</code><br>
+    2. Create AGENT.md with identity + instructions<br>
+    3. Add skills/ and playbooks/ folders<br>
+    4. Create state/CONTEXT.md<br>
+    5. Create Telegram group, add bot, note chat ID<br>
+    6. Add to config/telegram.json + config/schedules.json<br>
+    7. Restart on Railway</p>
+  </div>
+</div>
+
+<!-- MODULE 10 -->
+<div class="module" id="philosophy">
+  <div class="module-num">Module 10</div>
+  <h2>The Philosophy</h2>
+  <p>Why this system works &mdash; and why it only works if you operate it well.</p>
+
+  <div class="card" style="border-color:rgba(59,130,246,0.3);">
+    <div class="card-title">Traditional Business</div>
+    <p>Hire people &rarr; manage people &rarr; people manage processes &rarr; processes produce results</p>
+  </div>
+
+  <div class="card" style="border-color:rgba(168,85,247,0.3);">
+    <div class="card-title">Your Model</div>
+    <p>Build intelligence &rarr; intelligence manages processes &rarr; processes produce results &rarr; results improve intelligence</p>
+  </div>
+
+  <p style="margin-top:24px;">The bottleneck isn't execution. It's the quality of the intelligence driving execution. That's why:</p>
+
+  <div class="card">
+    <p><strong>Playbooks matter more than skills</strong> &mdash; proven beats theoretical, every time</p>
+    <p><strong>CONTEXT.md matters more than AGENT.md</strong> &mdash; current state beats static identity</p>
+    <p><strong>Your corrections matter more than defaults</strong> &mdash; you see reality, the system sees data</p>
+  </div>
+
+  <h3>The Compounding Effect</h3>
+  <p>Every time you correct an agent, it learns.</p>
+  <p>Every campaign that runs teaches the playbooks something.</p>
+  <p>Every month, the system knows more than it did last month.</p>
+  <p>Every night, Beacon publishes another article building your organic moat.</p>
+  <p>Every order enriches the customer intelligence database.</p>
+  <p style="margin-top:20px;">The system doesn't just run. It gets better. But only if you feed it truth.</p>
+
+  <div class="callout" style="margin-top:48px;">
+    <p>Your One Rule</p>
+    <span class="sub" style="font-size:16px;">When you know something the system doesn't, tell it.<br>That's it. That's the whole job. The rest is automated.</span>
+  </div>
+</div>
+
+</div>
+
+<!-- FOOTER -->
+<div class="footer">
+  <p>Built by Tom Hall-Taylor with Claude Code &middot; March 2026</p>
+  <p style="margin-top:4px;">11 agents &middot; 27 scheduled tasks &middot; 37 modules &middot; 27,185 lines of code</p>
+  <p style="margin-top:4px;">The machine runs. The operator makes it excellent.</p>
+</div>
+
+</body>
+</html>

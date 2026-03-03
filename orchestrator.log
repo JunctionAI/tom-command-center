@@ -9,3 +9,47 @@
 2026-03-01 17:52:39,943 [INFO] Loaded brain for new-business: ~10231 tokens, 8 sections
 2026-03-01 17:52:39,972 [INFO] Loaded brain for social: ~3471 tokens, 4 sections
 2026-03-01 17:53:14,356 [INFO] Loaded brain for health-fitness: ~7155 tokens, 6 sections
+2026-03-01 18:57:02,961 [INFO] Loaded brain for global-events: ~8055 tokens, 7 sections
+2026-03-01 18:57:02,963 [INFO] Loaded brain for dbh-marketing: ~8587 tokens, 7 sections
+2026-03-01 18:57:22,114 [INFO] Learning database connected
+2026-03-01 18:57:22,116 [INFO] Loaded brain for global-events: ~8055 tokens, 7 sections
+2026-03-01 18:57:22,117 [INFO] Loaded brain for dbh-marketing: ~8587 tokens, 7 sections
+2026-03-01 18:57:22,118 [INFO] Loaded brain for new-business: ~10231 tokens, 8 sections
+2026-03-01 18:57:22,118 [INFO] Loaded brain for health-fitness: ~7155 tokens, 6 sections
+2026-03-01 18:57:22,119 [INFO] Loaded brain for social: ~3471 tokens, 4 sections
+2026-03-01 18:57:22,119 [INFO] Loaded brain for creative-projects: ~6432 tokens, 6 sections
+2026-03-01 18:57:22,119 [INFO] Loaded brain for daily-briefing: ~2927 tokens, 4 sections
+2026-03-01 18:57:22,119 [INFO] Loaded brain for command-center: ~2099 tokens, 4 sections
+2026-03-01 19:22:21,642 [ERROR] TELEGRAM_BOT_TOKEN environment variable not set!
+2026-03-01 19:22:32,522 [INFO] Loaded brain for global-events: ~10625 tokens, 8 sections
+2026-03-01 19:22:32,523 [INFO] Loaded brain for dbh-marketing: ~8587 tokens, 7 sections
+2026-03-01 19:22:32,527 [INFO] Loaded brain for new-business: ~10231 tokens, 8 sections
+2026-03-01 19:22:32,527 [INFO] Loaded brain for health-fitness: ~7155 tokens, 6 sections
+2026-03-01 19:22:32,532 [INFO] Loaded brain for social: ~3471 tokens, 4 sections
+2026-03-01 19:22:32,534 [INFO] Loaded brain for creative-projects: ~6432 tokens, 6 sections
+2026-03-01 19:22:32,535 [INFO] Loaded brain for daily-briefing: ~2927 tokens, 4 sections
+2026-03-01 19:22:32,536 [INFO] Loaded brain for command-center: ~2099 tokens, 4 sections
+2026-03-01 19:38:04,730 [INFO] Loaded brain for dbh-marketing: ~42944 tokens, 18 sections
+2026-03-01 19:38:29,201 [INFO] Loaded brain for dbh-marketing: ~42944 tokens, 18 sections
+2026-03-01 19:47:57,911 [INFO] Loaded brain for daily-briefing: ~3616 tokens, 4 sections
+2026-03-01 21:36:00,179 [INFO] Loaded brain for strategic-advisor: ~5493 tokens, 5 sections
+2026-03-01 21:59:37,410 [INFO] Loaded brain for strategic-advisor: ~7215 tokens, 5 sections
+2026-03-01 23:43:24,456 [INFO] Queued INFO notification for chat -123 (14 chars)
+2026-03-01 23:43:24,457 [INFO] Queued INFO notification for chat -123 (14 chars)
+2026-03-01 23:43:24,457 [INFO] Queued NOTABLE notification for chat -456 (10 chars)
+2026-03-01 23:43:24,460 [INFO] [CRITICAL] Sent immediately to -999 (DND=active)
+2026-03-01 23:43:24,460 [INFO] Queued INFO notification for chat -999 (14 chars)
+2026-03-01 23:43:24,460 [INFO] [INFO] Held for DND (queued) -- chat -999
+2026-03-01 23:44:00,191 [INFO] Queued INFO notification for chat -123 (14 chars)
+2026-03-01 23:44:00,191 [INFO] Queued INFO notification for chat -123 (14 chars)
+2026-03-01 23:44:00,192 [INFO] Queued NOTABLE notification for chat -456 (10 chars)
+2026-03-01 23:44:00,193 [INFO] [CRITICAL] Sent immediately to -999 (DND=active)
+2026-03-01 23:44:00,193 [INFO] Queued INFO notification for chat -999 (14 chars)
+2026-03-01 23:44:00,193 [INFO] [INFO] Held for DND (queued) -- chat -999
+2026-03-01 23:44:06,868 [WARNING] NotificationRouter: no bot_token provided. Set TELEGRAM_BOT_TOKEN env var or pass bot_token=
+2026-03-01 23:44:14,639 [WARNING] NotificationRouter: no bot_token provided. Set TELEGRAM_BOT_TOKEN env var or pass bot_token=
+2026-03-02 02:10:28,803 [INFO] Loaded brain for strategic-advisor: ~8090 tokens, 5 sections
+2026-03-02 15:55:25,283 [INFO] Loaded brain for dbh-marketing: ~39426 tokens, 18 sections
+2026-03-02 15:55:48,725 [INFO] Loaded brain for dbh-marketing: ~39426 tokens, 18 sections
+2026-03-02 23:48:58,124 [ERROR] TELEGRAM_BOT_TOKEN environment variable not set!
+2026-03-03 13:55:38,894 [ERROR] TELEGRAM_BOT_TOKEN environment variable not set!

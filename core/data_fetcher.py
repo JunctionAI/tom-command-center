@@ -362,11 +362,165 @@ def fetch_meta_ads_data(days: int = 1) -> str:
 # --- Google Ads ---
 
 def fetch_google_ads_data(days: int = 1) -> str:
-    """Placeholder for Google Ads -- requires google-ads library."""
-    api_key = os.environ.get("GOOGLE_ADS_DEVELOPER_TOKEN")
-    if not api_key:
-        return "[Google Ads data unavailable -- set GOOGLE_ADS_DEVELOPER_TOKEN]"
-    return "[Google Ads integration: coming soon]"
+    """Fetch Google Ads campaign performance via REST API (no SDK needed)."""
+    developer_token = os.environ.get("GOOGLE_ADS_DEVELOPER_TOKEN")
+    client_id = os.environ.get("GOOGLE_ADS_CLIENT_ID")
+    client_secret = os.environ.get("GOOGLE_ADS_CLIENT_SECRET")
+    refresh_token = os.environ.get("GOOGLE_ADS_REFRESH_TOKEN")
+    customer_id = os.environ.get("GOOGLE_ADS_CUSTOMER_ID")
+
+    if not developer_token or not refresh_token:
+        return "[Google Ads data unavailable -- set GOOGLE_ADS_DEVELOPER_TOKEN and GOOGLE_ADS_REFRESH_TOKEN]"
+    if not client_id or not client_secret:
+        return "[Google Ads data unavailable -- set GOOGLE_ADS_CLIENT_ID and GOOGLE_ADS_CLIENT_SECRET]"
+    if not customer_id:
+        return "[Google Ads data unavailable -- set GOOGLE_ADS_CUSTOMER_ID]"
+
+    import requests
+
+    # Strip dashes from customer ID if present
+    customer_id = customer_id.replace("-", "")
+
+    try:
+        # Step 1: Exchange refresh token for access token
+        token_resp = requests.post(
+            "https://oauth2.googleapis.com/token",
+            data={
+                "client_id": client_id,
+                "client_secret": client_secret,
+                "refresh_token": refresh_token,
+                "grant_type": "refresh_token",
+            },
+            timeout=15,
+        )
+        if token_resp.status_code != 200:
+            error_detail = token_resp.text[:200]
+            logger.error(f"Google Ads OAuth error {token_resp.status_code}: {error_detail}")
+            return f"[Google Ads OAuth error {token_resp.status_code}: {error_detail}]"
+
+        access_token = token_resp.json().get("access_token")
+        if not access_token:
+            return "[Google Ads OAuth error: no access_token in response]"
+
+        # Step 2: Build GAQL query with correct date filter
+        now_nz = datetime.now(NZ_TZ)
+        if days == 1:
+            date_filter = f"segments.date = '{now_nz.strftime('%Y-%m-%d')}'"
+        else:
+            end_date = now_nz.strftime("%Y-%m-%d")
+            start_date = (now_nz - timedelta(days=days - 1)).strftime("%Y-%m-%d")
+            date_filter = f"segments.date BETWEEN '{start_date}' AND '{end_date}'"
+
+        query = (
+            "SELECT campaign.name, campaign.status, "
+            "metrics.cost_micros, metrics.clicks, metrics.impressions, "
+            "metrics.conversions, metrics.conversions_value, metrics.average_cpc "
+            "FROM campaign "
+            f"WHERE {date_filter} AND campaign.status != 'REMOVED' "
+            "ORDER BY metrics.cost_micros DESC"
+        )
+
+        # Step 3: Call the Google Ads searchStream REST endpoint
+        headers = {
+            "Authorization": f"Bearer {access_token}",
+            "developer-token": developer_token,
+            "Content-Type": "application/json",
+        }
+
+        search_url = f"https://googleads.googleapis.com/v18/customers/{customer_id}/googleAds:searchStream"
+        search_resp = requests.post(
+            search_url,
+            headers=headers,
+            json={"query": query},
+            timeout=30,
+        )
+
+        if search_resp.status_code != 200:
+            error_detail = search_resp.text[:300]
+            logger.error(f"Google Ads API error {search_resp.status_code}: {error_detail}")
+            return f"[Google Ads API error {search_resp.status_code}: {error_detail}]"
+
+        # Step 4: Parse the streaming response (list of result batches)
+        response_data = search_resp.json()
+
+        # searchStream returns a list of batches, each with "results"
+        all_rows = []
+        if isinstance(response_data, list):
+            for batch in response_data:
+                all_rows.extend(batch.get("results", []))
+        elif isinstance(response_data, dict):
+            all_rows.extend(response_data.get("results", []))
+
+        if not all_rows:
+            return f"GOOGLE ADS -- No campaign data for last {days} day(s) (as of {now_nz.strftime('%Y-%m-%d %H:%M NZST')})"
+
+        # Step 5: Aggregate totals and per-campaign breakdown
+        total_spend = 0.0
+        total_clicks = 0
+        total_impressions = 0
+        total_conversions = 0.0
+        total_conv_value = 0.0
+        campaigns = {}
+
+        for row in all_rows:
+            campaign = row.get("campaign", {})
+            metrics = row.get("metrics", {})
+            name = campaign.get("name", "Unknown")
+
+            cost_micros = int(metrics.get("costMicros", 0))
+            spend = cost_micros / 1_000_000
+            clicks = int(metrics.get("clicks", 0))
+            impressions = int(metrics.get("impressions", 0))
+            conversions = float(metrics.get("conversions", 0))
+            conv_value = float(metrics.get("conversionsValue", 0))
+
+            total_spend += spend
+            total_clicks += clicks
+            total_impressions += impressions
+            total_conversions += conversions
+            total_conv_value += conv_value
+
+            # Aggregate per campaign (multiple rows if multi-day query)
+            if name not in campaigns:
+                campaigns[name] = {"spend": 0, "clicks": 0, "impressions": 0, "conversions": 0, "conv_value": 0}
+            campaigns[name]["spend"] += spend
+            campaigns[name]["clicks"] += clicks
+            campaigns[name]["impressions"] += impressions
+            campaigns[name]["conversions"] += conversions
+            campaigns[name]["conv_value"] += conv_value
+
+        total_cpc = total_spend / total_clicks if total_clicks > 0 else 0
+        total_roas = total_conv_value / total_spend if total_spend > 0 else 0
+
+        # Step 6: Format output
+        lines = [
+            f"GOOGLE ADS -- Last {days} day(s) (as of {now_nz.strftime('%Y-%m-%d %H:%M NZST')})",
+            f"  Spend: ${total_spend:,.2f}",
+            f"  Clicks: {total_clicks:,}  Impressions: {total_impressions:,}",
+            f"  Conversions: {total_conversions:.0f}  Conv. Value: ${total_conv_value:,.2f}",
+            f"  CPC: ${total_cpc:.2f}  ROAS: {total_roas:.2f}x",
+        ]
+
+        # Per-campaign breakdown sorted by spend descending
+        sorted_campaigns = sorted(campaigns.items(), key=lambda x: x[1]["spend"], reverse=True)
+        if sorted_campaigns:
+            lines.append("")
+            lines.append("  By Campaign:")
+            for name, m in sorted_campaigns:
+                c_roas = m["conv_value"] / m["spend"] if m["spend"] > 0 else 0
+                lines.append(
+                    f"    {name}: ${m['spend']:,.2f} spend, "
+                    f"{m['clicks']:,} clicks, "
+                    f"{m['conversions']:.0f} conversions, "
+                    f"${m['conv_value']:,.2f} value, "
+                    f"{c_roas:.2f}x ROAS"
+                )
+
+        return "\n".join(lines)
+
+    except Exception as e:
+        logger.error(f"Google Ads fetch error: {e}")
+        return f"[Google Ads error: {str(e)}]"
 
 
 # --- Combined Fetch ---

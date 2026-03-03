@@ -39,15 +39,15 @@
     },
     {
       "agent": "social",
-      "task": "weekly_plan",
-      "cron": "0 10 * * 0",
-      "description": "Compass weekly social plan (Sunday 10am)"
+      "task": "reflection_session",
+      "cron": "0 18 * * 4",
+      "description": "Compass life reflection session (Thursday 6pm)"
     },
     {
       "agent": "social",
-      "task": "midweek_checkin",
-      "cron": "0 12 * * 3",
-      "description": "Compass mid-week check-in (Wednesday noon)"
+      "task": "weekly_plan",
+      "cron": "0 10 * * 0",
+      "description": "Compass weekly social check-in (Sunday 10am)"
     },
     {
       "agent": "dbh-marketing",
@@ -138,6 +138,60 @@
       "task": "ltv_analysis",
       "cron": "0 6 1 * *",
       "description": "Monthly CPA:LTV cohort analysis (1st of month, 6am)"
+    },
+    {
+      "agent": "dbh-marketing",
+      "task": "auto_optimize",
+      "cron": "45 23 * * *",
+      "description": "Auto-optimizer: budget adjustments, A/B winners, campaign drafts (11:45pm)"
+    },
+    {
+      "agent": "beacon",
+      "task": "citation_check",
+      "cron": "0 3 * * 0",
+      "description": "AI citation monitoring -- check Perplexity for DBH mentions (Sunday 3am)"
+    },
+    {
+      "agent": "beacon",
+      "task": "gsc_feedback",
+      "cron": "0 4 * * 1",
+      "description": "GSC ranking feedback injected into Beacon context (Monday 4am)"
+    },
+    {
+      "agent": "beacon",
+      "task": "llms_txt_update",
+      "cron": "0 3 1 * *",
+      "description": "Regenerate llms.txt for AEO (1st of month, 3am)"
+    },
+    {
+      "agent": "odysseus-money",
+      "task": "daily_briefing",
+      "cron": "30 6 * * *",
+      "description": "Odysseus financial briefing with Xero data (6:30am)"
+    },
+    {
+      "agent": "asclepius-brain",
+      "task": "daily_protocol",
+      "cron": "0 7 * * *",
+      "description": "Asclepius brain health protocol (7am daily)"
+    },
+    {
+      "agent": "strategos-pg",
+      "task": "deep_dive_lesson",
+      "cron": "30 19 * * *",
+      "description": "Strategos PG learning deep dive (7:30pm daily)"
+    },
+    {
+      "agent": "marcus-stoic",
+      "task": "daily_micro_action",
+      "cron": "45 6 * * *",
+      "description": "Marcus daily micro-action (6:45am, after Odysseus, before Oracle)"
+    },
+    {
+      "agent": "marcus-stoic",
+      "task": "weekly_reflection",
+      "cron": "0 20 * * 0",
+      "description": "Marcus weekly Stoic reflection (Sunday 8pm)"
     }
   ]
 }

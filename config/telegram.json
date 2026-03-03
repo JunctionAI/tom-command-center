@@ -12,7 +12,11 @@
     "command-center": "-5111519939",
     "strategic-advisor": "-5253584815",
     "evening-reading": "-5246434255",
-    "beacon": "-5111519939"
+    "beacon": "-5111519939",
+    "odysseus-money": "-5216161047",
+    "strategos-pg": "-5216495239",
+    "asclepius-brain": "-5225364924",
+    "marcus-stoic": "-5187865439"
   },
   "agent_names": {
     "global-events": "Atlas",
@@ -25,6 +29,10 @@
     "command-center": "Nexus",
     "strategic-advisor": "PREP",
     "evening-reading": "ASI",
-    "beacon": "Beacon"
+    "beacon": "Beacon",
+    "odysseus-money": "Odysseus",
+    "strategos-pg": "Strategos",
+    "asclepius-brain": "Asclepius",
+    "marcus-stoic": "Marcus"
   }
 }

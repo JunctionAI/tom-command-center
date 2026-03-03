@@ -1,76 +1,92 @@
-# knowledge.md — Compass (Social & Relationships)
-## Relationship Patterns & Connection Preferences
-**Last Updated:** 2026-03-03 14:00 NZST
+# knowledge.md — Compass (Therapeutic Thinking Partner)
+## Relationship Patterns, Life Direction & Self-Understanding
+**Last Updated:** March 3, 2026
 
----
+## ABOUT TOM & RELATIONSHIPS
 
-## CORE RELATIONSHIPS (Anchors)
+**Tom's Social History:**
+- Healed from teenage social anxiety years ago
+- No longer fear-driven in social situations (anxiety resolved)
+- Current block: Uncertainty about what he actually wants (not fear)
+- Tendency: Isolation under high stress (work, projects)
+- Introvert-leaning (socialising can be draining if not aligned with his interests)
 
-### Inner Circle
-- **Brad, Ollie, Tyler:** Core trusted friends (confirmed anchors from PREP context)
-- **Family:** Important anchor point
-- **Connection frequency:** TBD (how often does Tom want contact with inner circle?)
-- **Preferred medium:** TBD (calls, in-person, messages?)
+**Tom's Relationship Values:**
+- Quality over quantity (prefers depth to breadth)
+- Authenticity matters (forced socialising feels hollow)
+- Shared energy preferred (creative collaboration, shared interests > small talk)
+- Independence valued (doesn't want to depend on social validation)
 
----
+**Tom's Life Context (Relevant to Relationships):**
+- Building multiple ambitious businesses (DBH, PG, personal brand)
+- High-stress, high-performance environment
+- Wants success AND love/connection (not trade-off)
+- Young (25) and future-oriented
+- Can go all-in on projects and forget human side
 
-## RELATIONSHIP PATTERNS (To Be Documented)
+## KEY RELATIONSHIPS
 
-### Connection Preferences
-- **Frequency:** How often does Tom want to see close friends? (TBD)
-- **Activity type:** What brings Tom energy? (Conversations, activities, shared meals?)
-- **Time constraints:** How much can Tom realistically commit? (TBD)
-- **Vulnerability style:** How deep does Tom go with different people? (TBD)
+**Inner Circle (Daily):**
+- Trent: Flatmate, close mate
+- Barnaby: Flatmate, close mate
+- Tyler: Flatmate, becoming closer (also working through brain recovery journey)
 
-### Risk Factors
-- **Isolation pattern:** Tom goes into isolation under pressure (London, Vietnam) — needs monitoring
-- **Warning signs:** TBD (when is Tom withdrawing too much?)
-- **Recovery signals:** TBD (what re-engages him with relationships?)
+**Close Friends (Outside flat):**
+- Ollie Schmidt: Pro MMA fighter, trust anchor
+- Zachary Ody: Creative collaborator, Alternate project partner
 
----
+**Family:**
+[To be documented as it comes up in reflection]
 
-## CONTACT LIST (To Be Documented)
+## ROMANTIC PARTNERSHIP VISION
+[To emerge through reflection sessions]
+- Does Tom want a partner? Long-term or exploring?
+- What qualities matter (intelligence, appearance, values, ambition)?
+- What blocks might exist?
+- What would it look like practically given his lifestyle?
 
-| Person | Relationship | Last Contact | Preferred Medium | Notes |
-|--------|--------------|--------------|------------------|-------|
-| TBD | TBD | TBD | TBD | TBD |
+## FRIENDSHIP PHILOSOPHY
+[To be explored]
+- How many close friends does Tom want?
+- How often should he see them?
+- What makes a friendship feel meaningful?
+- How to balance friendships with business intensity?
 
----
+## ISOLATION PATTERNS
+Tom tends to isolate under pressure. Worth monitoring:
+- Warning signs: Withdrawing from Ollie, Zach, flatmates over 2+ weeks?
+- Context: What's the stress trigger?
+- Recovery: What re-engages him (usually something creative or achievement-related)?
 
-## ACTIVE DECISIONS
+## WHAT BRINGS TOM ENERGY
+[To be built from reflection sessions]
+- Shared creative projects (like Alternate work with Zach)
+- Meaningful conversations with trusted people
+- Physical activity with friends (gym, MMA, running)
+- Building something with others
+- Natural social opportunities (not forced scheduling)
 
-| Decision | Made | Confidence | Status | Evidence | Next Review |
-|----------|------|-----------|--------|----------|-------------|
-| Maintain core relationships despite busy schedule | TBD | HIGH | ⏳ Monitor | TBD | Weekly |
+## WHAT DRAINS TOM
+- Small talk and surface socialising
+- Forced activities that don't align with interests
+- People who don't respect his time/intensity
+- Social obligation without genuine connection
 
----
-
-## KNOWLEDGE GAPS (To Probe)
-
-1. **Relationship priorities:** Who are the 3-5 people Tom wants to prioritize?
-2. **Connection frequency:** How often should Tom see/talk to each person?
-3. **Energy dynamics:** Which relationships energize Tom? Which drain?
-4. **Activity preferences:** What activities bring Tom joy with friends?
-5. **Vulnerability level:** How deep does Tom want to go with different people?
-6. **Family dynamics:** Current status with family relationships?
-7. **Isolation triggers:** When does Tom tend to isolate? How to prevent unhealthy isolation?
-
----
+## REFLECTION SESSION INSIGHTS
+[Built over time as Tom explores with Compass]
+- Key realizations about what he wants
+- Patterns he's noticed about himself
+- Decisions made about how to approach relationships
+- Ongoing questions being explored
 
 ## MEMORY RULES
+Updated after:
+- Every Thursday reflection session (key insights, decisions, ongoing themes)
+- Important social/relationship events Tom shares
+- Pattern observations (both positive and concerning)
+- Any shifts in how Tom thinks about relationships or his life direction
 
-This file is updated after every social/relationship conversation.
-
-**What gets added:**
-- New relationship information
-- Connection patterns and preferences
-- Activity and frequency updates
-- Energy and vulnerability observations
-- Warning signs of isolation
-- Birthday/anniversary reminders
-
----
-
-*Last updated: 2026-03-03 (Initial structure)*
-*Next auto-update: After social interactions*
-*Next review: 2026-03-10 (Weekly relationship check)*
+Do not update with:
+- Surface activity planning (that's CONTEXT.md)
+- Daily task completions (that's state)
+- Generic advice (this is Tom's actual learning, not external input)
