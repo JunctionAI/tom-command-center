@@ -228,6 +228,12 @@
       "task": "weekly_audit",
       "cron": "0 16 * * 5",
       "description": "Auditor weekly time & ROI audit (Friday 4pm)"
+    },
+    {
+      "agent": "scout",
+      "task": "daily_scan",
+      "cron": "0 5 * * *",
+      "description": "SCOUT ecosystem ideas scan (5am daily, before all other agents)"
     }
   ]
 }

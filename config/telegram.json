@@ -22,7 +22,8 @@
     "experiments": "-5101519317",
     "principles": "-5011862674",
     "efficiency": "-5256082396",
-    "sentinel": "-5068196377"
+    "sentinel": "-5068196377",
+    "scout": "SETUP_NEEDED"
   },
   "agent_names": {
     "global-events": "Atlas",
@@ -45,6 +46,7 @@
     "experiments": "Experimenter",
     "principles": "Codifier",
     "efficiency": "Auditor",
-    "sentinel": "Sentinel"
+    "sentinel": "Sentinel",
+    "scout": "Scout"
   }
 }

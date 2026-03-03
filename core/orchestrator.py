@@ -49,6 +49,7 @@ AGENT_DISPLAY = {
     "principles":        "Codifier",
     "efficiency":        "Auditor",
     "sentinel":          "Sentinel",
+    "scout":             "Scout",
 }
 
 logging.basicConfig(
