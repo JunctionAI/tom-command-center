@@ -1420,39 +1420,33 @@ channel shifts, category growth). The DB learns more with every briefing."""
             data_status["Xero Financial"] = f"FAILED: {e}"
 
         # Wise: Multi-currency balances, recent transfers, exchange rates
-        # Note: Skip for strategic-advisor (PREP) since Tom only handles DBH marketing, not personal finance
-        if agent_name != "strategic-advisor":
-            try:
-                from core.wise_client import WiseClient
-                wise = WiseClient()
-                if wise.available:
-                    wise_snapshot = wise.get_financial_snapshot()
-                    if wise_snapshot:
-                        financial_parts.append(wise_snapshot)
-                        logger.info(f"Injected Wise financial data for {agent_name}/{task_name}")
-                        data_status["Wise Balances/FX"] = "OK"
-                else:
-                    data_status["Wise Balances/FX"] = "Not configured"
-            except Exception as e:
-                logger.warning(f"Wise data fetch failed (non-fatal): {e}")
-                data_status["Wise Balances/FX"] = f"FAILED: {e}"
-        else:
-            data_status["Wise Balances/FX"] = "Excluded (PREP focuses on DBH marketing)"
+        try:
+            from core.wise_client import WiseClient
+            wise = WiseClient()
+            if wise.available:
+                wise_snapshot = wise.get_financial_snapshot()
+                if wise_snapshot:
+                    financial_parts.append(wise_snapshot)
+                    logger.info(f"Injected Wise financial data for {agent_name}/{task_name}")
+                    data_status["Wise Balances/FX"] = "OK"
+            else:
+                data_status["Wise Balances/FX"] = "Not configured"
+        except Exception as e:
+            logger.warning(f"Wise data fetch failed (non-fatal): {e}")
+            data_status["Wise Balances/FX"] = f"FAILED: {e}"
 
         if financial_parts:
-            # Header depends on which data sources are included
-            header_sources = "Xero"
-            if any("Wise" in part for part in financial_parts):
-                header_sources = "Xero + Wise"
-
             task_prompt += f"""
 
-=== FINANCIAL POSITION ({header_sources}) ===
+=== FINANCIAL POSITION ===
+**DBH Operations (Xero):** Handled by Tony/ops team. Your role: marketing spend vs results only.
+**Tom's Personal Balance (Wise):** For visibility. NOT an operational concern for DBH.
+
 {chr(10).join(financial_parts)}
 
-Use this financial data in your briefing. Flag cash position, outstanding invoices,
-upcoming payments. PREP: focus on DBH marketing spend vs results.
-Oracle: include financial health in the PERFORMANCE section."""
+PREP: Focus only on DBH marketing metrics (spend, ROAS, CAC). Tom's personal Wise balance
+is informational only — do NOT flag as a business operational issue.
+Oracle: Include DBH financial health (via Xero) in the PERFORMANCE section."""
 
     # 2c. Replenishment candidates for Meridian
     if task_name in ("morning_brief", "morning_briefing") and agent_name in ("dbh-marketing", "daily-briefing", "strategic-advisor"):
