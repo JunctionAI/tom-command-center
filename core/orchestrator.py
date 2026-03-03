@@ -8,6 +8,13 @@ Every agent reads its full brain (AGENT.md + skills + playbooks + state) before 
 import sys
 import os
 
+# Load environment variables from .env file
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass  # dotenv not installed, use system environment variables
+
 # --- Windows encoding fix ---
 # Prevents crashes from Unicode characters (arrows, emojis, em-dashes) on Windows terminal
 if os.name == 'nt':
