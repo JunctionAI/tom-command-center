@@ -53,3 +53,106 @@
 2026-03-02 15:55:48,725 [INFO] Loaded brain for dbh-marketing: ~39426 tokens, 18 sections
 2026-03-02 23:48:58,124 [ERROR] TELEGRAM_BOT_TOKEN environment variable not set!
 2026-03-03 13:55:38,894 [ERROR] TELEGRAM_BOT_TOKEN environment variable not set!
+2026-03-04 12:34:04,615 [INFO] Running scheduled task: strategic-advisor/morning_brief
+2026-03-04 12:34:04,627 [INFO] Loaded 2 shared strategy files for strategic-advisor
+2026-03-04 12:34:04,627 [INFO] Loaded brain for strategic-advisor: ~13283 tokens, 10 sections
+2026-03-04 12:34:13,159 [INFO] Injected performance data for strategic-advisor/morning_brief
+2026-03-04 12:34:17,174 [INFO] Injected order intelligence + DB summary for strategic-advisor/morning_brief
+2026-03-04 12:34:17,178 [INFO] Xero tokens loaded from file
+2026-03-04 12:34:17,188 [INFO] Wise API token loaded from file
+2026-03-04 12:34:17,688 [INFO] Fetched 2 Wise profile(s)
+2026-03-04 12:34:18,178 [INFO] Fetched 9 balance(s) for profile 28947642
+2026-03-04 12:34:18,634 [INFO] Rate NZD/USD: 0.58915
+2026-03-04 12:34:19,048 [INFO] Rate NZD/AUD: 0.836861
+2026-03-04 12:34:19,463 [INFO] Rate NZD/GBP: 0.44103
+2026-03-04 12:34:19,899 [INFO] Rate NZD/EUR: 0.507167
+2026-03-04 12:34:20,283 [INFO] Rate USD/NZD: 1.69736
+2026-03-04 12:34:20,829 [INFO] Fetched 10 transfer(s)
+2026-03-04 12:34:21,343 [INFO] Fetched 0 transfer(s)
+2026-03-04 12:34:21,344 [INFO] Injected Wise financial data for strategic-advisor/morning_brief
+2026-03-04 12:34:21,383 [INFO] Expired 1 events older than 48h
+2026-03-04 12:34:21,384 [INFO] Moved 8492 chars of live data into system prompt
+2026-03-04 12:34:21,388 [INFO] Queued INFO notification for chat -5253584815 (264 chars)
+2026-03-04 12:34:21,388 [INFO] [INFO] Queued for digest -- chat -5253584815
+2026-03-04 12:34:21,388 [INFO] Calling Claude for strategic-advisor/morning_brief: brain=61797 chars, prompt=1962 chars
+2026-03-04 12:34:21,786 [INFO] Calling Claude API: model=claude-opus-4-6, system_len=61797, user_len=1962
+2026-03-04 12:34:22,156 [INFO] HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 400 Bad Request"
+2026-03-04 12:34:22,158 [ERROR] Claude API error (claude-opus-4-6): Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits.'}, 'request_id': 'req_011CYh2FZBVYprvggSueT77N'}
+2026-03-04 12:34:22,162 [INFO] Learning database connected
+2026-03-04 12:34:22,167 [INFO] Created new session log: /Users/tomhall-taylor/tom-command-center/agents/strategic-advisor/state/session-log-2026-03-04.md
+2026-03-04 12:34:22,168 [INFO] Appended to session log for strategic-advisor
+2026-03-04 12:34:23,152 [WARNING] Telegram Markdown send failed (404), retrying as plain text
+2026-03-04 12:34:24,178 [INFO] [IMPORTANT] Sent to -5253584815
+2026-03-04 12:34:24,179 [INFO] Completed: strategic-advisor/morning_brief
+2026-03-04 12:39:39,525 [INFO] Running scheduled task: strategic-advisor/morning_brief
+2026-03-04 12:39:39,538 [INFO] Loaded 2 shared strategy files for strategic-advisor
+2026-03-04 12:39:39,538 [INFO] Loaded brain for strategic-advisor: ~13283 tokens, 10 sections
+2026-03-04 12:39:48,669 [INFO] Injected performance data for strategic-advisor/morning_brief
+2026-03-04 12:39:52,350 [INFO] Injected order intelligence + DB summary for strategic-advisor/morning_brief
+2026-03-04 12:39:52,353 [INFO] Xero tokens loaded from file
+2026-03-04 12:39:52,361 [INFO] Wise API token loaded from file
+2026-03-04 12:39:52,780 [INFO] Fetched 2 Wise profile(s)
+2026-03-04 12:39:53,243 [INFO] Fetched 9 balance(s) for profile 28947642
+2026-03-04 12:39:53,632 [INFO] Rate NZD/USD: 0.5891
+2026-03-04 12:39:54,028 [INFO] Rate NZD/AUD: 0.83679
+2026-03-04 12:39:54,399 [INFO] Rate NZD/GBP: 0.441059
+2026-03-04 12:39:54,797 [INFO] Rate NZD/EUR: 0.507167
+2026-03-04 12:39:55,198 [INFO] Rate USD/NZD: 1.6975
+2026-03-04 12:39:55,672 [INFO] Fetched 10 transfer(s)
+2026-03-04 12:39:56,107 [INFO] Fetched 0 transfer(s)
+2026-03-04 12:39:56,107 [INFO] Injected Wise financial data for strategic-advisor/morning_brief
+2026-03-04 12:39:56,128 [INFO] Moved 8492 chars of live data into system prompt
+2026-03-04 12:39:56,133 [INFO] Queued INFO notification for chat -5253584815 (264 chars)
+2026-03-04 12:39:56,133 [INFO] [INFO] Queued for digest -- chat -5253584815
+2026-03-04 12:39:56,133 [INFO] Calling Claude for strategic-advisor/morning_brief: brain=61797 chars, prompt=1962 chars
+2026-03-04 12:39:56,412 [INFO] Calling Claude API: model=claude-opus-4-6, system_len=61797, user_len=1962
+2026-03-04 12:41:13,554 [INFO] HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+2026-03-04 12:41:13,688 [INFO] Claude API responded: 10881 chars, stop=end_turn
+2026-03-04 12:41:13,717 [INFO] Learning database connected
+2026-03-04 12:41:13,724 [INFO] Appended to session log for strategic-advisor
+2026-03-04 12:41:13,726 [INFO] EVENT #2 published: [IMPORTANT] campaign.zero_roas from strategic-advisor -> Oracle, Meridian
+2026-03-04 12:41:13,726 [INFO] Event published: campaign.zero_roas from strategic-advisor (IMPORTANT)
+2026-03-04 12:41:13,726 [INFO] EVENT #3 published: [IMPORTANT] financial.low_balance from strategic-advisor -> Oracle
+2026-03-04 12:41:13,726 [INFO] Event published: financial.low_balance from strategic-advisor (IMPORTANT)
+2026-03-04 12:41:13,735 [INFO] Decision #1 logged: [tactical] Recommend pausing GLM Tiered Bundle campaign by PREP (confidence=75%)
+2026-03-04 12:41:14,878 [WARNING] Telegram Markdown send failed (404), retrying as plain text
+2026-03-04 12:41:17,097 [WARNING] Telegram Markdown send failed (404), retrying as plain text
+2026-03-04 12:41:19,047 [WARNING] Telegram Markdown send failed (404), retrying as plain text
+2026-03-04 12:41:19,984 [INFO] [IMPORTANT] Sent to -5253584815
+2026-03-04 12:41:19,985 [INFO] Completed: strategic-advisor/morning_brief
+2026-03-04 12:44:35,332 [INFO] Running scheduled task: strategic-advisor/morning_brief
+2026-03-04 12:44:35,344 [INFO] Loaded 2 shared strategy files for strategic-advisor
+2026-03-04 12:44:35,344 [INFO] Loaded brain for strategic-advisor: ~13472 tokens, 11 sections
+2026-03-04 12:44:43,708 [INFO] Injected performance data for strategic-advisor/morning_brief
+2026-03-04 12:44:47,479 [INFO] Injected order intelligence + DB summary for strategic-advisor/morning_brief
+2026-03-04 12:44:47,484 [INFO] Xero tokens loaded from file
+2026-03-04 12:44:47,493 [INFO] Wise API token loaded from file
+2026-03-04 12:44:47,867 [INFO] Fetched 2 Wise profile(s)
+2026-03-04 12:44:48,259 [INFO] Fetched 9 balance(s) for profile 28947642
+2026-03-04 12:44:48,614 [INFO] Rate NZD/USD: 0.58895
+2026-03-04 12:44:48,996 [INFO] Rate NZD/AUD: 0.836577
+2026-03-04 12:44:49,421 [INFO] Rate NZD/GBP: 0.440979
+2026-03-04 12:44:49,774 [INFO] Rate NZD/EUR: 0.507169
+2026-03-04 12:44:50,134 [INFO] Rate USD/NZD: 1.69794
+2026-03-04 12:44:50,567 [INFO] Fetched 10 transfer(s)
+2026-03-04 12:44:50,955 [INFO] Fetched 0 transfer(s)
+2026-03-04 12:44:50,956 [INFO] Injected Wise financial data for strategic-advisor/morning_brief
+2026-03-04 12:44:50,977 [INFO] Moved 8679 chars of live data into system prompt
+2026-03-04 12:44:50,981 [INFO] Queued INFO notification for chat -5253584815 (264 chars)
+2026-03-04 12:44:50,981 [INFO] [INFO] Queued for digest -- chat -5253584815
+2026-03-04 12:44:50,981 [INFO] Calling Claude for strategic-advisor/morning_brief: brain=62742 chars, prompt=1962 chars
+2026-03-04 12:44:51,279 [INFO] Calling Claude API: model=claude-opus-4-6, system_len=62742, user_len=1962
+2026-03-04 12:46:01,671 [INFO] HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+2026-03-04 12:46:01,706 [INFO] Claude API responded: 9973 chars, stop=end_turn
+2026-03-04 12:46:01,714 [INFO] Learning database connected
+2026-03-04 12:46:01,721 [INFO] Appended to session log for strategic-advisor
+2026-03-04 12:46:01,723 [INFO] EVENT #4 published: [IMPORTANT] meta.zero_conversion_day from strategic-advisor -> Oracle
+2026-03-04 12:46:01,723 [INFO] Event published: meta.zero_conversion_day from strategic-advisor (IMPORTANT)
+2026-03-04 12:46:01,724 [INFO] EVENT #5 published: [NOTABLE] customer.opt_in_rate_low from strategic-advisor -> Oracle, Meridian, Scout
+2026-03-04 12:46:01,724 [INFO] Event published: customer.opt_in_rate_low from strategic-advisor (NOTABLE)
+2026-03-04 12:46:01,726 [INFO] Decision #2 logged: [tactical] Kill GLM Tiered Bundle campaign immediately by PREP (confidence=90%)
+2026-03-04 12:46:01,727 [INFO] Decision #3 logged: [tactical] Diagnose post-click experience before launching Marine Collagen by PREP (confidence=85%)
+2026-03-04 12:46:02,761 [WARNING] Telegram Markdown send failed (404), retrying as plain text
+2026-03-04 12:46:04,718 [WARNING] Telegram Markdown send failed (404), retrying as plain text
+2026-03-04 12:46:05,690 [INFO] [IMPORTANT] Sent to -5253584815
+2026-03-04 12:46:05,690 [INFO] Completed: strategic-advisor/morning_brief

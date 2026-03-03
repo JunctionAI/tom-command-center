@@ -530,16 +530,20 @@ def fetch_order_intelligence(days: int = 1, yesterday_only: bool = True) -> str:
         day_start = yesterday_nz.replace(hour=0, minute=0, second=0, microsecond=0)
         day_end = now_nz.replace(hour=0, minute=0, second=0, microsecond=0)  # Today at midnight
         since = day_start.isoformat()
+        until = day_end.isoformat()
     else:
         # For historical analysis: get last N days from now
         day_start = now_nz.replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=days - 1)
+        day_end = now_nz  # Include everything up to now
         since = day_start.isoformat()
+        until = day_end.isoformat()
 
     try:
         # Fetch orders with full details
         orders_url = f"https://{store_url}/admin/api/2025-01/orders.json"
         resp = requests.get(orders_url, headers=headers, params={
             "created_at_min": since,
+            "created_at_max": until,
             "status": "any",
             "limit": 250,
         }, timeout=15)
