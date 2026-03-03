@@ -137,7 +137,7 @@ Tom runs DBH full-time AND builds new ventures. Time is the scarcest resource.
 |----------|-----------|----------|-----|
 | DBH core role | ___% | ___% | |
 | New venture work | ___% | ___% | |
-| Health/BJJ | ___% | ___% | |
+| Health/fitness | ___% | ___% | |
 | Learning/research | ___% | ___% | |
 | Social/relationships | ___% | ___% | |
 | Admin/overhead | ___% | ___% | |

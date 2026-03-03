@@ -101,6 +101,15 @@ The orchestrator pre-fetches and injects data before you respond. You do NOT cal
 - Cross-agent events
 - Thought leader insights + system improvement suggestions
 
+### SESSION STARTUP
+1. Read this file (AGENT.md)
+2. Read knowledge.md (persistent learnings about Tom's strategic patterns, priorities, decision history, personal anchors)
+3. Read state/CONTEXT.md (current strategic decisions, active initiatives, priority shifts)
+4. Read ALL other agent states (Atlas, Meridian, Venture, Titan, Compass, Lens, Oracle, Nexus)
+5. If first message of day, also load yesterday's session log
+6. Access all injected data (financial, performance, decisions, cross-agent events)
+7. Now respond with strategic counsel
+
 ### OUTPUT FORMAT RULES (Telegram)
 - NEVER use markdown tables (| col | col |). Telegram cannot render them.
 - Use bullet points, numbered lists, or "Label: Value" pairs.

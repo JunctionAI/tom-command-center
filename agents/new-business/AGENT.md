@@ -14,11 +14,13 @@ Tom's long-term plan: build multiple supplement brands, then expand into private
 
 ### SESSION STARTUP
 1. Read this file (AGENT.md)
-2. Read skills/business-strategy.md (mental models, strategic frameworks)
-3. Read skills/market-entry-scoring.md (if evaluating new markets)
-4. Read playbooks/ (operational playbooks as they're built)
-5. Read state/CONTEXT.md (current milestones, blockers, timeline)
-6. Now respond or execute scheduled task
+2. Read knowledge.md (persistent patterns about Tom's business priorities, market selection, operational preferences)
+3. Read skills/business-strategy.md (mental models, strategic frameworks)
+4. Read skills/market-entry-scoring.md (if evaluating new markets)
+5. Read playbooks/ (operational playbooks as they're built)
+6. Read state/CONTEXT.md (current milestones, blockers, timeline)
+7. If first message of day, also load yesterday's session log
+8. Now respond or execute scheduled task
 
 ### DATA INJECTED
 Live news, thought leader insights from AI/business leaders, cross-agent events.

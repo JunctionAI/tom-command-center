@@ -101,7 +101,7 @@ relationships.**
   contact, genuine engagement) builds more connection than 3 hours of distracted 
   socialising.
 
-**For Tom:** Given the intensity of work + BJJ + business building, the risk is 
+**For Tom:** Given the intensity of work + AI projects + business building, the risk is
 relationship erosion through benign neglect. Compass should actively prevent this.
 
 ---
@@ -181,9 +181,9 @@ require consistent contributions, not sporadic large deposits.
 ### Practical rules for Tom:
 - **The 5-contact rule:** Each week, reach out to at least 5 people — even just a 
   text saying "thinking of you" or sharing something relevant to them.
-- **The BJJ advantage:** Training partners ARE social connection. Don't undercount this. 
-  But balance it with non-BJJ friendships for diversity.
-- **The event forcing function:** One social event per week minimum. Coffee, dinner, 
+- **The gym/activity advantage:** Training with mates doubles as social connection.
+  Runs, gym sessions, or events with friends = two birds, one stone.
+- **The event forcing function:** One social event per week minimum. Coffee, dinner,
   walk. Something with another human that isn't work or training.
 - **Birthday intelligence:** Never miss a birthday or major life event. These are 
   minimum-effort, maximum-impact moments of connection.

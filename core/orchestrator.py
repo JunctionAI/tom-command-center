@@ -38,6 +38,7 @@ AGENT_DISPLAY = {
     "command-center":    "Nexus",
     "strategic-advisor": "PREP",
     "evening-reading":   "ASI",
+    "beacon":            "Beacon",
 }
 
 logging.basicConfig(
@@ -122,6 +123,29 @@ def load_agent_brain(agent_name: str) -> str:
         logger.error(f"No AGENT.md found for {agent_name}")
         return ""
 
+    # 1.5 PERSISTENT KNOWLEDGE -- Learned patterns and constraints about user
+    knowledge_file = agent_dir / "knowledge.md"
+    if knowledge_file.exists():
+        brain_parts.append(f"=== PERSISTENT KNOWLEDGE (Learned Patterns) ===\n{knowledge_file.read_text(encoding='utf-8')}")
+
+    # 1.7 YESTERDAY'S SUMMARY -- If first message of day, load yesterday's session log
+    from datetime import date, timedelta
+    today = date.today().isoformat()
+    yesterday = (date.today() - timedelta(days=1)).isoformat()
+    yesterday_log = agent_dir / "state" / f"session-log-{yesterday}.md"
+    if yesterday_log.exists():
+        try:
+            yesterday_content = yesterday_log.read_text(encoding='utf-8')
+            # Extract just the summary section (first 1000 chars)
+            if "## SUMMARY" in yesterday_content:
+                summary_start = yesterday_content.find("## SUMMARY")
+                summary_section = yesterday_content[summary_start:summary_start+1000]
+            else:
+                summary_section = yesterday_content[:500]
+            brain_parts.append(f"=== YESTERDAY'S SUMMARY ===\n{summary_section}")
+        except Exception as e:
+            logger.warning(f"Could not load yesterday's session log: {e}")
+
     # 2. TRAINING -- Deep domain knowledge (mental models, frameworks, anti-patterns)
     training_dir = agent_dir / "training"
     if training_dir.exists():
@@ -173,6 +197,18 @@ def load_agent_brain(agent_name: str) -> str:
     except Exception:
         pass  # Non-fatal, agent works fine without decision memory
 
+    # 8. SHARED STRATEGY -- Load shared context for strategic agents
+    STRATEGY_AGENTS = ["dbh-marketing", "strategic-advisor", "daily-briefing", "beacon"]
+    if agent_name in STRATEGY_AGENTS:
+        shared_strategy_dir = AGENTS_DIR / "shared" / "strategy"
+        if shared_strategy_dir.exists():
+            strategy_files = sorted(shared_strategy_dir.glob("*.md"))
+            if strategy_files:
+                brain_parts.append("=== SHARED STRATEGY (90-Day Execution Plan) ===")
+                for f in strategy_files:
+                    brain_parts.append(f"--- {f.name} ---\n{f.read_text(encoding='utf-8')}")
+                logger.info(f"Loaded {len(strategy_files)} shared strategy files for {agent_name}")
+
     brain = "\n\n".join(brain_parts)
 
     # Log brain size for monitoring
@@ -202,6 +238,108 @@ def update_agent_state(agent_name: str, new_info: str):
         current += f"\n\n## Update {timestamp}\n{new_info}"
         state_file.write_text(current, encoding='utf-8')
         logger.info(f"Updated state for {agent_name}")
+
+
+# --- Session Logging (NEW) ---
+
+def append_to_session_log(agent_name: str, tom_input: str, agent_response: str, markers_found: dict):
+    """
+    Append interaction to today's session log.
+    Creates session-log-YYYY-MM-DD.md if it doesn't exist.
+
+    markers_found = {
+        'metrics': [...],
+        'insights': [...],
+        'state_updates': [...],
+        'events': [...]
+    }
+    """
+    from datetime import date
+    today = date.today().isoformat()
+
+    log_file = AGENTS_DIR / agent_name / "state" / f"session-log-{today}.md"
+
+    # Create log file if it doesn't exist
+    if not log_file.exists():
+        header = f"# SESSION LOG — {agent_name.title()}\n## Date: {today}\n\n"
+        log_file.write_text(header, encoding='utf-8')
+        logger.info(f"Created new session log: {log_file}")
+
+    # Append interaction
+    timestamp = datetime.now().strftime("%H:%M:%S")
+    interaction_entry = f"""
+### INTERACTION at {timestamp}
+**Tom said:** {tom_input[:200]}...
+
+**Markers extracted:**
+- Metrics: {', '.join([str(m) for m in markers_found.get('metrics', [])]) or 'None'}
+- Insights: {', '.join([str(i) for i in markers_found.get('insights', [])]) or 'None'}
+- State updates: {', '.join([str(s) for s in markers_found.get('state_updates', [])]) or 'None'}
+- Events: {', '.join([str(e) for e in markers_found.get('events', [])]) or 'None'}
+
+"""
+
+    try:
+        current = log_file.read_text(encoding='utf-8')
+        current += interaction_entry
+        log_file.write_text(current, encoding='utf-8')
+        logger.info(f"Appended to session log for {agent_name}")
+    except Exception as e:
+        logger.warning(f"Failed to append to session log: {e}")
+
+
+def extract_markers_from_response(response: str) -> dict:
+    """
+    Extract all structured markers from agent response.
+    Returns dict with lists of found markers.
+    """
+    import re
+
+    markers = {
+        'metrics': [],
+        'insights': [],
+        'state_updates': [],
+        'events': [],
+        'tasks': []
+    }
+
+    # [METRIC: name|value|context]
+    for match in re.finditer(r'\[METRIC:\s*([^|]+)\|([^|]+)\|([^\]]+)\]', response):
+        markers['metrics'].append({
+            'name': match.group(1).strip(),
+            'value': match.group(2).strip(),
+            'context': match.group(3).strip()
+        })
+
+    # [INSIGHT: category|content|evidence]
+    for match in re.finditer(r'\[INSIGHT:\s*([^|]+)\|([^|]+)\|([^\]]+)\]', response):
+        markers['insights'].append({
+            'category': match.group(1).strip(),
+            'content': match.group(2).strip(),
+            'evidence': match.group(3).strip()
+        })
+
+    # [STATE UPDATE: ...]
+    for match in re.finditer(r'\[STATE UPDATE:\s*([^\]]+)\]', response):
+        markers['state_updates'].append(match.group(1).strip())
+
+    # [EVENT: type|severity|payload]
+    for match in re.finditer(r'\[EVENT:\s*([^|]+)\|([^|]+)\|([^\]]+)\]', response):
+        markers['events'].append({
+            'type': match.group(1).strip(),
+            'severity': match.group(2).strip(),
+            'payload': match.group(3).strip()
+        })
+
+    # [TASK: title|priority|description]
+    for match in re.finditer(r'\[TASK:\s*([^|]+)\|([^|]+)\|([^\]]+)\]', response):
+        markers['tasks'].append({
+            'title': match.group(1).strip(),
+            'priority': match.group(2).strip(),
+            'description': match.group(3).strip()
+        })
+
+    return markers
 
 
 # --- Claude API Caller ---
@@ -278,12 +416,15 @@ added to your state/CONTEXT.md.
 # --- Learning Loop Integration ---
 
 def process_response_learning(agent_name: str, response: str, trigger: str = "chat",
-                               task: str = None, input_summary: str = None) -> str:
+                               task: str = None, input_summary: str = None, full_input: str = None) -> str:
     """
     After every agent response:
     1. Extract structured insights/decisions/metrics from markers
-    2. Log the interaction
-    3. Clean markers from the response before sending to Telegram
+    2. Log the interaction to learning.db
+    3. Log to daily session log
+    4. Clean markers from the response before sending to Telegram
+
+    full_input: The complete user input (for session logging). If None, input_summary is used.
 
     Returns the cleaned response.
     """
@@ -306,6 +447,13 @@ def process_response_learning(agent_name: str, response: str, trigger: str = "ch
             input_summary=input_summary[:200] if input_summary else None,
             output_summary=response[:500]
         )
+
+        # Extract markers for session log
+        markers = extract_markers_from_response(response)
+
+        # Append to today's session log
+        tom_input = full_input if full_input else (input_summary or "")
+        append_to_session_log(agent_name, tom_input, response, markers)
 
         # Process cross-agent events from response
         process_events_from_response(agent_name, response)
@@ -749,6 +897,46 @@ def run_scheduled_task(agent_name: str, task_name: str, telegram_config: dict):
             if "No orders" in order_data:
                 order_count = 0
 
+            # Tag new customers with acquisition channel in Shopify
+            tagged_count = 0
+            try:
+                from core.order_intelligence import get_db as get_cust_db
+                from core.shopify_writer import ShopifyWriter
+                cust_db = get_cust_db()
+                writer = ShopifyWriter()
+                if writer.available:
+                    from datetime import date as _date
+                    today_str = _date.today().isoformat()
+                    month_str = _date.today().strftime("%Y-%m")
+
+                    # Find today's new customers (first-time buyers with known channel)
+                    new_customers = cust_db.execute("""
+                        SELECT c.shopify_id, o.channel
+                        FROM customers c
+                        JOIN orders o ON o.shopify_customer_id = c.shopify_id
+                        WHERE c.total_orders = 1
+                          AND DATE(o.created_at) = ?
+                          AND o.channel != 'unknown'
+                          AND o.channel IS NOT NULL
+                    """, (today_str,)).fetchall()
+
+                    for row in new_customers:
+                        try:
+                            channel = row[1]  # sqlite3 without row_factory
+                            customer_id = row[0]
+                            tags = [
+                                f"acquired:{channel}",
+                                f"acquired-date:{month_str}",
+                                f"cohort:{month_str}-{channel}"
+                            ]
+                            writer.add_customer_tags(str(customer_id), tags)
+                            tagged_count += 1
+                        except Exception as tag_err:
+                            logger.warning(f"Failed to tag customer {row[0]}: {tag_err}")
+                cust_db.close()
+            except Exception as tag_e:
+                logger.warning(f"Customer tagging failed (non-fatal): {tag_e}")
+
             # Post brief status to channel
             chat_id = telegram_config.get("chat_ids", {}).get(agent_name, "")
             if chat_id:
@@ -762,10 +950,12 @@ def run_scheduled_task(agent_name: str, task_name: str, telegram_config: dict):
                     total_customers = "?"
                     total_orders = "?"
 
+                tag_note = f"\nCustomers tagged: {tagged_count}" if tagged_count > 0 else ""
                 status_msg = (
                     f"🔄 *Intelligence Sync Complete*\n"
                     f"Orders today: {order_count}\n"
-                    f"DB totals: {total_customers} customers, {total_orders} orders tracked\n"
+                    f"DB totals: {total_customers} customers, {total_orders} orders tracked"
+                    f"{tag_note}\n"
                     f"_Learning accumulates — next briefing will use updated intelligence._"
                 )
                 bot_token = telegram_config.get("bot_token", os.environ.get("TELEGRAM_BOT_TOKEN", ""))
@@ -819,6 +1009,96 @@ def run_scheduled_task(agent_name: str, task_name: str, telegram_config: dict):
             logger.error(f"Thought leader extraction failed: {e}")
         return  # No Claude call needed
 
+    # --- ROAS verification check (runs after intelligence_sync) ---
+    if task_name == "roas_check":
+        try:
+            from core.roas_tracker import run_nightly_roas_check
+            result = run_nightly_roas_check()
+
+            chat_id = telegram_config.get("chat_ids", {}).get(agent_name, "")
+            if chat_id:
+                bot_token = telegram_config.get("bot_token", os.environ.get("TELEGRAM_BOT_TOKEN", ""))
+                from core.notification_router import route_notification
+                route_notification(chat_id, result, bot_token, agent=agent_name)
+
+            logger.info("ROAS check complete")
+        except Exception as e:
+            logger.error(f"ROAS check failed: {e}")
+        return
+
+    # --- Rule-based Asana task creation (runs after ROAS check) ---
+    if task_name == "rule_check":
+        try:
+            from core.rule_engine import run_rule_checks
+            result = run_rule_checks()
+
+            chat_id = telegram_config.get("chat_ids", {}).get(agent_name, "")
+            if chat_id:
+                bot_token = telegram_config.get("bot_token", os.environ.get("TELEGRAM_BOT_TOKEN", ""))
+                from core.notification_router import route_notification
+                route_notification(chat_id, result, bot_token, agent=agent_name)
+
+            logger.info("Rule check complete")
+        except Exception as e:
+            logger.error(f"Rule check failed: {e}")
+        return
+
+    # --- Tony weekly report (Monday 7am, file-based) ---
+    if task_name == "tony_report":
+        try:
+            from core.tony_report import generate_and_save
+            result = generate_and_save()
+
+            # Notify on command-center channel (not the report itself, just a heads-up)
+            chat_id = telegram_config.get("chat_ids", {}).get("command-center", "")
+            if chat_id:
+                bot_token = telegram_config.get("bot_token", os.environ.get("TELEGRAM_BOT_TOKEN", ""))
+                from core.notification_router import route_notification
+                route_notification(chat_id, result, bot_token,
+                                   severity="IMPORTANT", agent="strategic-advisor")
+
+            logger.info("Tony report generated and saved")
+        except Exception as e:
+            logger.error(f"Tony report generation failed: {e}")
+        return
+
+    # --- Vault indexer sync (nightly 2am) ---
+    if task_name == "vault_sync":
+        try:
+            from core.vault_indexer import VaultIndexer
+            indexer = VaultIndexer()
+            result = indexer.sync()
+
+            chat_id = telegram_config.get("chat_ids", {}).get(agent_name, "")
+            if chat_id:
+                bot_token = telegram_config.get("bot_token", os.environ.get("TELEGRAM_BOT_TOKEN", ""))
+                from core.notification_router import route_notification
+                route_notification(chat_id, f"Vault sync: {result}", bot_token,
+                                   severity="INFO", agent=agent_name)
+
+            logger.info(f"Vault sync complete: {result}")
+        except Exception as e:
+            logger.error(f"Vault sync failed: {e}")
+        return
+
+    # --- Monthly CPA:LTV cohort analysis (1st of month) ---
+    if task_name == "ltv_analysis":
+        try:
+            from core.roas_tracker import run_monthly_ltv_analysis
+            result = run_monthly_ltv_analysis()
+
+            chat_id = telegram_config.get("chat_ids", {}).get("command-center", "")
+            if chat_id:
+                bot_token = telegram_config.get("bot_token", os.environ.get("TELEGRAM_BOT_TOKEN", ""))
+                from core.notification_router import route_notification
+                route_notification(chat_id, result, bot_token,
+                                   severity="IMPORTANT", agent="strategic-advisor")
+
+            logger.info("LTV analysis complete")
+        except Exception as e:
+            logger.error(f"LTV analysis failed: {e}")
+        return
+
     brain = load_agent_brain(agent_name)
 
     # Build task-specific prompt
@@ -833,6 +1113,7 @@ def run_scheduled_task(agent_name: str, task_name: str, telegram_config: dict):
         "weekly_review": "Execute your weekly performance review. Full data pull, compare to targets, identify patterns, recommend optimisations. Use the format specified in your AGENT.md.",
         "weekly_deep_dive": "Execute your weekly deep analysis. Pick the most important developing story and provide in-depth analysis. Use the format specified in your AGENT.md.",
         "evening_reading": "",  # Placeholder -- replaced below with knowledge engine output
+        "content_generation": "Generate tonight's SEO/AEO article following your nightly workflow. Check your CONTEXT.md for the current keyword priority, select the next topic, and generate a full article using one of your proven content formulas. Include the complete article HTML, meta description, FAQ section, and JSON-LD schema. Save instructions and Shopify draft details should be in your output. After your article, emit a [STATE UPDATE:] with the article title and next priority keyword.",
     }
 
     task_prompt = task_prompts.get(task_name, f"Execute task: {task_name}")
@@ -1241,7 +1522,13 @@ The daily plan should reference the 90-day execution map from Meridian's intelli
 
     # Call Claude with full brain + task
     # PREP always uses Opus -- strategic thinking needs the best model
-    effective_task_type = "deep_analysis" if agent_name == "strategic-advisor" else task_name
+    # Beacon (content_generation) uses Opus for quality SEO content
+    if agent_name == "strategic-advisor":
+        effective_task_type = "deep_analysis"
+    elif agent_name == "beacon" and task_name == "content_generation":
+        effective_task_type = "deep_analysis"  # Opus for quality content
+    else:
+        effective_task_type = task_name
     logger.info(f"Calling Claude for {agent_name}/{task_name}: brain={len(brain)} chars, prompt={len(task_prompt)} chars")
     response = call_claude(brain, task_prompt, task_type=effective_task_type)
 
@@ -1253,9 +1540,57 @@ The daily plan should reference the 90-day execution map from Meridian's intelli
         input_summary=task_prompt
     )
 
+    # Beacon post-processing: save article + create Shopify draft
+    if agent_name == "beacon" and task_name == "content_generation":
+        try:
+            from datetime import date as _d
+            import re as _re
+
+            today_str = _d.today().isoformat()
+            # Extract title from response (look for # heading or **Title**)
+            title_match = _re.search(r'(?:^#\s+(.+)|Title[:\s]*\*?\*?(.+?)\*?\*?$)', response, _re.MULTILINE)
+            title = (title_match.group(1) or title_match.group(2)).strip() if title_match else f"Article {today_str}"
+            slug = _re.sub(r'[^a-z0-9]+', '-', title.lower()).strip('-')[:60]
+
+            # Save to file
+            from pathlib import Path as _P
+            article_dir = _P.home() / "dbh-aios" / "reports" / "seo-articles"
+            article_dir.mkdir(parents=True, exist_ok=True)
+            article_path = article_dir / f"{today_str}-{slug}.md"
+            article_path.write_text(response, encoding='utf-8')
+            logger.info(f"Beacon article saved: {article_path}")
+
+            # Create Shopify blog draft
+            try:
+                from core.shopify_blog_publisher import ShopifyBlogPublisher
+                publisher = ShopifyBlogPublisher()
+                if publisher.available:
+                    blog_id = publisher.get_default_blog_id()
+                    if blog_id:
+                        # Extract body HTML if present, otherwise use full response
+                        body_match = _re.search(r'<article[^>]*>(.*?)</article>|<div[^>]*class="article[^"]*"[^>]*>(.*?)</div>', response, _re.DOTALL)
+                        body_html = (body_match.group(1) or body_match.group(2)) if body_match else response
+                        publisher.create_draft_article(blog_id, title, body_html)
+                        logger.info(f"Shopify blog draft created: {title}")
+            except Exception as pub_e:
+                logger.warning(f"Shopify blog draft creation failed (non-fatal): {pub_e}")
+
+        except Exception as beacon_e:
+            logger.warning(f"Beacon post-processing failed (non-fatal): {beacon_e}")
+
     # Send to Telegram
-    if chat_id and chat_id != "CHAT_ID_HERE":
-        send_telegram(chat_id, response, bot_token)
+    # Beacon uses command-center channel (no dedicated channel)
+    send_chat_id = chat_id
+    if agent_name == "beacon":
+        send_chat_id = telegram_config.get("chat_ids", {}).get("command-center", chat_id)
+        # Beacon sends a brief notification, not the full article
+        if send_chat_id and send_chat_id != "CHAT_ID_HERE":
+            from core.notification_router import route_notification
+            route_notification(send_chat_id,
+                               f"Beacon: article generated and saved.\nReview drafts in Shopify admin.",
+                               bot_token, severity="INFO", agent="beacon")
+    elif send_chat_id and send_chat_id != "CHAT_ID_HERE":
+        send_telegram(send_chat_id, response, bot_token)
     else:
         logger.warning(f"No chat ID configured for {agent_name}, printing to console:")
         print(f"\n{'='*60}")
@@ -1854,6 +2189,7 @@ def start_polling(telegram_config: dict):
             "global-events":     ["market.*"],
             "new-business":      ["market.*"],
             "command-center":    ["system.*"],
+            "beacon":            ["campaign.*", "content.*"],
         }
         for agent, patterns in default_subs.items():
             for pat in patterns:

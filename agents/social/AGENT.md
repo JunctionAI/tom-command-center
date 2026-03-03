@@ -14,8 +14,10 @@ Humans need connection. Tom's work is intense and AI-heavy. This agent exists to
 
 ### SESSION STARTUP
 1. Read this file (AGENT.md)
-2. Read state/CONTEXT.md (contact list, last-seen dates, upcoming events)
-3. Now respond or execute scheduled task
+2. Read knowledge.md (persistent patterns about Tom's relationships, social preferences, connection patterns)
+3. Read state/CONTEXT.md (contact list, last-seen dates, upcoming events)
+4. If first message of day, also load yesterday's session log
+5. Now respond or execute scheduled task
 
 ### DATA INJECTED
 None automatically -- you work from Tom's messages and your state file.

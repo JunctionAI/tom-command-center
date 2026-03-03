@@ -102,6 +102,42 @@
       "task": "evening_reading",
       "cron": "30 20 * * *",
       "description": "ASI evening reading -- life mentor lesson (8:30pm)"
+    },
+    {
+      "agent": "beacon",
+      "task": "content_generation",
+      "cron": "0 22 * * *",
+      "description": "Beacon SEO article generation (10pm daily)"
+    },
+    {
+      "agent": "dbh-marketing",
+      "task": "roas_check",
+      "cron": "15 23 * * *",
+      "description": "Meta ROAS verification against Shopify (11:15pm, after intelligence sync)"
+    },
+    {
+      "agent": "dbh-marketing",
+      "task": "rule_check",
+      "cron": "30 23 * * *",
+      "description": "Rule-based Asana task creation (11:30pm, after ROAS check)"
+    },
+    {
+      "agent": "strategic-advisor",
+      "task": "tony_report",
+      "cron": "0 7 * * 1",
+      "description": "Weekly Tony CEO report generation (Monday 7am)"
+    },
+    {
+      "agent": "command-center",
+      "task": "vault_sync",
+      "cron": "0 2 * * *",
+      "description": "Obsidian vault re-index (2am daily)"
+    },
+    {
+      "agent": "strategic-advisor",
+      "task": "ltv_analysis",
+      "cron": "0 6 1 * *",
+      "description": "Monthly CPA:LTV cohort analysis (1st of month, 6am)"
     }
   ]
 }

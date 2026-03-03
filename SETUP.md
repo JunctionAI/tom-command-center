@@ -141,8 +141,8 @@ cp ~/dbh-aios/skills/market-entry-scoring.md ~/tom-command-center/agents/new-bus
 
 ### Health & Fitness:
 Message the Health channel with your current:
-- BJJ class schedule
-- Gym routine
+- Gym/lifting routine
+- Running/cardio schedule
 - Dietary preferences/restrictions
 - Current goals (cut/bulk/maintain)
 - Current weight and target

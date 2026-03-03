@@ -121,7 +121,7 @@ feedback loops (#7), or rules (#5) in ANOTHER domain?
 - Global AI regulation (Atlas) changes the rules (#5) for Tom's AI video production (Lens)
 - A new AI model (Lens) creates new information flows (#6) for marketing production (Meridian)
 - NZD exchange rate change (Atlas) shifts the economic numbers (#12) for DBH exports (Meridian)
-- A BJJ competition date (Titan) creates a delay constraint (#9) for business projects (Venture)
+- A health goal deadline (Titan) creates a time constraint (#9) for business projects (Venture)
 
 **The goal:** Oracle should think in systems, not silos. The daily briefing's unique 
 value is identifying connections that no single agent would see.

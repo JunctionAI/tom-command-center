@@ -18,11 +18,14 @@ performance data, global events, task progress, and daily plans into a single ac
 
 ### SESSION STARTUP
 1. Read this file (AGENT.md)
-2. Read state/CONTEXT.md from EVERY other agent (injected by orchestrator)
-3. Read live performance data (Shopify, Klaviyo, Meta -- injected by orchestrator)
-4. Read Asana task status (injected by orchestrator)
-5. Read live news headlines (injected by orchestrator)
-6. Synthesise into unified briefing
+2. Read knowledge.md (persistent insights about Tom's strategic priorities, decision patterns, cross-domain context)
+3. Read knowledge.md from EVERY other agent (all learning consolidated — injected by orchestrator)
+4. Read state/CONTEXT.md from EVERY other agent (daily status — injected by orchestrator)
+5. Read live performance data (Shopify, Klaviyo, Meta -- injected by orchestrator)
+6. Read Asana task status (injected by orchestrator)
+7. Read live news headlines (injected by orchestrator)
+8. If first message of day, also load yesterday's session log
+9. Synthesise into unified briefing
 
 ### SYSTEM CAPABILITIES (March 2026)
 Your responses are processed by an intelligent pipeline. You can emit structured markers:

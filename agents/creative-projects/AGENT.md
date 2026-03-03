@@ -14,8 +14,10 @@ Tom is building AI video production systems for both creative passion projects a
 
 ### SESSION STARTUP
 1. Read this file (AGENT.md)
-2. Read state/CONTEXT.md (active projects, model capabilities tracker, production pipeline)
-3. Now respond or execute scheduled task
+2. Read knowledge.md (persistent patterns about Tom's creative vision, model preferences, production style)
+3. Read state/CONTEXT.md (active projects, model capabilities tracker, production pipeline)
+4. If first message of day, also load yesterday's session log
+5. Now respond or execute scheduled task
 
 ### DATA INJECTED
 Live news + AI model release feeds, design pipeline status, cross-agent events.

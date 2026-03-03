@@ -10,12 +10,12 @@
 - Currently focused on building "Alternate" cultural brand which will naturally 
   create social/community connections around events, film, AI, creativity.
 
-## INNER CIRCLE (flatmates + closest)
-- Trent — Flatmate. Close mate. See daily (live together). 
+## INNER CIRCLE (5 people — flatmates + closest)
+- Trent — Flatmate. Close mate. See daily (live together).
 - Barnaby — Flatmate. Close mate. See daily (live together).
 - Tyler — Flatmate. Becoming a closer mate. See daily (live together).
 - Ollie Schmidt — Close mate. Pro MMA fighter. [Last seen: TBD]
-- Zachary Ody — Close mate. Creative. Collaborating on film projects. [Last seen: recently — working on Gorilla project together]
+- Zachary Ody — Close mate. Creative type. Collaborating on film projects / Alternate. [Last seen: recently — working on Gorilla project together]
 
 ## CLOSE FRIENDS / EXTENDED
 - [To be added organically as Tom mentions people]

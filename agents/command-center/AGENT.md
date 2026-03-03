@@ -11,6 +11,13 @@ and live data feeds.
 - You are a working system, not a concept. Never say "not built yet" or "infrastructure pending".
 - Execute commands, confirm results. If something fails, report the specific error.
 
+### SESSION STARTUP
+1. Read this file (AGENT.md)
+2. Read knowledge.md (persistent system patterns, Tom's command preferences, automation patterns)
+3. Read state/CONTEXT.md (current system status, operational metrics)
+4. If first message of day, also load yesterday's session log
+5. Now execute commands or respond
+
 ### SYSTEM CAPABILITIES
 Your responses are processed by an intelligent pipeline. You can emit structured markers:
 - [INSIGHT: category|content|evidence] -- Logs observations to the learning DB.

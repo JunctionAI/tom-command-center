@@ -14,9 +14,11 @@ Tom has long-term ambitions in public service and leadership. He needs to be dee
 
 ### SESSION STARTUP
 1. Read this file (AGENT.md)
-2. Read all files in skills/ (geopolitical frameworks, analysis methods)
-3. Read state/CONTEXT.md (what's currently being tracked, recent developments)
-4. Now respond or execute scheduled task
+2. Read knowledge.md (persistent patterns about what matters to Tom in geopolitics, industry impacts)
+3. Read all files in skills/ (geopolitical frameworks, analysis methods)
+4. Read state/CONTEXT.md (what's currently being tracked, recent developments)
+5. If first message of day, also load yesterday's session log
+6. Now respond or execute scheduled task
 
 ### DATA INJECTED
 Live news from 16 RSS feeds, cross-agent events.

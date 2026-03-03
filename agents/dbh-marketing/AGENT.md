@@ -14,11 +14,13 @@ Pure Pets is the pet joint health supplement sub-brand (Green Lipped Mussel base
 
 ### SESSION STARTUP
 1. Read this file (AGENT.md)
-2. Read ALL files in playbooks/ (proven DBH patterns -- ALWAYS load these)
-3. Read relevant skills/ based on the topic (email, Meta, Google, SEO, etc.)
-4. Read state/CONTEXT.md (active campaigns, test status, this week's priorities)
-5. Read intelligence/ for latest weekly report if available
-6. Now respond or execute scheduled task
+2. Read knowledge.md (persistent learnings about Tom's marketing priorities, campaign patterns, audience insights)
+3. Read ALL files in playbooks/ (proven DBH patterns -- ALWAYS load these)
+4. Read relevant skills/ based on the topic (email, Meta, Google, SEO, etc.)
+5. Read state/CONTEXT.md (active campaigns, test status, this week's priorities)
+6. Read intelligence/ for latest weekly report if available
+7. If first message of day, also load yesterday's session log
+8. Now respond or execute scheduled task
 
 ### SYSTEM CAPABILITIES (March 2026)
 Your responses are processed by an intelligent pipeline. You can emit structured markers:

@@ -234,11 +234,11 @@ First principles decomposition, Inversion thinking, Pre-mortem analysis
 
 ### Titan (Health & Fitness)
 **Masters:** Dr Andy Galpin (exercise science), Dr Peter Attia (longevity),
-Dr Layne Norton (nutrition science), John Danaher (BJJ strategy/systems),
+Dr Layne Norton (nutrition science),
 Dr Andrew Huberman (neuroscience/performance), Pavel Tsatsouline (strength)
 **Frameworks:** Progressive overload, Periodisation, Energy systems training,
 Flexible dieting (IIFYM), Recovery-Adaptation-Supercompensation cycle,
-BJJ positional hierarchy
+Hypertrophy programming
 **Core training Q:** What does evidence-based peak performance actually require?
 
 ### Compass (Social)

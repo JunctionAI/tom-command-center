@@ -538,7 +538,7 @@ After completing your main task, extract any insights or learnings from your ana
 Return a JSON array of insights. Each insight should be:
 {
     "insight": "A clear, specific, actionable statement of what was learned",
-    "domain": "the topic area (e.g., meta_ads, email, geopolitics, nutrition, bjj)",
+    "domain": "the topic area (e.g., meta_ads, email, geopolitics, nutrition, fitness)",
     "evidence": "What specific data or observation supports this",
     "confidence": "EMERGING (first time observed) or PROVEN (seen 3+ times)",
     "tags": ["relevant", "tags", "for", "cross-referencing"]
