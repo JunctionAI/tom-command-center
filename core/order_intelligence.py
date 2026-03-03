@@ -502,10 +502,15 @@ def build_customer_profile(order: dict, db_conn: sqlite3.Connection = None) -> d
 
 # --- Main Intelligence Fetch ---
 
-def fetch_order_intelligence(days: int = 1) -> str:
+def fetch_order_intelligence(days: int = 1, yesterday_only: bool = True) -> str:
     """
     Fetch per-order attribution, customer intelligence, and cross-channel verification.
     Persists to database for cumulative learning.
+
+    Args:
+        days: Number of days to fetch (1 = yesterday for morning briefings)
+        yesterday_only: If True, fetch the full previous calendar day (yesterday 00:00 to today 00:00)
+                       If False, fetch last N days from now
     """
     store_url = _shopify_url()
     token = os.environ.get("SHOPIFY_ACCESS_TOKEN")
@@ -516,10 +521,19 @@ def fetch_order_intelligence(days: int = 1) -> str:
     import requests
 
     headers = _shopify_headers()
-    # Use NZ timezone so "today" = midnight NZST, not UTC
+    # Use NZ timezone so dates align with Auckland business day
     now_nz = datetime.now(NZ_TZ)
-    day_start = now_nz.replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=days - 1)
-    since = day_start.isoformat()
+
+    if yesterday_only and days == 1:
+        # For morning briefing: get YESTERDAY's full calendar day (00:00 to 23:59 NZ time)
+        yesterday_nz = now_nz - timedelta(days=1)
+        day_start = yesterday_nz.replace(hour=0, minute=0, second=0, microsecond=0)
+        day_end = now_nz.replace(hour=0, minute=0, second=0, microsecond=0)  # Today at midnight
+        since = day_start.isoformat()
+    else:
+        # For historical analysis: get last N days from now
+        day_start = now_nz.replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=days - 1)
+        since = day_start.isoformat()
 
     try:
         # Fetch orders with full details
@@ -532,7 +546,8 @@ def fetch_order_intelligence(days: int = 1) -> str:
         orders = resp.json().get("orders", [])
 
         if not orders:
-            return f"ORDER INTELLIGENCE -- No orders in last {days} day(s)"
+            day_label = f"{day_start.strftime('%A, %B %d')} (NZ)" if yesterday_only and days == 1 else f"last {days} day(s)"
+            return f"ORDER INTELLIGENCE -- No orders on {day_label}"
 
         # Cross-reference data
         klaviyo_sends = get_recent_klaviyo_sends(hours=max(days * 24 + 24, 48))
@@ -638,8 +653,14 @@ def fetch_order_intelligence(days: int = 1) -> str:
                     logger.warning(f"DB save failed for order {analysis['name']}: {e}")
 
         # --- Format output ---
+        if yesterday_only and days == 1:
+            day_label = f"{day_start.strftime('%A, %B %d, %Y')} (NZ)"
+            header = f"ORDER INTELLIGENCE -- {day_label}"
+        else:
+            header = f"ORDER INTELLIGENCE -- Last {days} day(s)"
+
         lines = [
-            f"ORDER INTELLIGENCE -- Last {days} day(s)",
+            header,
             f"  Total: {len(orders)} orders, ${total_revenue:,.2f} revenue",
             f"  Customers: {new_customers} new, {returning_customers} returning "
             f"({returning_customers / len(orders) * 100:.0f}% repeat rate)" if orders else "",
