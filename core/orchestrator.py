@@ -43,6 +43,12 @@ AGENT_DISPLAY = {
     "strategos-pg":      "Strategos",
     "asclepius-brain":   "Asclepius",
     "marcus-stoic":      "Marcus",
+    "trajectory":        "Trajectory",
+    "customer-science":  "Customer",
+    "experiments":       "Experimenter",
+    "principles":        "Codifier",
+    "efficiency":        "Auditor",
+    "sentinel":          "Sentinel",
 }
 
 logging.basicConfig(

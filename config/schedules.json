@@ -192,6 +192,42 @@
       "task": "weekly_reflection",
       "cron": "0 20 * * 0",
       "description": "Marcus weekly Stoic reflection (Sunday 8pm)"
+    },
+    {
+      "agent": "sentinel",
+      "task": "health_check",
+      "cron": "45 7 * * *",
+      "description": "Sentinel daily system health check (7:45am, before Trajectory)"
+    },
+    {
+      "agent": "trajectory",
+      "task": "daily_forecast",
+      "cron": "0 8 * * *",
+      "description": "Trajectory daily 90-day forecast (8:00am)"
+    },
+    {
+      "agent": "customer-science",
+      "task": "weekly_deep_dive",
+      "cron": "0 10 * * 1",
+      "description": "Customer Scientist weekly deep dive (Monday 10am)"
+    },
+    {
+      "agent": "experiments",
+      "task": "weekly_compilation",
+      "cron": "0 17 * * 5",
+      "description": "Experimenter weekly A/B test compilation (Friday 5pm)"
+    },
+    {
+      "agent": "principles",
+      "task": "weekly_codification",
+      "cron": "0 18 * * 0",
+      "description": "Codifier weekly principle extraction (Sunday 6pm)"
+    },
+    {
+      "agent": "efficiency",
+      "task": "weekly_audit",
+      "cron": "0 16 * * 5",
+      "description": "Auditor weekly time & ROI audit (Friday 4pm)"
     }
   ]
 }

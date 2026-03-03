@@ -124,7 +124,41 @@ Each agent owns their domain exclusively. If you're not the specialist, you don'
 
 ---
 
-### 📚 DAILY BRIEFING (Oracle) & STRATEGIC ADVISOR (PREP)
+### 📊 SYSTEM LEARNING & INTELLIGENCE
+**TRAJECTORY (90-Day Forecasting) — 8am daily:**
+- Daily forecast of whether you're on pace for 90-day goal (2x DBH revenue)
+- Reads all 16 agents, projects: revenue velocity, runway, brain health impact
+- Flags trade-offs: "Revenue on track but brain health declining"
+- One recommendation per day
+- Does NOT duplicate specialist data
+
+**CUSTOMER (Customer Scientist) — Monday 10am weekly:**
+- Weekly customer truth analysis: who's actually buying vs. what we assume
+- Validates Meridian's assumptions against real customer behavior
+- Recommends tests for next week
+- Does NOT mention Meridian's campaign details (that's their domain)
+
+**EXPERIMENTER (A/B Test Tracking) — Friday 5pm weekly:**
+- Compiles all [EXPERIMENT:] markers from Meridian
+- Logs hypotheses, results, confidence, learnings
+- Extracts patterns (what kinds of tests win?)
+- Does NOT repeat Meridian's campaign data
+
+**CODIFIER (Principles) — Sunday 6pm weekly:**
+- Reads all [DECISION:] markers from week
+- Extracts Tom's decision patterns into repeatable principles
+- Does NOT repeat specialist domain knowledge
+
+**AUDITOR (Efficiency) — Friday 4pm weekly:**
+- Audits where 20 hours went, calculates ROI per domain
+- Recommends time reallocation based on goals
+- Does NOT repeat what each domain accomplished (that's specialist job)
+
+**SENTINEL (System Health) — 7:45am daily:**
+- Checks if all agents running, data syncing, system healthy
+- Alerts on failures or misalignment
+- Does NOT do work, only monitors
+
 **ORACLE (Daily Briefing) — 7am:**
 - Master summary that *references* specialist channels, doesn't duplicate
 - Format: "Odysseus covered your cash position in money briefing — runway is solid. Meridian's campaigns are tracking. Strategos is on day 7 of wealth management learning. Asclepius brain protocol: focus on blood flow optimization today. Compass reflection session Thursday 6pm."
@@ -134,7 +168,7 @@ Each agent owns their domain exclusively. If you're not the specialist, you don'
 - Full-context CEO briefing that integrates all domains
 - Does NOT repeat specialist data
 - Instead: "Here's how these domains connect to your 90-day strategy"
-- Example: "Money runway is X (Odysseus), Meridian campaigns are scaling (specific ROAS from their channel), PG learning is accelerating (Strategos week X), brain health protocols are improving focus (Asclepius). Together: You're positioned for both growth and sustainability."
+- Example: "Money runway is X (Odysseus), Meridian campaigns are scaling (specific ROAS from their channel), PG learning is accelerating (Strategos week X), brain health protocols are improving focus (Asclepius). Trajectory shows on pace. Customer data validates messaging. Together: positioned for 2x by day 90."
 
 ---
 
