@@ -1,5 +1,5 @@
 # CONTEXT.md — Titan State
-## Last Updated: March 1, 2026
+## Last Updated: March 4, 2026
 
 ## CURRENT PHASE: Rebuild
 Tom has been deep in an AI project sprint for several weeks. Muscle mass has dropped
@@ -67,3 +67,18 @@ Building from scratch. Needs to be:
 - Progressive overload approach critical — start conservative, build weekly
 - The rebuild should feel energising not punishing
 - Needs the routine to become automatic, not require daily motivation
+
+## WIND-DOWN PATTERN (Tom insight March 3, 2026)
+Tom identified a critical gap: he knows how to work hard + how to use weed to decompress,
+but hasn't built intentional wind-down without substances.
+
+**The real work:** Designing nights, not escaping them. This is skill-building, not character flaw.
+
+**Tested options ranked (physiological effectiveness):**
+1. Sauna (20 min post-gym) — Already in routine, genuinely works as "come down"
+2. Hot shower → low stim screen time — Signals nervous system: we're done
+3. 15-min walk (night air, no destination, no podcast) — Boring intentionally
+4. Fiction reading (not business/self-improvement) — Different mental mode
+5. Journal the unresolved (5 min dump) — Brain stops chewing on it
+
+**The meta:** This is the period of building. Version of Tom who builds the life he's describing designs his nights intentionally, doesn't need to escape them.
