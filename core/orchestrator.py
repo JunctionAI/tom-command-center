@@ -1165,6 +1165,28 @@ def run_scheduled_task(agent_name: str, task_name: str, telegram_config: dict):
             logger.error(f"Vault sync failed: {e}")
         return
 
+    # --- Daily snapshot (11:59pm NZST -- locks calendar day figures) ---
+    if task_name == "daily_snapshot":
+        try:
+            from core.daily_snapshot import run_daily_snapshot
+            snapshot = run_daily_snapshot()
+
+            chat_id = telegram_config.get("chat_ids", {}).get("command-center", "")
+            if chat_id and snapshot:
+                bot_token = telegram_config.get("bot_token", os.environ.get("TELEGRAM_BOT_TOKEN", ""))
+                from core.notification_router import route_notification
+                msg = f"""✓ DAILY SNAPSHOT LOCKED -- {snapshot['date']}
+Revenue: ${snapshot['revenue']:.2f}
+Orders: {snapshot['order_count']}
+Customers: {snapshot['new_customers']} new, {snapshot['returning_customers']} returning
+"""
+                route_notification(chat_id, msg, bot_token, severity="INFO", agent="Nexus")
+
+            logger.info(f"Daily snapshot complete: {snapshot['date']} ${snapshot['revenue']:.2f}")
+        except Exception as e:
+            logger.error(f"Daily snapshot failed: {e}")
+        return
+
     # --- Monthly CPA:LTV cohort analysis (1st of month) ---
     if task_name == "ltv_analysis":
         try:

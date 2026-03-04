@@ -234,6 +234,12 @@
       "task": "daily_scan",
       "cron": "0 5 * * *",
       "description": "SCOUT ecosystem ideas scan (5am daily, before all other agents)"
+    },
+    {
+      "agent": "command-center",
+      "task": "daily_snapshot",
+      "cron": "59 23 * * *",
+      "description": "Daily snapshot -- locks calendar day figures at 11:59pm NZST (end of day)"
     }
   ]
 }
