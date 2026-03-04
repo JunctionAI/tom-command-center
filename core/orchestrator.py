@@ -1396,11 +1396,28 @@ patterns -- what's driving sales? Compare to benchmarks in your playbooks."""
     # 2b. Order-level intelligence (per-order attribution + customer analysis)
     if task_name in perf_data_tasks and agent_name in ("daily-briefing", "dbh-marketing", "strategic-advisor"):
         try:
-            from core.order_intelligence import fetch_order_intelligence, get_customer_db_summary
-            days = 7 if task_name == "weekly_review" else 1
-            order_data = fetch_order_intelligence(days)
-            db_summary = get_customer_db_summary()
-            task_prompt += f"""
+            # PRIORITY: Try to use yesterday's locked snapshot first
+            from core.snapshot_reporter import inject_snapshot_data
+            snapshot_text = inject_snapshot_data(agent_name, task_name)
+
+            if snapshot_text:
+                # Snapshot exists -- use it as ground truth
+                task_prompt += f"""
+
+{snapshot_text}
+
+=== SNAPSHOT-BASED ANALYSIS ===
+This locked snapshot represents yesterday's complete calendar day (midnight to midnight NZ time).
+All agents share this same ground truth."""
+                logger.info(f"Injected SNAPSHOT data for {agent_name}/{task_name}")
+                data_status["Order Intelligence (Snapshot)"] = "OK"
+            else:
+                # No snapshot yet (first run of day) -- fall back to live API
+                from core.order_intelligence import fetch_order_intelligence, get_customer_db_summary
+                days = 7 if task_name == "weekly_review" else 1
+                order_data = fetch_order_intelligence(days)
+                db_summary = get_customer_db_summary()
+                task_prompt += f"""
 
 {order_data}
 
@@ -1413,8 +1430,10 @@ returning customers, which campaigns are working. Flag any unattributed orders.
 For returning customers, note their LTV trajectory and what product they keep buying.
 Use the cumulative intelligence DB summary to spot long-term trends (repeat buyers,
 channel shifts, category growth). The DB learns more with every briefing."""
-            logger.info(f"Injected order intelligence + DB summary for {agent_name}/{task_name}")
-            data_status["Order Intelligence + Customer DB"] = "OK"
+                logger.info(f"Injected live order intelligence (snapshot not yet available) for {agent_name}/{task_name}")
+                data_status["Order Intelligence (Live API)"] = "OK"
+
+            logger.info(f"Injected order intelligence for {agent_name}/{task_name}")
         except Exception as e:
             logger.warning(f"Order intelligence fetch failed (non-fatal): {e}")
             data_status["Order Intelligence + Customer DB"] = f"FAILED: {e}"
