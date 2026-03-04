@@ -1480,14 +1480,30 @@ channel shifts, category growth). The DB learns more with every briefing."""
             task_prompt += f"""
 
 === FINANCIAL POSITION ===
-**DBH Operations (Xero):** Handled by Tony/ops team. Your role: marketing spend vs results only.
-**Tom's Personal Balance (Wise):** For visibility. NOT an operational concern for DBH.
+
+⚠️ CRITICAL SEPARATION (PREP, Meridian, Oracle):
+
+**DBH Operations (Xero):**
+- P&L, balance sheet, runway, operational metrics
+- Handled by Tony (CEO, operations, finance)
+- Your role: MARKETING ONLY (ad spend, ROAS, CAC, channel efficiency)
+- Do NOT make operational/cash-flow recommendations
+
+**Tom's Personal Balance (Wise):**
+- See breakdown below in WISE section
+- This is Tom's personal money, NOT DBH operational budget
+- DO include in briefing for transparency
+- DO NOT flag as a business crisis or operational concern
+- DO NOT suggest it impacts DBH spending decisions (it doesn't)
 
 {chr(10).join(financial_parts)}
 
-PREP: Focus only on DBH marketing metrics (spend, ROAS, CAC). Tom's personal Wise balance
-is informational only — do NOT flag as a business operational issue.
-Oracle: Include DBH financial health (via Xero) in the PERFORMANCE section."""
+PREP: Your analysis scope is marketing efficiency (Meta ROAS, email ROI, Google Ads performance).
+Do not conflate Tom's personal balance with DBH business decisions. Focus on marketing unit economics.
+
+Meridian: Same scope — marketing performance, channel optimization, campaign ROAS.
+
+Oracle: Include DBH financial health (Xero) in your PERFORMANCE section, but separate from Tom's personal finances."""
 
     # 2c. Replenishment candidates for Meridian
     if task_name in ("morning_brief", "morning_briefing") and agent_name in ("dbh-marketing", "daily-briefing", "strategic-advisor"):

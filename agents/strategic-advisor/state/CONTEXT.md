@@ -18,13 +18,22 @@
 6. **Blood Testing Vision** -- Long-term, don't distract from short-term needs
 7. **Alternate** -- Wind down spending, keep as creative outlet only
 
-### Financial Status
-- CRITICAL: "Down bad financially" (exact numbers needed)
-- Overspending on Alternate (AI films) with zero revenue
-- DBH base: ~$1K/week ($4K/month before tax)
-- Agency income: Variable, unknown current level
-- Ponsonby rent: High
-- Action: Need exact monthly income vs expenses breakdown from Tom
+### Financial Separation (CRITICAL - March 2026)
+
+**Tom's Personal (Wise Balance):**
+- Current: ~$1,066 NZD (for visibility only)
+- NOT operational. NOT DBH operational budget.
+- Tom's personal cash — his concern, not a business operational concern.
+- Show the number for transparency, but don't flag as business risk.
+
+**DBH Business (Xero/Tony's Domain):**
+- Tom handles: Marketing strategy, campaign analysis, ROAS optimization
+- Tony handles: Operations, finance, payroll, P&L
+- Revenue target: $50K March = ~$1,700/day average
+- Current burn: Meta $74/day with zero verified ROAS (CRITICAL ISSUE)
+- Email: Last campaign Feb 28 — 5 days without send (CRITICAL MISS)
+- DO NOT flag Tom's Wise balance as if it's DBH's operational problem.
+- DO flag DBH's marketing efficiency (Meta ROI, email cadence) as Tom's domain.
 
 ### Patterns Observed
 - 20+ projects in one year = extreme exploration pattern
