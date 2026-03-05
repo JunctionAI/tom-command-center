@@ -15,7 +15,10 @@ sys.path.insert(0, os.path.dirname(__file__))
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s",
-    handlers=[logging.StreamHandler()]
+    handlers=[
+        logging.FileHandler(os.path.join(os.path.dirname(__file__), "orchestrator.log"), encoding='utf-8'),
+        logging.StreamHandler()
+    ]
 )
 logger = logging.getLogger(__name__)
 
@@ -24,10 +27,23 @@ def run_scheduler(telegram_config, schedule_config):
     """Run APScheduler in a background thread."""
     from apscheduler.schedulers.background import BackgroundScheduler
     from apscheduler.triggers.cron import CronTrigger
+    from apscheduler.executors.pool import ThreadPoolExecutor
     from core.orchestrator import run_scheduled_task
 
     timezone = schedule_config.get("timezone", "Pacific/Auckland")
-    scheduler = BackgroundScheduler(timezone=timezone)
+    executors = {
+        'default': ThreadPoolExecutor(10)  # Allow 10 concurrent tasks
+    }
+    job_defaults = {
+        'coalesce': True,
+        'max_instances': 1,
+        'misfire_grace_time': 3600,  # 1 hour grace — never silently skip
+    }
+    scheduler = BackgroundScheduler(
+        timezone=timezone,
+        executors=executors,
+        job_defaults=job_defaults
+    )
 
     for task in schedule_config["schedules"]:
         agent = task["agent"]

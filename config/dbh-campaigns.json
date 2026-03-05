@@ -1,0 +1,168 @@
+{
+  "targets": {
+    "monthly": {
+      "2026-03": { "revenue": 50000, "orders": 350, "aov": 143 },
+      "2026-04": { "revenue": 62500, "orders": 420, "aov": 149 },
+      "2026-05": { "revenue": 77500, "orders": 500, "aov": 155 },
+      "2026-06": { "revenue": 87500, "orders": 560, "aov": 156 }
+    },
+    "repeat_rate": 0.35,
+    "email_revenue_pct": 0.20,
+    "roas_floor": 2.0,
+    "roas_scale_threshold": 3.0
+  },
+  "campaigns": [
+    {
+      "id": "pure-pets-biactive",
+      "name": "Pure Pets Bi-Active",
+      "status": "active",
+      "launch": "2026-03-15",
+      "budget_daily": 20,
+      "channels": ["meta", "email"],
+      "products": ["Pure Pets GLM", "Pure Pets Bi-Active"],
+      "notes": "Existing $10-20/day. Scale to $50/day if ROAS > 2x."
+    },
+    {
+      "id": "marine-collagen",
+      "name": "Marine Collagen Launch",
+      "status": "hold",
+      "launch": "2026-03-28",
+      "budget_daily": 30,
+      "channels": ["meta", "email", "seo"],
+      "products": ["Marine Collagen"],
+      "notes": "HOLD: Diagnose post-click funnel before launch. 86 clicks, 0 conversions = systemic issue."
+    },
+    {
+      "id": "colostrum",
+      "name": "Colostrum Campaign",
+      "status": "planned",
+      "launch": "2026-04-15",
+      "budget_daily": 50,
+      "channels": ["meta", "email", "google"],
+      "products": ["Colostrum"],
+      "notes": "New product category. Build landing page + educational email sequence first."
+    },
+    {
+      "id": "deer-velvet",
+      "name": "Deer Velvet Push",
+      "status": "planned",
+      "launch": "2026-04-28",
+      "budget_daily": 50,
+      "channels": ["meta", "email"],
+      "products": ["Deer Velvet 90 Twin Pack"],
+      "notes": "#3 product by revenue. Proven trust + social proof creative formula."
+    },
+    {
+      "id": "pure-pets-r2",
+      "name": "Pure Pets Round 2",
+      "status": "planned",
+      "launch": "2026-05-12",
+      "budget_daily": 75,
+      "channels": ["meta", "google", "email"],
+      "products": ["Pure Pets GLM", "Pure Pets Bi-Active"],
+      "notes": "Scale based on R1 learnings. Target $75/day if >2x ROAS."
+    },
+    {
+      "id": "winter-immunity",
+      "name": "Winter Immunity Bundle",
+      "status": "planned",
+      "launch": "2026-05-25",
+      "budget_daily": 60,
+      "channels": ["meta", "email", "seo"],
+      "products": ["Sea Cucumber", "Colostrum", "Oyster"],
+      "notes": "Seasonal push. Bundle offer. Sea Cucumber is #1 product."
+    }
+  ],
+  "deliverables": [
+    {
+      "id": "d1",
+      "type": "ad_creative",
+      "campaign": "pure-pets-biactive",
+      "title": "Pure Pets trust + social proof ad set (3 variants)",
+      "assigned_to": "roie",
+      "status": "brief",
+      "due": "2026-03-12"
+    },
+    {
+      "id": "d2",
+      "type": "email_sequence",
+      "campaign": "pure-pets-biactive",
+      "title": "Pure Pets 3-email launch sequence",
+      "assigned_to": "ai",
+      "status": "brief",
+      "due": "2026-03-14"
+    },
+    {
+      "id": "d3",
+      "type": "landing_page",
+      "campaign": "marine-collagen",
+      "title": "Marine Collagen landing page (funnel fix)",
+      "assigned_to": "roie",
+      "status": "brief",
+      "due": "2026-03-25"
+    },
+    {
+      "id": "d4",
+      "type": "seo_article",
+      "campaign": "marine-collagen",
+      "title": "Marine Collagen benefits article (Beacon)",
+      "assigned_to": "ai",
+      "status": "brief",
+      "due": "2026-03-20"
+    },
+    {
+      "id": "d5",
+      "type": "email_sequence",
+      "campaign": "colostrum",
+      "title": "Colostrum educational 5-email sequence",
+      "assigned_to": "ai",
+      "status": "planned",
+      "due": "2026-04-10"
+    },
+    {
+      "id": "d6",
+      "type": "ad_creative",
+      "campaign": "colostrum",
+      "title": "Colostrum ad creative set (trust formula)",
+      "assigned_to": "roie",
+      "status": "planned",
+      "due": "2026-04-12"
+    }
+  ],
+  "channel_systems": {
+    "email": {
+      "running_flows": ["Welcome Series", "Post-Purchase Thank You", "Browse Abandonment", "Winback 60-day", "VIP Exclusive"],
+      "tasks": [
+        { "task": "Build educational series: Sea Cucumber science + benefits (3 emails)", "priority": "high", "owner": "ai", "status": "pending" },
+        { "task": "Segment Loyal customers for upsell to Twin Packs", "priority": "medium", "owner": "ai", "status": "pending" },
+        { "task": "Build Pure Pets cross-sell flow for DBH human customers", "priority": "medium", "owner": "ai", "status": "pending" },
+        { "task": "Reactivate 60+ day dormant customers (142 identified)", "priority": "high", "owner": "ai", "status": "pending" }
+      ]
+    },
+    "paid_ads": {
+      "running_campaigns": [],
+      "tasks": [
+        { "task": "Add UTM params to all Meta ad URLs when Pure Pets launches", "priority": "critical", "owner": "tom", "status": "pending" },
+        { "task": "Apply for Google Ads Basic API access", "priority": "high", "owner": "tom", "status": "pending" },
+        { "task": "Build Pure Pets Bi-Active ad set (3 trust + social proof variants)", "priority": "high", "owner": "roie", "status": "pending" },
+        { "task": "Diagnose post-click funnel: 86 clicks, 0 conversions", "priority": "critical", "owner": "tom", "status": "pending" }
+      ]
+    },
+    "seo": {
+      "running_systems": ["Beacon nightly articles", "Schema markup generation", "Shopify blog publishing", "GSC ranking feedback"],
+      "tasks": [
+        { "task": "Review and publish first Beacon articles once system deploys", "priority": "high", "owner": "tom", "status": "pending" },
+        { "task": "Target 'green lipped mussel benefits' keyword cluster (4 articles)", "priority": "medium", "owner": "ai", "status": "pending" },
+        { "task": "Target 'deer velvet benefits nz' keyword cluster (3 articles)", "priority": "medium", "owner": "ai", "status": "pending" },
+        { "task": "Build FAQ schema for top 5 product pages", "priority": "medium", "owner": "ai", "status": "pending" }
+      ]
+    },
+    "other": {
+      "tasks": [
+        { "task": "Identify 10 NZ pet influencers for Pure Pets seeding", "priority": "medium", "owner": "tom", "status": "pending" },
+        { "task": "Research wholesale/distribution for Pure Pets (vet clinics, pet stores)", "priority": "low", "owner": "tom", "status": "pending" },
+        { "task": "TikTok brand content plan: founder story + product education", "priority": "medium", "owner": "tom", "status": "pending" }
+      ]
+    }
+  }
+}

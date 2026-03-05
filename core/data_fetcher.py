@@ -149,7 +149,7 @@ def fetch_klaviyo_data(days: int = 1) -> str:
             attrs = c.get("attributes", {})
             send_time = attrs.get("send_time", "")
             status = attrs.get("status", "")
-            if status == "Sent" and send_time:
+            if status in ("Sent", "Sending") and send_time:
                 if send_time >= cutoff or len(recent) < 5:
                     recent.append(c)
             if len(recent) >= 5:
@@ -359,6 +359,199 @@ def fetch_meta_ads_data(days: int = 1) -> str:
         return f"[Meta Ads error: {str(e)}]"
 
 
+# --- Meta Ads Video Metrics ---
+
+def fetch_meta_video_metrics(campaign_filter: str = None, days: int = 7,
+                              since: str = None, until: str = None) -> dict:
+    """Fetch ad-level video engagement metrics from Meta Ads API.
+
+    Returns structured dict with per-ad video performance + formatted string.
+    Supports either relative days or explicit date range (since/until as YYYY-MM-DD).
+    """
+    access_token = os.environ.get("META_ACCESS_TOKEN")
+    ad_account_id = os.environ.get("META_AD_ACCOUNT_ID")
+
+    if not access_token or not ad_account_id:
+        return {"error": "Meta Ads not configured", "formatted": "[Meta Ads video data unavailable]", "ads": []}
+
+    import requests
+
+    # Date range
+    if since and until:
+        date_since = since
+        date_until = until
+    else:
+        now_nz = datetime.now(NZ_TZ)
+        nz_start = now_nz.replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=days - 1)
+        nz_start_utc = nz_start.astimezone(ZoneInfo("UTC"))
+        nz_end_utc = now_nz.astimezone(ZoneInfo("UTC"))
+        date_since = nz_start_utc.strftime("%Y-%m-%d")
+        date_until = nz_end_utc.strftime("%Y-%m-%d")
+
+    fields = ",".join([
+        "ad_name", "campaign_name", "adset_name",
+        "spend", "impressions", "reach", "clicks", "ctr", "cpc",
+        "actions", "action_values", "cost_per_action_type",
+        "video_play_actions",
+        "video_thruplay_watched_actions",
+        "video_p25_watched_actions",
+        "video_p50_watched_actions",
+        "video_p75_watched_actions",
+        "video_p100_watched_actions",
+        "video_avg_time_watched_actions",
+    ])
+
+    try:
+        url = f"https://graph.facebook.com/v21.0/act_{ad_account_id}/insights"
+        params = {
+            "access_token": access_token,
+            "time_range": json.dumps({"since": date_since, "until": date_until}),
+            "fields": fields,
+            "level": "ad",
+            "limit": 50,
+        }
+        if campaign_filter:
+            params["filtering"] = json.dumps([{
+                "field": "campaign.name",
+                "operator": "CONTAIN",
+                "value": campaign_filter,
+            }])
+
+        resp = requests.get(url, params=params, timeout=30)
+
+        if resp.status_code != 200:
+            error_msg = resp.json().get("error", {}).get("message", resp.text[:200])
+            logger.error(f"Meta video metrics API error {resp.status_code}: {error_msg}")
+            return {"error": error_msg, "formatted": f"[Meta API error: {error_msg}]", "ads": []}
+
+        raw_ads = resp.json().get("data", [])
+
+        if not raw_ads:
+            return {"error": None, "formatted": f"No video ad data for {date_since} to {date_until}", "ads": []}
+
+        ads = []
+        for ad in raw_ads:
+            # Extract purchases + revenue from actions
+            purchases = 0
+            revenue = 0.0
+            cpa = 0.0
+            for a in ad.get("actions", []):
+                if a.get("action_type") == "purchase":
+                    purchases = int(a.get("value", 0))
+            for a in ad.get("action_values", []):
+                if a.get("action_type") == "purchase":
+                    revenue = float(a.get("value", 0))
+            for a in ad.get("cost_per_action_type", []):
+                if a.get("action_type") == "purchase":
+                    cpa = float(a.get("value", 0))
+
+            spend = float(ad.get("spend", 0))
+            impressions = int(ad.get("impressions", 0))
+
+            # Video metrics — extract values from action arrays
+            def _video_val(field_data):
+                if not field_data:
+                    return 0
+                if isinstance(field_data, list):
+                    return sum(int(v.get("value", 0)) for v in field_data)
+                return int(field_data)
+
+            video_plays = _video_val(ad.get("video_play_actions"))
+            thruplay = _video_val(ad.get("video_thruplay_watched_actions"))
+            p25 = _video_val(ad.get("video_p25_watched_actions"))
+            p50 = _video_val(ad.get("video_p50_watched_actions"))
+            p75 = _video_val(ad.get("video_p75_watched_actions"))
+            p100 = _video_val(ad.get("video_p100_watched_actions"))
+
+            avg_watch_raw = ad.get("video_avg_time_watched_actions")
+            avg_watch = 0.0
+            if avg_watch_raw and isinstance(avg_watch_raw, list):
+                avg_watch = float(avg_watch_raw[0].get("value", 0)) if avg_watch_raw else 0.0
+            elif avg_watch_raw:
+                avg_watch = float(avg_watch_raw)
+
+            # Derived metrics
+            hook_rate = (p25 / impressions * 100) if impressions > 0 else 0  # ~3s for 13s video
+            completion_rate = (p100 / video_plays * 100) if video_plays > 0 else 0
+            thruplay_rate = (thruplay / impressions * 100) if impressions > 0 else 0
+            roas = revenue / spend if spend > 0 else 0
+
+            ad_record = {
+                "ad_name": ad.get("ad_name", "Unknown"),
+                "campaign_name": ad.get("campaign_name", "Unknown"),
+                "adset_name": ad.get("adset_name", "Unknown"),
+                "spend": spend,
+                "impressions": impressions,
+                "reach": int(ad.get("reach", 0)),
+                "clicks": int(ad.get("clicks", 0)),
+                "ctr": float(ad.get("ctr", 0)),
+                "cpc": float(ad.get("cpc", 0)),
+                "purchases": purchases,
+                "revenue": revenue,
+                "cpa": cpa,
+                "roas": roas,
+                "video_plays": video_plays,
+                "thruplay": thruplay,
+                "thruplay_rate": thruplay_rate,
+                "p25": p25,
+                "p50": p50,
+                "p75": p75,
+                "p100": p100,
+                "avg_watch_time": avg_watch,
+                "hook_rate": hook_rate,
+                "completion_rate": completion_rate,
+                "drop_off_25_50": ((p25 - p50) / p25 * 100) if p25 > 0 else 0,
+                "drop_off_50_75": ((p50 - p75) / p50 * 100) if p50 > 0 else 0,
+                "drop_off_75_100": ((p75 - p100) / p75 * 100) if p75 > 0 else 0,
+            }
+            ads.append(ad_record)
+
+        # Sort by spend descending
+        ads.sort(key=lambda x: x["spend"], reverse=True)
+
+        # Format output
+        lines = [
+            f"META VIDEO METRICS — {date_since} to {date_until}",
+            f"Filter: {campaign_filter or 'All campaigns'}",
+            f"Ads found: {len(ads)}",
+            "",
+        ]
+
+        for i, a in enumerate(ads, 1):
+            lines.append(f"--- Ad {i}: {a['ad_name']} ---")
+            lines.append(f"  Campaign: {a['campaign_name']}")
+            lines.append(f"  Ad Set: {a['adset_name']}")
+            lines.append(f"  Spend: ${a['spend']:,.2f}  |  Impressions: {a['impressions']:,}  |  Reach: {a['reach']:,}")
+            lines.append(f"  Clicks: {a['clicks']:,}  |  CTR: {a['ctr']:.2f}%  |  CPC: ${a['cpc']:.2f}")
+            lines.append(f"  Purchases: {a['purchases']}  |  Revenue: ${a['revenue']:,.2f}  |  CPA: ${a['cpa']:,.2f}  |  ROAS: {a['roas']:.2f}x")
+            lines.append(f"  Video Plays: {a['video_plays']:,}  |  Avg Watch: {a['avg_watch_time']:.1f}s")
+            lines.append(f"  Hook Rate (25%): {a['hook_rate']:.1f}%  |  ThruPlay Rate: {a['thruplay_rate']:.1f}%  |  Completion: {a['completion_rate']:.1f}%")
+            lines.append(f"  Retention: 25%={a['p25']:,} → 50%={a['p50']:,} → 75%={a['p75']:,} → 100%={a['p100']:,}")
+            lines.append(f"  Drop-off: 25→50: {a['drop_off_25_50']:.1f}%  |  50→75: {a['drop_off_50_75']:.1f}%  |  75→100: {a['drop_off_75_100']:.1f}%")
+            lines.append("")
+
+        # Comparative summary
+        if len(ads) > 1:
+            lines.append("=== COMPARATIVE SUMMARY ===")
+            best_hook = max(ads, key=lambda x: x["hook_rate"])
+            best_completion = max(ads, key=lambda x: x["completion_rate"])
+            best_cpa = min((a for a in ads if a["purchases"] > 0), key=lambda x: x["cpa"], default=None)
+            best_roas = max(ads, key=lambda x: x["roas"])
+
+            lines.append(f"  Best Hook Rate: {best_hook['ad_name']} ({best_hook['hook_rate']:.1f}%)")
+            lines.append(f"  Best Completion: {best_completion['ad_name']} ({best_completion['completion_rate']:.1f}%)")
+            if best_cpa:
+                lines.append(f"  Best CPA: {best_cpa['ad_name']} (${best_cpa['cpa']:,.2f})")
+            lines.append(f"  Best ROAS: {best_roas['ad_name']} ({best_roas['roas']:.2f}x)")
+
+        formatted = "\n".join(lines)
+        return {"error": None, "formatted": formatted, "ads": ads}
+
+    except Exception as e:
+        logger.error(f"Meta video metrics error: {e}")
+        return {"error": str(e), "formatted": f"[Meta video metrics error: {e}]", "ads": []}
+
+
 # --- Google Ads ---
 
 def fetch_google_ads_data(days: int = 1) -> str:
@@ -427,7 +620,7 @@ def fetch_google_ads_data(days: int = 1) -> str:
             "Content-Type": "application/json",
         }
 
-        search_url = f"https://googleads.googleapis.com/v18/customers/{customer_id}/googleAds:searchStream"
+        search_url = f"https://googleads.googleapis.com/v19/customers/{customer_id}/googleAds:searchStream"
         search_resp = requests.post(
             search_url,
             headers=headers,

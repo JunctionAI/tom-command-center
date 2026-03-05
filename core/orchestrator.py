@@ -59,15 +59,18 @@ AGENT_DISPLAY = {
     "scout":             "Scout",
 }
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(message)s",
-    handlers=[
-        logging.FileHandler(BASE_DIR / "orchestrator.log", encoding='utf-8'),
-        logging.StreamHandler()
-    ]
-)
+# Logging configured by entrypoint.py — just get the logger here
 logger = logging.getLogger(__name__)
+# Fallback for direct CLI usage (python -m core.orchestrator)
+if not logger.handlers and not logging.getLogger().handlers:
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s [%(levelname)s] %(message)s",
+        handlers=[
+            logging.FileHandler(BASE_DIR / "orchestrator.log", encoding='utf-8'),
+            logging.StreamHandler()
+        ]
+    )
 
 
 def load_config():
@@ -829,6 +832,115 @@ def call_claude_vision(system_prompt: str, image_b64: str, media_type: str,
         return f"API Error: {str(e)}"
 
 
+# --- System Health Gatherer (for Sentinel) ---
+
+def _gather_system_health(telegram_config: dict) -> str:
+    """
+    Gather real system health data for Sentinel to analyse.
+    Checks: agent state file freshness, database sizes, log errors, schedule completions.
+    """
+    import sqlite3
+    from datetime import datetime, timedelta
+
+    lines = []
+    now = datetime.now()
+
+    # 1. Agent state file freshness
+    lines.append("AGENT STATE FILE FRESHNESS:")
+    agents_dir = os.path.join(BASE_DIR, "agents")
+    for agent_dir in sorted(os.listdir(agents_dir)):
+        state_path = os.path.join(agents_dir, agent_dir, "state", "CONTEXT.md")
+        if os.path.exists(state_path):
+            mtime = datetime.fromtimestamp(os.path.getmtime(state_path))
+            age_hours = (now - mtime).total_seconds() / 3600
+            status = "HEALTHY" if age_hours < 24 else "STALE" if age_hours < 72 else "DEAD"
+            lines.append(f"  {agent_dir}: updated {age_hours:.1f}h ago [{status}]")
+        elif os.path.isdir(os.path.join(agents_dir, agent_dir)):
+            lines.append(f"  {agent_dir}: NO state/CONTEXT.md [MISSING]")
+
+    # 2. Database health
+    lines.append("\nDATABASE STATUS:")
+    data_dir = os.path.join(BASE_DIR, "data")
+    if os.path.isdir(data_dir):
+        for db_file in sorted(os.listdir(data_dir)):
+            if db_file.endswith(".db"):
+                db_path = os.path.join(data_dir, db_file)
+                size_kb = os.path.getsize(db_path) / 1024
+                mtime = datetime.fromtimestamp(os.path.getmtime(db_path))
+                age_hours = (now - mtime).total_seconds() / 3600
+                row_counts = {}
+                try:
+                    conn = sqlite3.connect(db_path)
+                    tables = conn.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()
+                    for (table,) in tables[:5]:
+                        count = conn.execute(f"SELECT COUNT(*) FROM [{table}]").fetchone()[0]
+                        row_counts[table] = count
+                    conn.close()
+                except Exception as e:
+                    row_counts = {"error": str(e)}
+                lines.append(f"  {db_file}: {size_kb:.0f}KB, updated {age_hours:.1f}h ago, tables: {row_counts}")
+
+    # 3. Recent orchestrator log errors (last 100 lines)
+    lines.append("\nRECENT LOG ERRORS (last 100 lines):")
+    log_path = os.path.join(BASE_DIR, "orchestrator.log")
+    error_count = 0
+    if os.path.exists(log_path):
+        try:
+            with open(log_path, "r") as f:
+                log_lines = f.readlines()[-100:]
+            for line in log_lines:
+                if "ERROR" in line or "CRASHED" in line or "FAILED" in line:
+                    lines.append(f"  {line.strip()[:200]}")
+                    error_count += 1
+            if error_count == 0:
+                lines.append("  No errors in last 100 log lines")
+        except Exception:
+            lines.append("  Could not read orchestrator.log")
+    else:
+        lines.append("  orchestrator.log not found")
+
+    # 4. Schedule config summary
+    lines.append(f"\nSCHEDULED TASKS:")
+    schedules_path = os.path.join(BASE_DIR, "config", "schedules.json")
+    try:
+        with open(schedules_path, "r") as f:
+            import json
+            schedules = json.load(f)
+        tasks = schedules.get("tasks", [])
+        lines.append(f"  Total scheduled: {len(tasks)}")
+        agents_scheduled = set(t.get("agent", "?") for t in tasks)
+        lines.append(f"  Agents with schedules: {', '.join(sorted(agents_scheduled))}")
+    except Exception as e:
+        lines.append(f"  Could not read schedules: {e}")
+
+    # 5. Telegram config check (any SETUP_NEEDED?)
+    lines.append("\nTELEGRAM CONFIG:")
+    tg_path = os.path.join(BASE_DIR, "config", "telegram.json")
+    try:
+        with open(tg_path, "r") as f:
+            import json
+            tg = json.load(f)
+        chat_ids = tg.get("chat_ids", {})
+        configured = [k for k, v in chat_ids.items() if v and str(v) != "SETUP_NEEDED"]
+        unconfigured = [k for k, v in chat_ids.items() if not v or str(v) == "SETUP_NEEDED"]
+        lines.append(f"  Configured: {len(configured)} agents ({', '.join(sorted(configured))})")
+        if unconfigured:
+            lines.append(f"  NOT CONFIGURED: {', '.join(unconfigured)}")
+    except Exception as e:
+        lines.append(f"  Could not read telegram config: {e}")
+
+    # 6. Environment variable check
+    lines.append("\nENVIRONMENT VARIABLES:")
+    critical_vars = ["TELEGRAM_BOT_TOKEN", "CLAUDE_API_KEY", "SHOPIFY_ACCESS_TOKEN",
+                     "KLAVIYO_API_KEY", "META_ACCESS_TOKEN", "ASANA_API_KEY"]
+    for var in critical_vars:
+        val = os.environ.get(var, "")
+        status = "SET" if val else "MISSING"
+        lines.append(f"  {var}: {status}")
+
+    return "\n".join(lines)
+
+
 # --- Telegram Handler ---
 
 def _convert_tables_to_text(text: str) -> str:
@@ -882,6 +994,34 @@ def _convert_tables_to_text(text: str) -> str:
     return "\n".join(result)
 
 
+def _sanitize_telegram_markdown(text: str) -> str:
+    """
+    Sanitize text for Telegram Markdown (v1) to prevent parse failures.
+    Strips problematic patterns that cause Telegram's parser to reject messages.
+    """
+    import re
+    # Remove triple backtick code blocks (Telegram Markdown v1 only supports single backtick)
+    text = re.sub(r'```[\w]*\n?', '', text)
+    # Fix unmatched single underscores (used for italics in Markdown)
+    # Count underscores — if odd, escape the last one
+    underscore_count = text.count('_')
+    if underscore_count % 2 != 0:
+        # Find the last underscore and escape it
+        idx = text.rfind('_')
+        text = text[:idx] + '\\_' + text[idx+1:]
+    # Fix unmatched asterisks
+    asterisk_count = text.count('*')
+    if asterisk_count % 2 != 0:
+        idx = text.rfind('*')
+        text = text[:idx] + text[idx+1:]
+    # Fix unmatched square brackets (broken links)
+    open_brackets = text.count('[')
+    close_brackets = text.count(']')
+    if open_brackets != close_brackets:
+        text = text.replace('[', '(').replace(']', ')')
+    return text
+
+
 def send_telegram(chat_id: str, text: str, bot_token: str):
     """Send a message to a Telegram chat."""
     import requests
@@ -896,6 +1036,8 @@ def send_telegram(chat_id: str, text: str, bot_token: str):
 
     # Convert any markdown tables to structured text (Telegram can't render tables)
     text = _convert_tables_to_text(text)
+    # Sanitize markdown to prevent parse failures
+    text = _sanitize_telegram_markdown(text)
 
     url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
 
@@ -911,7 +1053,8 @@ def send_telegram(chat_id: str, text: str, bot_token: str):
             if data.get("ok"):
                 return True
             # Markdown parse errors -- retry without parse_mode
-            if "can't parse" in str(data.get("description", "")).lower():
+            desc = str(data.get("description", "")).lower()
+            if "can't parse" in desc or "bad request" in desc:
                 logger.warning(f"Markdown parse failed for {chat_id}, retrying plain text")
                 resp2 = requests.post(url, json={
                     "chat_id": chat_id,
@@ -963,6 +1106,27 @@ def run_scheduled_task(agent_name: str, task_name: str, telegram_config: dict):
     6. Update state
     """
     logger.info(f"Running scheduled task: {agent_name}/{task_name}")
+    try:
+        _run_scheduled_task_inner(agent_name, task_name, telegram_config)
+    except Exception as e:
+        logger.error(f"TASK CRASHED: {agent_name}/{task_name}: {e}", exc_info=True)
+        # Notify Tom so failures are never silent
+        try:
+            chat_id = telegram_config.get("chat_ids", {}).get("command-center") or \
+                      telegram_config.get("chat_ids", {}).get(agent_name)
+            bot_token = telegram_config.get("bot_token", os.environ.get("TELEGRAM_BOT_TOKEN", ""))
+            if chat_id and bot_token:
+                from core.notification_router import route_notification
+                agent_display = AGENT_DISPLAY.get(agent_name, agent_name)
+                route_notification(chat_id,
+                    f"TASK FAILED: {agent_display}/{task_name}\n\nError: {str(e)[:300]}\n\nWill retry next schedule.",
+                    bot_token, severity="IMPORTANT", agent="command-center")
+        except Exception:
+            logger.error(f"Could not send failure notification for {agent_name}/{task_name}")
+
+
+def _run_scheduled_task_inner(agent_name: str, task_name: str, telegram_config: dict):
+    """Inner task runner — exceptions bubble up to run_scheduled_task wrapper."""
 
     # --- Silent intelligence sync (no Claude call, just DB update) ---
     if task_name == "intelligence_sync":
@@ -1274,6 +1438,44 @@ Customers: {snapshot['new_customers']} new, {snapshot['returning_customers']} re
             logger.error(f"GSC feedback failed: {e}")
         return
 
+    # --- Pure Pets ranking tracker (daily 6am, after GSC data refresh) ---
+    if task_name == "pure_pets_ranking_check":
+        try:
+            from core.pure_pets_ranking_tracker import track_rankings, get_alert_severity
+            result = track_rankings()
+
+            # Determine alert severity from the report
+            from core.pure_pets_ranking_tracker import get_alerts_since
+            recent_alerts = get_alerts_since(1)
+            severity = get_alert_severity(recent_alerts)
+
+            # Send to Meridian (marketing) channel
+            chat_id = telegram_config.get("chat_ids", {}).get("dbh-marketing", "")
+            if chat_id:
+                bot_token = telegram_config.get("bot_token", os.environ.get("TELEGRAM_BOT_TOKEN", ""))
+                from core.notification_router import route_notification
+                route_notification(chat_id, result, bot_token, severity=severity, agent="beacon")
+
+            # If severe drops, also alert command-center
+            if severity in ("CRITICAL", "IMPORTANT"):
+                cc_chat_id = telegram_config.get("chat_ids", {}).get("command-center", "")
+                if cc_chat_id and cc_chat_id != chat_id:
+                    alert_msg = (
+                        f"PURE PETS RANKING ALERT ({severity})\n\n"
+                        + "\n".join(
+                            f"  - {a['keyword']}: dropped to #{a['position']:.0f} "
+                            f"(change: {a['change_from_previous']:.0f})"
+                            for a in recent_alerts
+                        )
+                    )
+                    route_notification(cc_chat_id, alert_msg, bot_token,
+                                       severity=severity, agent="beacon")
+
+            logger.info(f"Pure Pets ranking check complete (severity: {severity})")
+        except Exception as e:
+            logger.error(f"Pure Pets ranking check failed: {e}")
+        return
+
     # --- llms.txt regeneration (monthly, regenerates llms.txt for AEO) ---
     if task_name == "llms_txt_update":
         try:
@@ -1292,6 +1494,57 @@ Customers: {snapshot['new_customers']} new, {snapshot['returning_customers']} re
             logger.error(f"llms.txt generation failed: {e}")
         return
 
+    # --- SENTINEL health_check (gathers real system data — Python, then Claude analyses) ---
+    if task_name == "health_check" and agent_name == "sentinel":
+        try:
+            health_data = _gather_system_health(telegram_config)
+            brain = load_agent_brain(agent_name)
+            prompt = (
+                "You are Sentinel. Analyse the REAL SYSTEM DATA below and produce your daily health report "
+                "following the exact format in your AGENT.md.\n\n"
+                "=== LIVE SYSTEM HEALTH DATA ===\n" + health_data
+            )
+            response = call_claude(prompt, brain, agent_name)
+
+            if response and not response.startswith("API Error:"):
+                chat_id = telegram_config.get("chat_ids", {}).get(agent_name) or \
+                          telegram_config.get("chat_ids", {}).get("command-center", "")
+                if chat_id:
+                    bot_token = telegram_config.get("bot_token", os.environ.get("TELEGRAM_BOT_TOKEN", ""))
+                    from core.notification_router import route_notification
+                    severity = "CRITICAL" if "CRITICAL" in response else "IMPORTANT" if "DEGRADED" in response else "NOTABLE"
+                    route_notification(chat_id, response, bot_token, severity=severity, agent=agent_name)
+                _extract_state_updates(response, agent_name)
+            logger.info("Sentinel health_check complete")
+        except Exception as e:
+            logger.error(f"Sentinel health_check failed: {e}")
+        return
+
+    # --- SCOUT daily scan (scrapes AI creators — needs Python, not Claude) ---
+    if task_name == "daily_scan" and agent_name == "scout":
+        try:
+            from core.scout_scraper import ScoutScraper
+            scraper = ScoutScraper(BASE_DIR)
+            result = scraper.run_daily_scan()
+
+            # Format results for Telegram
+            ideas = result.get("ideas", [])
+            summary = f"SCOUT Daily Scan Complete\n\nCreators scanned: {result.get('creators_scanned', 0)}\nIdeas extracted: {len(ideas)}\n"
+            for i, idea in enumerate(ideas[:5], 1):
+                summary += f"\n{i}. {idea.get('title', 'Untitled')}\n   Score: {idea.get('score', 0)}/10 | Source: {idea.get('source', '?')}\n"
+
+            chat_id = telegram_config.get("chat_ids", {}).get(agent_name) or \
+                      telegram_config.get("chat_ids", {}).get("command-center", "")
+            if chat_id:
+                bot_token = telegram_config.get("bot_token", os.environ.get("TELEGRAM_BOT_TOKEN", ""))
+                from core.notification_router import route_notification
+                route_notification(chat_id, summary, bot_token, severity="NOTABLE", agent=agent_name)
+
+            logger.info(f"SCOUT daily scan complete: {len(ideas)} ideas extracted")
+        except Exception as e:
+            logger.error(f"SCOUT daily scan failed: {e}")
+        return
+
     brain = load_agent_brain(agent_name)
 
     # Build task-specific prompt
@@ -1307,9 +1560,23 @@ Customers: {snapshot['new_customers']} new, {snapshot['returning_customers']} re
         "weekly_deep_dive": "Execute your weekly deep analysis. Pick the most important developing story and provide in-depth analysis. Use the format specified in your AGENT.md.",
         "evening_reading": "",  # Placeholder -- replaced below with knowledge engine output
         "content_generation": "Generate tonight's SEO/AEO article following your nightly workflow. Check your CONTEXT.md for the current keyword priority, select the next topic, and generate a full article using one of your proven content formulas. Include the complete article HTML, meta description, FAQ section, and JSON-LD schema. Save instructions and Shopify draft details should be in your output. After your article, emit a [STATE UPDATE:] with the article title and next priority keyword.",
+        # --- Newer agents (previously hitting generic fallback) ---
+        "daily_protocol": "Execute your daily protocol. Follow the exact format and instructions in your AGENT.md. Generate today's output based on Tom's current context and your domain expertise.",
+        "daily_briefing": "Generate your daily briefing. Follow the format in your AGENT.md. Use any live data injected below. Include analysis, recommendations, and actionable items.",
+        "daily_micro_action": "Generate today's micro-action. One specific, actionable thing Tom should do today based on your domain. Make it concrete, not abstract. Follow your AGENT.md format.",
+        "weekly_reflection": "Execute your weekly reflection. Review the past week through your lens. What patterns emerged? What should change? Follow your AGENT.md format. Be profound and practical.",
+        "daily_scan": "Execute your daily ecosystem scan. Follow the workflow in your AGENT.md. Scrape sources, extract ideas, rank by applicability/effort/ROI, and deliver the top actionable insights.",
+        "health_check": "Run your system health check. Check all agents, integrations, and data flows. Report what's working, what's failing, and what needs attention. Be specific with error details.",
+        "daily_forecast": "Generate your daily 90-day trajectory forecast. Use current data and trend analysis. Where is Tom headed? What needs course correction? Follow your AGENT.md format.",
+        "weekly_compilation": "Execute your weekly experiment compilation. Gather all A/B test results and hypothesis outcomes from this week. Analyse patterns and recommend next experiments.",
+        "weekly_codification": "Execute your weekly principle extraction. Review this week's decisions, outcomes, and patterns. Extract and codify any new principles. Follow your AGENT.md format.",
+        "weekly_audit": "Execute your weekly efficiency audit. Analyse where time and money went, what generated returns, and what should change. Be data-driven. Follow your AGENT.md format.",
+        "deep_dive_lesson": "Generate tonight's deep-dive lesson. Follow the topic selection and format in your AGENT.md. Make it practical and connected to Tom's current situation.",
+        "reflection_session": "Conduct a therapeutic reflection session. Review Tom's emotional state, relationships, and life direction. Follow your AGENT.md format. Be genuine, not generic.",
+        "tony_report": "Generate this week's Tony CEO report. Pull all performance data, decisions made, campaigns launched, and strategic progress. Follow the weekly report format in your AGENT.md. File-based output for Tom to review before sending.",
     }
 
-    task_prompt = task_prompts.get(task_name, f"Execute task: {task_name}")
+    task_prompt = task_prompts.get(task_name, f"Execute task: {task_name}. Follow the instructions and format in your AGENT.md.")
 
     # Evening reading: knowledge engine builds the full prompt
     if task_name == "evening_reading":
@@ -1374,27 +1641,46 @@ Cross-reference with your state/CONTEXT.md to identify changes since your last b
             logger.warning(f"News fetch failed (non-fatal): {e}")
             data_status["Live News (RSS)"] = f"FAILED: {e}"
 
-    # 2. Performance data for business briefings
-    perf_data_tasks = ("morning_briefing", "morning_brief", "weekly_review")
-    if task_name in perf_data_tasks and agent_name in ("daily-briefing", "dbh-marketing", "strategic-advisor"):
+    # 2. Performance data for business briefings — SINGLE SOURCE OF TRUTH
+    # Uses core.data_brief which pulls from the same sources as the dashboard.
+    # If the dashboard shows correct data, agents get correct data.
+    perf_data_tasks = ("morning_briefing", "morning_brief", "weekly_review", "daily_briefing", "daily_forecast", "weekly_deep_dive", "tony_report")
+    if task_name in perf_data_tasks and agent_name in ("daily-briefing", "dbh-marketing", "strategic-advisor", "odysseus-money", "trajectory", "customer-science"):
         try:
-            from core.data_fetcher import fetch_all_performance_data, fetch_weekly_performance_data
+            from core.data_brief import build_data_brief, build_weekly_brief
             days = 7 if task_name == "weekly_review" else 1
-            perf_data = fetch_weekly_performance_data() if days == 7 else fetch_all_performance_data()
+            perf_data = build_weekly_brief() if days == 7 else build_data_brief()
             task_prompt += f"""
 
 {perf_data}
 
 Use this real performance data in your briefing. Show actual numbers. Identify attribution
-patterns -- what's driving sales? Compare to benchmarks in your playbooks."""
-            logger.info(f"Injected performance data for {agent_name}/{task_name}")
-            data_status["Shopify/Klaviyo/Meta Performance"] = "OK"
+patterns -- what's driving sales? Compare to benchmarks in your playbooks.
+These numbers come from the verified dashboard data pipeline -- treat them as ground truth.
+The 90-day goal trajectory (Mar $50K → Apr $62.5K → May $77.5K → Jun $87.5K = $277.5K total) must inform every analysis."""
+            logger.info(f"Injected DASHBOARD-SOURCED performance data for {agent_name}/{task_name}")
+            data_status["Shopify/Klaviyo/Meta Performance"] = "OK (dashboard pipeline)"
         except Exception as e:
-            logger.warning(f"Performance data fetch failed (non-fatal): {e}")
-            data_status["Shopify/Klaviyo/Meta Performance"] = f"FAILED: {e}"
+            # Fall back to old data_fetcher if data_brief fails
+            logger.warning(f"Dashboard data brief failed, falling back to data_fetcher: {e}")
+            try:
+                from core.data_fetcher import fetch_all_performance_data, fetch_weekly_performance_data
+                days = 7 if task_name == "weekly_review" else 1
+                perf_data = fetch_weekly_performance_data() if days == 7 else fetch_all_performance_data()
+                task_prompt += f"""
+
+{perf_data}
+
+Use this real performance data in your briefing. Show actual numbers. Identify attribution
+patterns -- what's driving sales? Compare to benchmarks in your playbooks."""
+                logger.info(f"Injected FALLBACK performance data for {agent_name}/{task_name}")
+                data_status["Shopify/Klaviyo/Meta Performance"] = "OK (fallback)"
+            except Exception as e2:
+                logger.warning(f"Performance data fetch failed (non-fatal): {e2}")
+                data_status["Shopify/Klaviyo/Meta Performance"] = f"FAILED: {e2}"
 
     # 2b. Order-level intelligence (per-order attribution + customer analysis)
-    if task_name in perf_data_tasks and agent_name in ("daily-briefing", "dbh-marketing", "strategic-advisor"):
+    if task_name in perf_data_tasks and agent_name in ("daily-briefing", "dbh-marketing", "strategic-advisor", "odysseus-money", "trajectory", "customer-science"):
         try:
             # PRIORITY: Try to use yesterday's locked snapshot first
             from core.snapshot_reporter import inject_snapshot_data
@@ -1439,7 +1725,7 @@ channel shifts, category growth). The DB learns more with every briefing."""
             data_status["Order Intelligence + Customer DB"] = f"FAILED: {e}"
 
     # 2b2. Financial data from Xero + Wise for Oracle, PREP, Meridian
-    if task_name in perf_data_tasks and agent_name in ("daily-briefing", "strategic-advisor", "dbh-marketing"):
+    if task_name in perf_data_tasks and agent_name in ("daily-briefing", "strategic-advisor", "dbh-marketing", "odysseus-money"):
         financial_parts = []
 
         # Xero: P&L, balance sheet, unpaid invoices
@@ -1764,6 +2050,20 @@ The daily plan should reference the 90-day execution map from Meridian's intelli
     logger.info(f"Calling Claude for {agent_name}/{task_name}: brain={len(brain)} chars, prompt={len(task_prompt)} chars")
     response = call_claude(brain, task_prompt, task_type=effective_task_type)
 
+    # Check for API errors — don't send raw errors to Telegram
+    if response and response.startswith("API Error:"):
+        logger.error(f"Claude API failed for {agent_name}/{task_name}: {response}")
+        chat_id = telegram_config.get("chat_ids", {}).get("command-center") or \
+                  telegram_config.get("chat_ids", {}).get(agent_name)
+        bot_token = telegram_config.get("bot_token", os.environ.get("TELEGRAM_BOT_TOKEN", ""))
+        if chat_id and bot_token:
+            agent_display = AGENT_DISPLAY.get(agent_name, agent_name)
+            from core.notification_router import route_notification
+            route_notification(chat_id,
+                f"{agent_display}/{task_name}: API call failed. Will retry next schedule.\n\nError: {response[11:200]}",
+                bot_token, severity="IMPORTANT", agent="command-center")
+        return
+
     # Process through learning loop (extract insights, clean markers)
     response = process_response_learning(
         agent_name, response,
@@ -1871,7 +2171,7 @@ The daily plan should reference the 90-day execution map from Meridian's intelli
     elif send_chat_id and send_chat_id != "CHAT_ID_HERE":
         from core.notification_router import route_notification
         # Morning/weekly briefings are IMPORTANT, scans are NOTABLE, other tasks INFO
-        _sched_severity = "IMPORTANT" if task_name in ("morning_briefing", "morning_brief", "morning_protocol", "weekly_review", "weekly_deep_dive", "weekly_plan", "evening_reading") else "NOTABLE" if task_name in ("scan", "model_scan") else "INFO"
+        _sched_severity = "NOTABLE" if task_name in ("scan", "model_scan", "health_check") else "IMPORTANT"
         route_notification(send_chat_id, response, bot_token, severity=_sched_severity, agent=agent_name)
     else:
         logger.warning(f"No chat ID configured for {agent_name}, printing to console:")
@@ -1922,15 +2222,22 @@ def _inject_prep_context(brain: str) -> str:
         brain += f"\n\n=== ALL AGENT STATES (you see the full picture) ===\n" + "\n\n".join(agent_states)
     logger.info(f"PREP inject: {len(agent_states)} agent states loaded")
 
-    # 2. Live performance data
-    logger.info("PREP inject: fetching performance data...")
+    # 2. Live performance data — from dashboard pipeline (single source of truth)
+    logger.info("PREP inject: fetching dashboard data brief...")
     try:
-        from core.data_fetcher import fetch_all_performance_data
-        perf = fetch_all_performance_data()
-        brain += f"\n\n=== LIVE PERFORMANCE DATA ===\n{perf}"
-        logger.info(f"PREP inject: performance data OK ({len(perf)} chars)")
+        from core.data_brief import build_data_brief
+        perf = build_data_brief()
+        brain += f"\n\n=== LIVE BUSINESS DATA (from dashboard pipeline) ===\n{perf}"
+        logger.info(f"PREP inject: dashboard data brief OK ({len(perf)} chars)")
     except Exception as e:
-        logger.warning(f"PREP inject: performance data FAILED (non-fatal): {e}")
+        logger.warning(f"PREP inject: dashboard data brief FAILED, trying fallback: {e}")
+        try:
+            from core.data_fetcher import fetch_all_performance_data
+            perf = fetch_all_performance_data()
+            brain += f"\n\n=== LIVE PERFORMANCE DATA (fallback) ===\n{perf}"
+            logger.info(f"PREP inject: fallback performance data OK ({len(perf)} chars)")
+        except Exception as e2:
+            logger.warning(f"PREP inject: performance data FAILED (non-fatal): {e2}")
 
     # 3. Xero financial data
     logger.info("PREP inject: checking Xero...")

@@ -49,14 +49,7 @@ TIMEZONE = "Pacific/Auckland"
 DND_START_HOUR = 22
 DND_END_HOUR = 6
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(message)s",
-    handlers=[
-        logging.FileHandler(BASE_DIR / "orchestrator.log", encoding='utf-8'),
-        logging.StreamHandler()
-    ]
-)
+# Logging configured by entrypoint.py — just get the logger
 logger = logging.getLogger(__name__)
 
 
@@ -297,6 +290,25 @@ def next_dnd_end() -> datetime:
 
 # --- Core Telegram Sender (wraps existing pattern) ---
 
+def _sanitize_telegram_markdown(text: str) -> str:
+    """Sanitize text for Telegram Markdown v1 to prevent parse failures."""
+    import re
+    text = re.sub(r'```[\w]*\n?', '', text)
+    underscore_count = text.count('_')
+    if underscore_count % 2 != 0:
+        idx = text.rfind('_')
+        text = text[:idx] + '\\_' + text[idx+1:]
+    asterisk_count = text.count('*')
+    if asterisk_count % 2 != 0:
+        idx = text.rfind('*')
+        text = text[:idx] + text[idx+1:]
+    open_brackets = text.count('[')
+    close_brackets = text.count(']')
+    if open_brackets != close_brackets:
+        text = text.replace('[', '(').replace(']', ')')
+    return text
+
+
 def _send_telegram_raw(chat_id: str, text: str, bot_token: str,
                        disable_notification: bool = False):
     """
@@ -307,6 +319,7 @@ def _send_telegram_raw(chat_id: str, text: str, bot_token: str,
     """
     import requests
 
+    text = _sanitize_telegram_markdown(text)
     url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
 
     def _post(chunk: str):
@@ -319,10 +332,10 @@ def _send_telegram_raw(chat_id: str, text: str, bot_token: str,
             payload["disable_notification"] = True
         try:
             resp = requests.post(url, json=payload, timeout=30)
-            if resp.status_code != 200:
+            data = resp.json() if resp.status_code == 200 else {}
+            if not data.get("ok"):
                 # Markdown can fail with unmatched formatting -- retry as plain text
-                logger.warning(f"Telegram Markdown send failed ({resp.status_code}), "
-                               f"retrying as plain text")
+                logger.warning(f"Telegram Markdown send failed, retrying as plain text")
                 payload.pop("parse_mode")
                 resp = requests.post(url, json=payload, timeout=30)
             return resp

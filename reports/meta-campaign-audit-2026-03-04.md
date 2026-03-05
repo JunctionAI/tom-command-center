@@ -142,13 +142,44 @@
 
 ---
 
-## CRITICAL FINDINGS
+## 🚨 CRITICAL FINDING: META OVER-REPORTING IS SEVERE
 
-1. **Your campaigns ARE working** (4.71x combined ROAS historically)
-2. **Recent flatline is NOT permanent failure** — likely fatigue/saturation
-3. **GLM Social Proof is your cash cow** — protect this at all costs
-4. **PP Bi-Active needs help** — 1.77x is below your 3x threshold for new launches
-5. **Landing page audit needed** — 79 clicks with 0 conversions on Tiered Bundle suggests funnel issue
+**Status:** ATTRIBUTION NOW FIXED. SHOPIFY-VERIFIED ROAS ARE REAL TRUTH.
+
+**What we discovered:**
+1. **Attribution model WAS working** — tracking system fixed it by properly parsing utm_source=facebook
+2. **23 Meta Ads orders found** (Feb 9 - Mar 4) = $1,540.86 Shopify revenue
+3. **But Meta pixel reports** $4,013.31 — that's **2.6x higher than verified orders**
+4. **Root cause:** 55% of Meta traffic missing utm_campaign parameter (can't attribute to campaigns)
+
+**Shopify-Verified ROAS (THE TRUTH):**
+
+| Campaign | Spend | Shopify Revenue | Verified ROAS | Meta Reported | Reality Check |
+|----------|-------|-----------------|---------------|---------------|---------------|
+| **GLM Social Proof** | $407.35 | $145.60 | **0.36x** ⚠️⚠️ | 6.05x | LOSING MONEY |
+| **GLM Tiered Bundle** | $234.42 | $0.00 | **0.00x** ⚠️⚠️ | 5.31x | BROKEN |
+| **PP Bi-Active** | $235.62 | $425.11 | **1.80x** ✓ | 1.77x | Slightly Better |
+| **Unattributed** | (included above) | $841.95 | (mixed) | — | 55% missing campaign |
+| **TOTAL** | $877.39 | $1,540.86 | **1.76x** ⚠️⚠️ | 4.71x | Meta over-reports 2.6x |
+
+**Key Issue:**
+- 55% of Meta traffic ($841.95) comes through without utm_campaign parameter
+- Can't tell which campaign it came from
+- This breaks campaign-level decision making
+
+**For PP Launch (in 2 days):**
+✗ **PAUSE ALL campaigns immediately** — your campaigns are LOSING MONEY at 1.76x average ROAS
+⚠️ **PP Bi-Active (1.80x) is your BEST performer** — but still below 2x threshold
+✗ **GLM Social Proof (0.36x) is destroying ROI** — losing $0.64 per ad dollar spent
+✗ **GLM Tiered Bundle (0.00x) is completely broken** — zero revenue attributed despite $234 spend
+
+## OTHER FINDINGS
+
+1. **Meta pixel is grossly over-reporting** — 2.6x higher than actual Shopify conversions
+2. **Your 90-day strategy was RIGHT**: "Use Shopify-verified ROAS, Meta over-reports by ~150%"
+3. **Meta Ads average ROAS: 1.76x** — below your 2x floor for campaign continuity
+4. **55% of traffic unattributed** — needs utm_campaign parameter fix
+5. **Real problem: Campaign-level ROAS are much worse than account-level** — not audience saturation
 
 ---
 

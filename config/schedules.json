@@ -159,6 +159,12 @@
     },
     {
       "agent": "beacon",
+      "task": "pure_pets_ranking_check",
+      "cron": "0 6 * * *",
+      "description": "Pure Pets daily ranking tracker -- GSC position monitoring (6am daily)"
+    },
+    {
+      "agent": "beacon",
       "task": "llms_txt_update",
       "cron": "0 3 1 * *",
       "description": "Regenerate llms.txt for AEO (1st of month, 3am)"
