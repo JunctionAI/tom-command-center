@@ -2317,16 +2317,16 @@ def handle_incoming_message(chat_id: str, message_text: str, telegram_config: di
         else:
             task_type = "chat"
 
-        # ASI (evening-reading): if Tom asks for a reading, trigger the knowledge engine
-        # Otherwise ASI can still chat normally as a life mentor
+        # ASI (evening-reading): conversational by default, new reading only on explicit request
         if agent_name == "evening-reading":
-            reading_triggers = ["reading", "teach", "lesson", "read", "tonight",
-                                "give me", "first reading", "what should i learn",
-                                "hit me", "go", "start"]
+            # Only trigger a NEW reading for very explicit requests
+            new_reading_triggers = ["new reading", "next reading", "give me a reading",
+                                    "tonight's reading", "new lesson", "next lesson",
+                                    "teach me something new", "what should i learn today"]
             msg_lower = message_text.lower().strip()
-            is_reading_request = any(t in msg_lower for t in reading_triggers)
+            is_new_reading = any(t in msg_lower for t in new_reading_triggers)
 
-            if is_reading_request:
+            if is_new_reading:
                 # Trigger a full knowledge-engine reading
                 try:
                     from core.knowledge_engine import get_tonight_reading
@@ -2337,21 +2337,47 @@ def handle_incoming_message(chat_id: str, message_text: str, telegram_config: di
                     response = call_claude(brain, user_prompt, task_type=task_type)
                 except Exception as e:
                     logger.error(f"Knowledge engine failed for on-demand reading: {e}")
-                    # Fall through to normal chat
-                    is_reading_request = False
+                    is_new_reading = False
 
-            if not is_reading_request:
-                # Normal ASI conversation -- life mentor chat
+            if not is_new_reading:
+                # Conversational mode -- discuss the last reading, go deeper, mentor chat
+                # Load today's session log so ASI knows what was discussed
+                from datetime import date as _d
+                recent_context = ""
+                today_log = AGENTS_DIR / "evening-reading" / "state" / f"session-log-{_d.today().isoformat()}.md"
+                if today_log.exists():
+                    try:
+                        log_content = today_log.read_text(encoding='utf-8')
+                        # Last 3000 chars covers the most recent reading + any follow-ups
+                        recent_context = log_content[-3000:] if len(log_content) > 3000 else log_content
+                    except Exception:
+                        pass
+
                 pending_events = get_pending_events_for_agent(agent_name)
                 events_section = f"\n\n{pending_events}" if pending_events else ""
+                recent_section = f"\n\n=== TONIGHT'S SESSION SO FAR ===\n{recent_context}" if recent_context else ""
+
                 user_prompt = f"""Tom says: {message_text}
-{events_section}
-Respond as ASI, Tom's life mentor. You have your full context loaded above.
+{events_section}{recent_section}
+
+Respond as ASI, Tom's wise life mentor. You have your full context loaded above.
+
+CRITICAL: Tom is replying to your most recent reading/lesson. He wants to DISCUSS it,
+go deeper, ask questions, or share his thoughts. Do NOT deliver a new lesson unless
+he explicitly asks for one. Instead:
+- Engage with what he said
+- Go deeper on the topic you were discussing
+- Ask him probing questions back
+- Connect his response to the broader lesson
+- Challenge his thinking if appropriate
+
 Be warm but profound. Use stories and analogies. Make non-linear connections.
+This is a dialogue, not a lecture.
 
 FORMATTING: Telegram. No tables. Bold with *single asterisks*. Short paragraphs.
 
-After your response, emit [STATE UPDATE: <what to remember>]."""
+After your response, emit [STATE UPDATE: <what to remember from this exchange>]."""
+                task_type = "evening_reading"  # Use Opus for depth
                 response = call_claude(brain, user_prompt, task_type=task_type)
         else:
             # All other agents -- standard chat flow
