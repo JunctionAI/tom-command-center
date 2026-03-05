@@ -28,8 +28,8 @@
     {
       "agent": "global-events",
       "task": "scan",
-      "cron": "0 6,12,18,0 * * *",
-      "description": "Atlas world scan every 6 hours"
+      "cron": "15 6 * * *",
+      "description": "Atlas morning world briefing (6:15am daily, one comprehensive scan)"
     },
     {
       "agent": "creative-projects",

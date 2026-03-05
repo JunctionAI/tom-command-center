@@ -8,11 +8,17 @@ No API keys required -- uses public RSS feeds.
 """
 
 import logging
+import hashlib
+import json
 from datetime import datetime, timedelta
+from pathlib import Path
 from typing import Optional
 import xml.etree.ElementTree as ET
 
 logger = logging.getLogger(__name__)
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+HEADLINE_HISTORY_FILE = BASE_DIR / "data" / "headline_history.json"
 
 # --- RSS Feed Sources ---
 # Organised by topic. Each agent's scan can pull relevant feeds.
@@ -23,10 +29,7 @@ FEEDS = {
     "aljazeera": "https://www.aljazeera.com/xml/rss/all.xml",
     "guardian_world": "https://www.theguardian.com/world/rss",
     "ap_news": "https://feedx.net/rss/ap.xml",
-
-    # Middle East specific
-    "bbc_middle_east": "https://feeds.bbci.co.uk/news/world/middle_east/rss.xml",
-    "guardian_middle_east": "https://www.theguardian.com/world/middleeast/rss",
+    "reuters_world": "https://www.reutersagency.com/feed/?best-topics=world",
 
     # Technology & AI
     "techcrunch": "https://techcrunch.com/feed/",
@@ -40,16 +43,26 @@ FEEDS = {
 
     # NZ specific
     "rnz_news": "https://www.rnz.co.nz/rss/national.xml",
+    "rnz_political": "https://www.rnz.co.nz/rss/political.xml",
     "nzherald": "https://rss.nzherald.co.nz/rss/xml/nzhrsecnews.xml",
     "stuff_national": "https://www.stuff.co.nz/rss/national",
+    "stuff_business": "https://www.stuff.co.nz/rss/business",
+    "interest_nz": "https://www.interest.co.nz/rss.xml",
+
+    # Science & Health
+    "bbc_science": "https://feeds.bbci.co.uk/news/science_and_environment/rss.xml",
+    "guardian_science": "https://www.theguardian.com/science/rss",
+    "nature_news": "https://www.nature.com/nature.rss",
 }
 
 # Which feeds each agent should use for scans
 AGENT_FEEDS = {
     "global-events": [
         "bbc_world", "aljazeera", "guardian_world", "ap_news",
-        "bbc_middle_east", "guardian_middle_east",
-        "bbc_business",
+        "bbc_business", "cnbc",
+        "rnz_news", "rnz_political", "nzherald", "stuff_national", "interest_nz",
+        "bbc_science", "guardian_science",
+        "techcrunch",
     ],
     "dbh-marketing": [
         "bbc_business", "cnbc",
@@ -140,10 +153,41 @@ def _clean_html(text: str) -> str:
     return clean.strip()[:300]  # Limit summary length
 
 
-def fetch_news_for_agent(agent_name: str, max_per_feed: int = 8) -> str:
+def _headline_hash(title: str) -> str:
+    """Hash a headline for dedup. Normalises whitespace and case."""
+    normalised = " ".join(title.lower().split())
+    return hashlib.md5(normalised.encode()).hexdigest()[:12]
+
+
+def _load_headline_history() -> dict:
+    """Load previously sent headline hashes. Structure: {date_str: [hashes]}"""
+    try:
+        if HEADLINE_HISTORY_FILE.exists():
+            return json.loads(HEADLINE_HISTORY_FILE.read_text(encoding='utf-8'))
+    except Exception:
+        pass
+    return {}
+
+
+def _save_headline_history(history: dict):
+    """Save headline history, keeping only last 3 days."""
+    # Prune old entries
+    cutoff = (datetime.now() - timedelta(days=3)).strftime("%Y-%m-%d")
+    pruned = {k: v for k, v in history.items() if k >= cutoff}
+    try:
+        HEADLINE_HISTORY_FILE.parent.mkdir(parents=True, exist_ok=True)
+        HEADLINE_HISTORY_FILE.write_text(json.dumps(pruned), encoding='utf-8')
+    except Exception as e:
+        logger.warning(f"Failed to save headline history: {e}")
+
+
+def fetch_news_for_agent(agent_name: str, max_per_feed: int = 8, deduplicate: bool = True) -> str:
     """
     Fetch all relevant news feeds for an agent and format as a text block
     that can be injected into the agent's prompt.
+
+    If deduplicate=True, filters out headlines that were already sent in the
+    last 3 days, ensuring Tom only sees genuinely new stories.
 
     Returns a formatted string of headlines + summaries.
     """
@@ -158,21 +202,47 @@ def fetch_news_for_agent(agent_name: str, max_per_feed: int = 8) -> str:
             items = fetch_feed(url, max_items=max_per_feed)
             for item in items:
                 item['source'] = key
+                item['hash'] = _headline_hash(item['title'])
             all_items.extend(items)
 
     if not all_items:
         return ""
 
+    # Deduplication: filter out headlines sent in previous days
+    new_items = all_items
+    if deduplicate:
+        history = _load_headline_history()
+        # Collect all hashes from previous days (not today — today's haven't been sent yet)
+        today_str = datetime.now().strftime("%Y-%m-%d")
+        seen_hashes = set()
+        for date_key, hashes in history.items():
+            if date_key != today_str:
+                seen_hashes.update(hashes)
+
+        new_items = [item for item in all_items if item['hash'] not in seen_hashes]
+
+        # Save today's hashes (all fetched, not just new — so they're deduped tomorrow)
+        today_hashes = history.get(today_str, [])
+        today_hashes.extend(item['hash'] for item in all_items)
+        history[today_str] = list(set(today_hashes))
+        _save_headline_history(history)
+
+        logger.info(f"News dedup: {len(all_items)} total, {len(new_items)} new, "
+                     f"{len(all_items) - len(new_items)} filtered as repeats")
+
+    if not new_items:
+        return f"=== NEWS: No new headlines since yesterday ({len(all_items)} filtered as repeats) ==="
+
     # Format into a prompt-friendly block
     lines = [
-        f"=== LIVE NEWS FEED (fetched {datetime.now().strftime('%Y-%m-%d %H:%M NZST')}) ===",
-        f"Total headlines: {len(all_items)} from {len(feed_keys)} sources",
+        f"=== NEW HEADLINES ONLY (fetched {datetime.now().strftime('%Y-%m-%d %H:%M NZST')}) ===",
+        f"New: {len(new_items)} headlines | Filtered: {len(all_items) - len(new_items)} repeats from yesterday",
         "",
     ]
 
     # Group by source
     by_source = {}
-    for item in all_items:
+    for item in new_items:
         by_source.setdefault(item['source'], []).append(item)
 
     for source, items in by_source.items():
