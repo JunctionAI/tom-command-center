@@ -1893,6 +1893,88 @@ Which are we already doing? Include the top 1-2 actionable ones in your briefing
             logger.warning(f"Thought leader brief failed (non-fatal): {e}")
             data_status["Thought Leader Insights"] = f"FAILED: {e}"
 
+    # 2g. Clinical evidence micro-learning for Meridian (daily product knowledge)
+    if task_name in ("morning_brief", "morning_briefing") and agent_name in ("dbh-marketing", "daily-briefing"):
+        try:
+            clinical_file = AGENTS_DIR / "dbh-marketing" / "training" / "clinical-evidence.md"
+            if clinical_file.exists():
+                content = clinical_file.read_text(encoding='utf-8')
+
+                # Parse all evidence entries (### prefixed)
+                import re
+                entries = re.split(r'\n### ', content)
+                entries = [e.strip() for e in entries if e.strip() and '**Source:**' in e]
+
+                if entries:
+                    # Determine focus product from active campaigns
+                    focus_product = None
+                    try:
+                        import json as _json
+                        config_path = BASE_DIR / "config" / "dbh-campaigns.json"
+                        if config_path.exists():
+                            camp_config = _json.loads(config_path.read_text(encoding='utf-8'))
+                            for camp in camp_config.get("campaigns", []):
+                                if camp.get("status") == "active":
+                                    prods = camp.get("products", [])
+                                    if prods:
+                                        focus_product = prods[0]
+                                    break
+                    except Exception:
+                        pass
+
+                    # Map focus product to evidence prefix
+                    product_prefixes = {
+                        "Pure Pets GLM": "GLM-", "Pure Pets Bi-Active": "GLM-",
+                        "Marine Collagen": "MC-", "Colostrum": "CO-",
+                        "Deer Velvet": "DV-", "Sea Cucumber": "SC-",
+                        "Shark Squalene": "SK-", "Shark Cartilage": "SK-",
+                        "Oyster": "OY-", "KUKU Mussel Oil": "KM-",
+                        "Joint Care Ultra": "JCU-",
+                    }
+
+                    # Filter to focus product entries, or all if no focus
+                    prefix = None
+                    if focus_product:
+                        for key, pfx in product_prefixes.items():
+                            if key.lower() in focus_product.lower():
+                                prefix = pfx
+                                break
+
+                    if prefix:
+                        relevant = [e for e in entries if prefix in e[:20]]
+                        if not relevant:
+                            relevant = entries
+                    else:
+                        relevant = entries
+
+                    # Daily rotation: pick entry based on day of year
+                    from datetime import date as _date
+                    day_index = _date.today().timetuple().tm_yday % len(relevant)
+                    todays_evidence = relevant[day_index]
+
+                    # Clean up the entry text
+                    if not todays_evidence.startswith("###"):
+                        todays_evidence = "### " + todays_evidence
+
+                    product_label = focus_product or "Deep Blue Health range"
+                    task_prompt += f"""
+
+=== CLINICAL EVIDENCE OF THE DAY ===
+Focus product: {product_label}
+
+{todays_evidence}
+
+INSTRUCTIONS: Include this clinical evidence in your morning brief under a
+"Clinical Knowledge" section. Present the key finding, the source study,
+and the sales angle. Tom is building deep product knowledge over time —
+each day he learns one new clinical fact that makes him more credible
+when selling. Keep it punchy — 3-4 lines max in the brief."""
+                    logger.info(f"Injected clinical evidence for {product_label} (day {day_index})")
+                    data_status["Clinical Evidence"] = f"OK ({product_label})"
+        except Exception as e:
+            logger.warning(f"Clinical evidence injection failed (non-fatal): {e}")
+            data_status["Clinical Evidence"] = f"FAILED: {e}"
+
     # 3. Asana task data for briefings
     asana_tasks = ("morning_briefing", "morning_brief")
     if task_name in asana_tasks:
