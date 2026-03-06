@@ -1646,7 +1646,7 @@ Cross-reference with your state/CONTEXT.md to identify changes since your last b
     # Uses core.data_brief which pulls from the same sources as the dashboard.
     # If the dashboard shows correct data, agents get correct data.
     perf_data_tasks = ("morning_briefing", "morning_brief", "weekly_review", "daily_briefing", "daily_forecast", "weekly_deep_dive", "tony_report")
-    if task_name in perf_data_tasks and agent_name in ("daily-briefing", "dbh-marketing", "strategic-advisor", "odysseus-money", "trajectory", "customer-science"):
+    if task_name in perf_data_tasks and agent_name in ("daily-briefing", "dbh-marketing", "strategic-advisor", "trajectory", "customer-science"):
         try:
             from core.data_brief import build_data_brief, build_weekly_brief
             days = 7 if task_name == "weekly_review" else 1
@@ -1681,7 +1681,7 @@ patterns -- what's driving sales? Compare to benchmarks in your playbooks."""
                 data_status["Shopify/Klaviyo/Meta Performance"] = f"FAILED: {e2}"
 
     # 2b. Order-level intelligence (per-order attribution + customer analysis)
-    if task_name in perf_data_tasks and agent_name in ("daily-briefing", "dbh-marketing", "strategic-advisor", "odysseus-money", "trajectory", "customer-science"):
+    if task_name in perf_data_tasks and agent_name in ("daily-briefing", "dbh-marketing", "strategic-advisor", "trajectory", "customer-science"):
         try:
             # PRIORITY: Try to use yesterday's locked snapshot first
             from core.snapshot_reporter import inject_snapshot_data
