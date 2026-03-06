@@ -2956,6 +2956,24 @@ def handle_command(command: str, telegram_config: dict):
             from core.notification_router import route_notification
             route_notification(chat_id, f"Citation report error: {e}", bot_token, severity="INFO", agent="command-center")
 
+    elif cmd == "setup pure pets":
+        # Build Pure Pets campaign structure via Meta Ads API
+        try:
+            from core.notification_router import route_notification
+            dry_run = "--dry-run" in command
+            mode = "DRY RUN" if dry_run else "CREATING"
+            route_notification(chat_id, f"Pure Pets campaign setup {mode}...", bot_token, severity="INFO", agent="command-center")
+            from core.pure_pets_campaign_builder import build_campaign
+            result = build_campaign(dry_run=dry_run)
+            if dry_run:
+                route_notification(chat_id, "Dry run complete. Run 'setup pure pets' (without --dry-run) to create.", bot_token, severity="INFO", agent="command-center")
+            else:
+                summary = f"Pure Pets campaign created (ALL PAUSED)\n\nCampaign: {result.get('campaign_id')}\nAd Set: {result.get('adset_id')}\nAds created: {len(result.get('ad_ids', []))}/12\n\nNext: upload creative images in Meta Ads Manager, then activate."
+                route_notification(chat_id, summary, bot_token, severity="IMPORTANT", agent="command-center")
+        except Exception as e:
+            from core.notification_router import route_notification
+            route_notification(chat_id, f"Pure Pets setup error: {e}", bot_token, severity="INFO", agent="command-center")
+
     else:
         # Unknown command -- show available commands instead of hallucinating
         help_text = """NEXUS -- Available Commands
@@ -2967,6 +2985,10 @@ System:
   db stats -- Learning database statistics
   briefs -- List active design briefs
   undo <action_id> -- Undo an auto-optimizer action
+  citations -- Latest AI citation monitoring report
+
+Campaigns:
+  setup pure pets -- Create Pure Pets campaign via Meta API (PAUSED)
 
 Agents:
   run <agent-name> -- Trigger an agent's default task

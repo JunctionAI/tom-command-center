@@ -849,6 +849,166 @@ class MetaAdsWriter:
 
         return {"paused": paused, "kept": kept}
 
+    # ===================================================================
+    # 8. CREATE CAMPAIGNS, AD SETS, AND ADS
+    #    Endpoint: POST /act_{id}/campaigns, /act_{id}/adsets, /act_{id}/ads
+    #    Autonomy: NEEDS APPROVAL -- creates new ad structure + spend
+    # ===================================================================
+
+    def create_campaign(self, name: str, objective: str = "OUTCOME_SALES",
+                        daily_budget_cents: int = None,
+                        status: str = "PAUSED",
+                        special_ad_categories: list = None,
+                        campaign_budget_optimization: bool = True) -> dict:
+        """
+        Create a new campaign.
+
+        POST /act_{ad_account_id}/campaigns
+
+        Args:
+            name: Campaign name
+            objective: Campaign objective. v21.0 options:
+                OUTCOME_AWARENESS, OUTCOME_ENGAGEMENT, OUTCOME_LEADS,
+                OUTCOME_SALES, OUTCOME_TRAFFIC, OUTCOME_APP_PROMOTION
+            daily_budget_cents: Daily budget in cents (e.g. 5500 = $55 NZD).
+                Required when campaign_budget_optimization=True.
+            status: Initial status ("PAUSED" or "ACTIVE")
+            special_ad_categories: List of special categories (e.g. ["HOUSING"])
+                or empty list for none.
+            campaign_budget_optimization: Enable Advantage Campaign Budget (CBO).
+
+        Returns:
+            Created campaign object with 'id' field
+        """
+        data = {
+            "name": name,
+            "objective": objective,
+            "status": status,
+            "buying_type": "AUCTION",
+            "is_campaign_budget_optimization": "true" if campaign_budget_optimization else "false",
+            "special_ad_categories": json.dumps(special_ad_categories or []),
+        }
+        if daily_budget_cents is not None:
+            data["daily_budget"] = str(int(daily_budget_cents))
+
+        result = self._post(f"{self.account_path}/campaigns", data=data)
+        logger.info(f"Created campaign '{name}' (ID: {result.get('id', '?')}, "
+                     f"objective: {objective}, budget: {daily_budget_cents}c, "
+                     f"CBO: {campaign_budget_optimization})")
+        return result
+
+    def create_adset(self, name: str, campaign_id: str,
+                     targeting: dict,
+                     optimization_goal: str = "OFFSITE_CONVERSIONS",
+                     billing_event: str = "IMPRESSIONS",
+                     bid_strategy: str = "LOWEST_COST_WITHOUT_CAP",
+                     promoted_object: dict = None,
+                     status: str = "PAUSED",
+                     daily_budget_cents: int = None,
+                     attribution_spec: list = None,
+                     targeting_optimization: str = "EXPANSION_ALL") -> dict:
+        """
+        Create a new ad set within a campaign.
+
+        POST /act_{ad_account_id}/adsets
+
+        Args:
+            name: Ad set name
+            campaign_id: Parent campaign ID
+            targeting: Targeting spec dict. Example:
+                {
+                    "geo_locations": {"countries": ["NZ"]},
+                    "age_min": 25,
+                    "age_max": 65,
+                }
+            optimization_goal: "OFFSITE_CONVERSIONS", "LINK_CLICKS",
+                "IMPRESSIONS", "REACH", "VALUE", etc.
+            billing_event: "IMPRESSIONS" (standard) or "LINK_CLICKS"
+            bid_strategy: "LOWEST_COST_WITHOUT_CAP" (default),
+                "LOWEST_COST_WITH_BID_CAP", "COST_CAP"
+            promoted_object: Conversion tracking. Example:
+                {"pixel_id": "123", "custom_event_type": "Purchase"}
+            status: Initial status
+            daily_budget_cents: Ad set budget in cents (optional with CBO)
+            attribution_spec: Attribution windows. Example:
+                [{"event_type": "CLICK_THROUGH", "window_days": 7},
+                 {"event_type": "VIEW_THROUGH", "window_days": 1}]
+            targeting_optimization: "EXPANSION_ALL" for Advantage+ Audience,
+                "NONE" for strict targeting.
+
+        Returns:
+            Created ad set object with 'id' field
+        """
+        data = {
+            "name": name,
+            "campaign_id": campaign_id,
+            "optimization_goal": optimization_goal,
+            "billing_event": billing_event,
+            "bid_strategy": bid_strategy,
+            "status": status,
+            "targeting": json.dumps(targeting),
+            "targeting_optimization": targeting_optimization,
+        }
+
+        if promoted_object:
+            data["promoted_object"] = json.dumps(promoted_object)
+        if daily_budget_cents is not None:
+            data["daily_budget"] = str(int(daily_budget_cents))
+        if attribution_spec:
+            data["attribution_spec"] = json.dumps(attribution_spec)
+
+        result = self._post(f"{self.account_path}/adsets", data=data)
+        logger.info(f"Created ad set '{name}' in campaign {campaign_id} "
+                     f"(ID: {result.get('id', '?')})")
+        return result
+
+    def create_ad(self, name: str, adset_id: str,
+                  creative_id: str = None,
+                  creative_spec: dict = None,
+                  status: str = "PAUSED",
+                  tracking_specs: list = None) -> dict:
+        """
+        Create a new ad within an ad set.
+
+        POST /act_{ad_account_id}/ads
+
+        Provide either creative_id (existing creative) or creative_spec
+        (inline creative definition).
+
+        Args:
+            name: Ad name
+            adset_id: Parent ad set ID
+            creative_id: ID of an existing ad creative
+            creative_spec: Inline creative spec. Built by the caller using
+                create_ad_creative() first, or passed inline as:
+                {"creative_id": "123"}
+            status: Initial status
+            tracking_specs: Tracking config for conversions. Example:
+                [{"action.type": ["offsite_conversion"],
+                  "fb_pixel": ["PIXEL_ID"]}]
+
+        Returns:
+            Created ad object with 'id' field
+        """
+        data = {
+            "name": name,
+            "adset_id": adset_id,
+            "status": status,
+        }
+
+        if creative_id:
+            data["creative"] = json.dumps({"creative_id": creative_id})
+        elif creative_spec:
+            data["creative"] = json.dumps(creative_spec)
+
+        if tracking_specs:
+            data["tracking_specs"] = json.dumps(tracking_specs)
+
+        result = self._post(f"{self.account_path}/ads", data=data)
+        logger.info(f"Created ad '{name}' in ad set {adset_id} "
+                     f"(ID: {result.get('id', '?')})")
+        return result
+
 
 # --- CLI ---
 
