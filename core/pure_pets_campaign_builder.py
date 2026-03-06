@@ -44,11 +44,20 @@ TARGETING = {
     },
     "age_min": 25,
     "age_max": 65,
+    "targeting_automation": {
+        "advantage_audience": 1,
+        "individual_setting": {
+            "age": 1,
+            "gender": 1,
+            "geo": 0,
+        },
+    },
 }
 
 ATTRIBUTION_SPEC = [
     {"event_type": "CLICK_THROUGH", "window_days": 7},
     {"event_type": "VIEW_THROUGH", "window_days": 1},
+    {"event_type": "ENGAGED_VIDEO_VIEW", "window_days": 1},
 ]
 
 # --- Ad Definitions (12 ads, all captions pre-written) ---
@@ -251,7 +260,7 @@ ADS = [
 ]
 
 
-def build_campaign(dry_run: bool = False) -> dict:
+def build_campaign(dry_run: bool = False, existing_campaign_id: str = None) -> dict:
     """
     Build the full Pure Pets campaign structure.
 
@@ -302,36 +311,39 @@ def build_campaign(dry_run: bool = False) -> dict:
         print("ERROR: META_PAGE_ID required (Facebook Page ID for ads)")
         sys.exit(1)
 
-    # --- Create campaign ---
-    print(f"Creating campaign: {CAMPAIGN_NAME}...")
-    campaign = writer.create_campaign(
-        name=CAMPAIGN_NAME,
-        objective="OUTCOME_SALES",
-        daily_budget_cents=CAMPAIGN_BUDGET_CENTS,
-        status="PAUSED",
-        campaign_budget_optimization=True,
-    )
-    campaign_id = campaign.get("id")
-    if not campaign_id:
-        print(f"ERROR: Failed to create campaign: {campaign}")
-        sys.exit(1)
+    # --- Create or reuse campaign ---
+    if existing_campaign_id:
+        campaign_id = existing_campaign_id
+        print(f"Using existing campaign: {campaign_id}")
+    else:
+        print(f"Creating campaign: {CAMPAIGN_NAME}...")
+        campaign = writer.create_campaign(
+            name=CAMPAIGN_NAME,
+            objective="OUTCOME_SALES",
+            daily_budget_cents=CAMPAIGN_BUDGET_CENTS,
+            status="PAUSED",
+            campaign_budget_optimization=True,
+        )
+        campaign_id = campaign.get("id")
+        if not campaign_id:
+            print(f"ERROR: Failed to create campaign: {campaign}")
+            sys.exit(1)
+        print(f"  Campaign created: {campaign_id}")
     result["campaign_id"] = campaign_id
-    print(f"  Campaign created: {campaign_id}")
 
     # --- Create ad set ---
     print(f"Creating ad set: {ADSET_NAME}...")
-    promoted_object = {"pixel_id": pixel_id, "custom_event_type": "Purchase"} if pixel_id else None
+    promoted_object = {"pixel_id": pixel_id, "custom_event_type": "PURCHASE"} if pixel_id else None
     adset = writer.create_adset(
         name=ADSET_NAME,
         campaign_id=campaign_id,
         targeting=TARGETING,
         optimization_goal="OFFSITE_CONVERSIONS",
         billing_event="IMPRESSIONS",
-        bid_strategy="LOWEST_COST_WITHOUT_CAP",
         promoted_object=promoted_object,
+        bid_strategy="LOWEST_COST_WITHOUT_CAP",
         status="PAUSED",
         attribution_spec=ATTRIBUTION_SPEC,
-        targeting_optimization="EXPANSION_ALL",
     )
     adset_id = adset.get("id")
     if not adset_id:
@@ -398,5 +410,10 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format="%(message)s")
 
     dry_run = "--dry-run" in sys.argv
+    # Allow passing existing campaign ID to resume after partial failure
+    existing_id = None
+    for arg in sys.argv[1:]:
+        if arg.startswith("--campaign-id="):
+            existing_id = arg.split("=", 1)[1]
 
-    result = build_campaign(dry_run=dry_run)
+    result = build_campaign(dry_run=dry_run, existing_campaign_id=existing_id)

@@ -901,40 +901,42 @@ class MetaAdsWriter:
                      targeting: dict,
                      optimization_goal: str = "OFFSITE_CONVERSIONS",
                      billing_event: str = "IMPRESSIONS",
-                     bid_strategy: str = "LOWEST_COST_WITHOUT_CAP",
+                     bid_strategy: str = None,
                      promoted_object: dict = None,
                      status: str = "PAUSED",
                      daily_budget_cents: int = None,
-                     attribution_spec: list = None,
-                     targeting_optimization: str = "EXPANSION_ALL") -> dict:
+                     attribution_spec: list = None) -> dict:
         """
         Create a new ad set within a campaign.
 
         POST /act_{ad_account_id}/adsets
 
+        For Advantage+ Audience, include targeting_automation in the
+        targeting dict:
+            {
+                "geo_locations": {"countries": ["NZ"]},
+                "age_min": 25, "age_max": 65,
+                "targeting_automation": {
+                    "advantage_audience": 1,
+                    "individual_setting": {"age": 1, "gender": 1, "geo": 0}
+                }
+            }
+
         Args:
             name: Ad set name
             campaign_id: Parent campaign ID
-            targeting: Targeting spec dict. Example:
-                {
-                    "geo_locations": {"countries": ["NZ"]},
-                    "age_min": 25,
-                    "age_max": 65,
-                }
-            optimization_goal: "OFFSITE_CONVERSIONS", "LINK_CLICKS",
-                "IMPRESSIONS", "REACH", "VALUE", etc.
+            targeting: Targeting spec dict (see above for Advantage+ format)
+            optimization_goal: "OFFSITE_CONVERSIONS", "LINK_CLICKS", etc.
             billing_event: "IMPRESSIONS" (standard) or "LINK_CLICKS"
-            bid_strategy: "LOWEST_COST_WITHOUT_CAP" (default),
-                "LOWEST_COST_WITH_BID_CAP", "COST_CAP"
+            bid_strategy: Optional. "LOWEST_COST_WITHOUT_CAP" (default if
+                omitted), "LOWEST_COST_WITH_BID_CAP", "COST_CAP"
             promoted_object: Conversion tracking. Example:
-                {"pixel_id": "123", "custom_event_type": "Purchase"}
+                {"pixel_id": "123", "custom_event_type": "PURCHASE"}
             status: Initial status
             daily_budget_cents: Ad set budget in cents (optional with CBO)
             attribution_spec: Attribution windows. Example:
                 [{"event_type": "CLICK_THROUGH", "window_days": 7},
                  {"event_type": "VIEW_THROUGH", "window_days": 1}]
-            targeting_optimization: "EXPANSION_ALL" for Advantage+ Audience,
-                "NONE" for strict targeting.
 
         Returns:
             Created ad set object with 'id' field
@@ -944,12 +946,12 @@ class MetaAdsWriter:
             "campaign_id": campaign_id,
             "optimization_goal": optimization_goal,
             "billing_event": billing_event,
-            "bid_strategy": bid_strategy,
             "status": status,
             "targeting": json.dumps(targeting),
-            "targeting_optimization": targeting_optimization,
         }
 
+        if bid_strategy:
+            data["bid_strategy"] = bid_strategy
         if promoted_object:
             data["promoted_object"] = json.dumps(promoted_object)
         if daily_budget_cents is not None:
