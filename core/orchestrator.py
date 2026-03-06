@@ -1561,7 +1561,8 @@ Customers: {snapshot['new_customers']} new, {snapshot['returning_customers']} re
         "evening_reading": "",  # Placeholder -- replaced below with knowledge engine output
         "content_generation": "Generate tonight's SEO/AEO article following your nightly workflow. Check your CONTEXT.md for the current keyword priority, select the next topic, and generate a full article using one of your proven content formulas. Include the complete article HTML, meta description, FAQ section, and JSON-LD schema. Save instructions and Shopify draft details should be in your output. After your article, emit a [STATE UPDATE:] with the article title and next priority keyword.",
         # --- Newer agents (previously hitting generic fallback) ---
-        "daily_protocol": "Execute your daily protocol. Follow the exact format and instructions in your AGENT.md. Generate today's output based on Tom's current context and your domain expertise.",
+        "daily_protocol": "Execute your daily protocol. Follow the exact format and instructions in your AGENT.md. Generate today's output based on Tom's current context and your domain expertise. Remember: Titan's state is injected below — interpret his physical data through your brain health lens.",
+        "evening_checkin": "Execute your evening cognitive check-in. Ask Tom to log today's brain health metrics: focus quality (1-10), mood (1-10), energy (1-10), social ease, any memory lapses, substance use (Y/N), and anything notable about his mental state today. Keep it warm, quick, and easy to respond to. Reference what today's morning protocol recommended and ask how it went. This data is CRITICAL for tracking recovery over time — without it, you cannot spot trends or adjust protocols. After Tom responds, emit [STATE UPDATE:] with ALL the data points, [METRIC:] for each trackable number, and [EVENT: brain.daily_log|INFO|summary] so Titan sees it.",
         "daily_briefing": "Generate your daily briefing. Follow the format in your AGENT.md. Use any live data injected below. Include analysis, recommendations, and actionable items.",
         "daily_micro_action": "Generate today's micro-action. One specific, actionable thing Tom should do today based on your domain. Make it concrete, not abstract. Follow your AGENT.md format.",
         "weekly_reflection": "Execute your weekly reflection. Review the past week through your lens. What patterns emerged? What should change? Follow your AGENT.md format. Be profound and practical.",
@@ -1974,6 +1975,57 @@ when selling. Keep it punchy — 3-4 lines max in the brief."""
         except Exception as e:
             logger.warning(f"Clinical evidence injection failed (non-fatal): {e}")
             data_status["Clinical Evidence"] = f"FAILED: {e}"
+
+    # 2h. Asclepius ↔ Titan cross-context injection (brain + body integration)
+    if agent_name in ("asclepius-brain", "health-fitness"):
+        try:
+            partner = "health-fitness" if agent_name == "asclepius-brain" else "asclepius-brain"
+            partner_display = "Titan (Health & Fitness)" if partner == "health-fitness" else "Asclepius (Brain Health)"
+            partner_state = AGENTS_DIR / partner / "state" / "CONTEXT.md"
+            if partner_state.exists():
+                partner_context = partner_state.read_text(encoding='utf-8')
+                # Also grab partner's yesterday session log for recent insights
+                from datetime import date as _date2, timedelta as _td2
+                yesterday_str = (_date2.today() - _td2(days=1)).isoformat()
+                partner_session = AGENTS_DIR / partner / "state" / f"session-log-{yesterday_str}.md"
+                partner_log = ""
+                if partner_session.exists():
+                    try:
+                        log_text = partner_session.read_text(encoding='utf-8')
+                        partner_log = log_text[-1500:] if len(log_text) > 1500 else log_text
+                    except Exception:
+                        pass
+
+                task_prompt += f"""
+
+=== {partner_display.upper()} — PARTNER AGENT STATE ===
+{partner_context}
+"""
+                if partner_log:
+                    task_prompt += f"""
+--- {partner_display} Yesterday's Session ---
+{partner_log}
+"""
+
+                if agent_name == "asclepius-brain":
+                    task_prompt += """
+INTEGRATION INSTRUCTIONS: Titan's state above shows Tom's current training,
+nutrition, sleep, and physical recovery data. Interpret this through your brain
+health lens. If training intensity/sleep/nutrition patterns have brain health
+implications, flag them. Emit [EVENT: brain.training_adjustment|IMPORTANT|description]
+if Titan should adjust anything for brain recovery."""
+                else:
+                    task_prompt += """
+INTEGRATION INSTRUCTIONS: Asclepius's state above shows Tom's cognitive metrics,
+mood tracking, and brain recovery phase. Factor this into today's training plan.
+If cognitive fatigue or poor sleep is flagged, adjust training intensity accordingly.
+Brain health > gains when recovery is compromised."""
+
+                logger.info(f"Injected {partner_display} state into {agent_name} ({len(partner_context)} chars)")
+                data_status[f"Partner Agent ({partner_display})"] = "OK"
+        except Exception as e:
+            logger.warning(f"Cross-agent context injection failed (non-fatal): {e}")
+            data_status[f"Partner Agent Context"] = f"FAILED: {e}"
 
     # 3. Asana task data for briefings
     asana_tasks = ("morning_briefing", "morning_brief")
@@ -2398,6 +2450,19 @@ def handle_incoming_message(chat_id: str, message_text: str, telegram_config: di
             task_type = "deep_analysis"  # Uses Opus
         else:
             task_type = "chat"
+
+        # Asclepius ↔ Titan: inject partner agent state into chat context
+        if agent_name in ("asclepius-brain", "health-fitness"):
+            try:
+                partner = "health-fitness" if agent_name == "asclepius-brain" else "asclepius-brain"
+                partner_state_file = AGENTS_DIR / partner / "state" / "CONTEXT.md"
+                if partner_state_file.exists():
+                    partner_ctx = partner_state_file.read_text(encoding='utf-8')
+                    partner_label = "Titan (Health & Fitness)" if partner == "health-fitness" else "Asclepius (Brain Health)"
+                    brain += f"\n\n=== {partner_label.upper()} — PARTNER AGENT STATE ===\n{partner_ctx}"
+                    logger.info(f"Chat: injected {partner_label} state into {agent_name}")
+            except Exception as e:
+                logger.warning(f"Chat cross-agent injection failed (non-fatal): {e}")
 
         # ASI (evening-reading): conversational by default, new reading only on explicit request
         if agent_name == "evening-reading":
@@ -2973,6 +3038,8 @@ def start_polling(telegram_config: dict):
             "new-business":      ["market.*"],
             "command-center":    ["system.*"],
             "beacon":            ["campaign.*", "content.*"],
+            "asclepius-brain":   ["health.*"],   # Receives Titan's sleep/training/recovery events
+            "health-fitness":    ["brain.*"],    # Receives Asclepius's cognitive/sleep insights
         }
         for agent, patterns in default_subs.items():
             for pat in patterns:

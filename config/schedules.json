@@ -182,6 +182,12 @@
       "description": "Asclepius brain health protocol (7am daily)"
     },
     {
+      "agent": "asclepius-brain",
+      "task": "evening_checkin",
+      "cron": "30 21 * * *",
+      "description": "Asclepius evening cognitive log check-in (9:30pm daily)"
+    },
+    {
       "agent": "strategos-pg",
       "task": "deep_dive_lesson",
       "cron": "30 19 * * *",
