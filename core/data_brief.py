@@ -62,86 +62,155 @@ def _query_db(db_name: str, query: str, params=(), one=False):
 # SECTION 1: SHOPIFY — Orders, Revenue, Products (from customer_intelligence.db)
 # ═══════════════════════════════════════════════════════════════════════════════
 
+def _fetch_shopify_orders_since(store_url: str, token: str, since_iso: str, headers: dict) -> list:
+    """Fetch all Shopify orders since a given ISO timestamp (handles pagination)."""
+    import requests
+    all_orders = []
+    url = f"https://{store_url}/admin/api/2025-01/orders.json"
+    params = {"created_at_min": since_iso, "status": "any", "limit": 250}
+    while url:
+        try:
+            resp = requests.get(url, headers=headers, params=params, timeout=15)
+            if resp.status_code != 200:
+                break
+            orders = resp.json().get("orders", [])
+            all_orders.extend(orders)
+            # Shopify pagination via Link header
+            link = resp.headers.get("Link", "")
+            next_url = None
+            for part in link.split(","):
+                part = part.strip()
+                if 'rel="next"' in part:
+                    next_url = part.split(";")[0].strip().strip("<>")
+            url = next_url
+            params = {}  # params are already in next_url
+        except Exception as e:
+            logger.debug(f"Shopify paginated fetch: {e}")
+            break
+    return all_orders
+
+
 def _shopify_brief(days: int = 1) -> str:
-    """Shopify performance from customer_intelligence.db + live API for today."""
+    """Shopify performance — MTD from live Shopify API (primary) + DB for product/channel detail."""
     import requests
 
     now = datetime.now(NZ_TZ)
-    lines = [f"SHOPIFY — Last {days} day(s) (as of {now.strftime('%Y-%m-%d %H:%M NZST')})"]
+    lines = [f"SHOPIFY — as of {now.strftime('%Y-%m-%d %H:%M NZST')}"]
 
-    # Today's numbers from live Shopify API (always fresh)
     store_url = os.environ.get("SHOPIFY_STORE_URL")
     token = os.environ.get("SHOPIFY_ACCESS_TOKEN")
-    today_rev, today_orders = 0, 0
+    api_headers = {"X-Shopify-Access-Token": token, "Content-Type": "application/json"} if token else {}
+
+    # ── Monthly target math ──────────────────────────────────────────────────
+    import calendar
+    monthly_target = 50000.0
+    days_in_month = calendar.monthrange(now.year, now.month)[1]
+    day_of_month = now.day
+    days_remaining = days_in_month - day_of_month  # days after today
+    days_elapsed = day_of_month  # days including today
+
+    # ── MTD from live Shopify API (SINGLE SOURCE OF TRUTH) ──────────────────
+    mtd_api_rev, mtd_api_orders, mtd_api_ok = 0.0, 0, False
+    today_rev, today_orders = 0.0, 0
 
     if store_url and token:
         try:
-            today_start = now.replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
-            headers = {"X-Shopify-Access-Token": token, "Content-Type": "application/json"}
-            resp = requests.get(
-                f"https://{store_url}/admin/api/2025-01/orders.json",
-                headers=headers,
-                params={"created_at_min": today_start, "status": "any", "limit": 250},
-                timeout=10
-            )
-            if resp.status_code == 200:
-                orders = resp.json().get("orders", [])
-                today_orders = len(orders)
-                today_rev = sum(float(o.get("total_price", 0)) for o in orders)
+            month_start_iso = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0).isoformat()
+            today_start_iso = now.replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
+
+            # Full MTD from API (paginated to handle large months)
+            all_month_orders = _fetch_shopify_orders_since(store_url, token, month_start_iso, api_headers)
+            for o in all_month_orders:
+                price = float(o.get("total_price", 0))
+                mtd_api_rev += price
+                mtd_api_orders += 1
+                # Split today vs earlier
+                created = o.get("created_at", "")
+                if created >= today_start_iso:
+                    today_rev += price
+                    today_orders += 1
+
+            mtd_api_ok = True
         except Exception as e:
-            logger.debug(f"Shopify today API: {e}")
+            logger.warning(f"Shopify MTD API fetch failed: {e}")
 
-    lines.append(f"  Today: ${today_rev:,.2f} from {today_orders} orders (live API)")
+    # ── Revenue lines ────────────────────────────────────────────────────────
+    if mtd_api_ok:
+        lines.append(f"  Month-to-date (LIVE): ${mtd_api_rev:,.2f} from {mtd_api_orders} orders")
+        lines.append(f"  Today so far: ${today_rev:,.2f} from {today_orders} orders")
+        if mtd_api_orders > 0:
+            lines.append(f"  AOV (month): ${mtd_api_rev/mtd_api_orders:,.2f}")
 
-    # Month-to-date from DB
-    month_start = now.strftime("%Y-%m-01")
-    mtd = _query_db("customer_intelligence.db",
-        "SELECT COALESCE(SUM(total_price), 0) as rev, COUNT(*) as orders FROM orders WHERE created_at >= ?",
-        (month_start,), one=True)
+        # Daily pace vs target
+        avg_daily = mtd_api_rev / days_elapsed if days_elapsed > 0 else 0
+        needed_daily = (monthly_target - mtd_api_rev) / days_remaining if days_remaining > 0 else 0
+        gap_pct = ((needed_daily - avg_daily) / avg_daily * 100) if avg_daily > 0 else 0
+        gap_label = f"+{gap_pct:.0f}% acceleration needed" if gap_pct > 0 else f"on track ({abs(gap_pct):.0f}% ahead of pace)"
+        lines.append(f"")
+        lines.append(f"  MONTHLY PACE vs TARGET:")
+        lines.append(f"    Target: ${monthly_target:,.0f} | Day {day_of_month} of {days_in_month} | {days_remaining} days remaining")
+        lines.append(f"    Current avg: ${avg_daily:,.0f}/day | Required: ${needed_daily:,.0f}/day")
+        lines.append(f"    Status: {gap_label}")
 
-    if mtd:
-        lines.append(f"  Month-to-date: ${mtd['rev']:,.2f} from {mtd['orders']} orders")
-        if mtd['orders'] > 0:
-            lines.append(f"  AOV (month): ${mtd['rev']/mtd['orders']:,.2f}")
+        # DB freshness check — warn if DB is out of sync
+        month_start_str = now.strftime("%Y-%m-01")
+        db_mtd = _query_db("customer_intelligence.db",
+            "SELECT COALESCE(SUM(total_price), 0) as rev, COUNT(*) as orders FROM orders WHERE created_at >= ?",
+            (month_start_str,), one=True)
+        if db_mtd and db_mtd["rev"] > 0:
+            db_rev = float(db_mtd["rev"])
+            if db_rev < mtd_api_rev * 0.85:  # DB is >15% below API = stale
+                lines.append(f"")
+                lines.append(f"  ⚠ DATA SYNC WARNING: DB shows ${db_rev:,.2f} MTD vs API ${mtd_api_rev:,.2f}")
+                lines.append(f"    intelligence_sync may be failing on Railway. DB data is stale.")
+    else:
+        # API failed — fall back to DB
+        lines.append(f"  [API unavailable — using DB data, may be stale]")
+        month_start_str = now.strftime("%Y-%m-01")
+        mtd = _query_db("customer_intelligence.db",
+            "SELECT COALESCE(SUM(total_price), 0) as rev, COUNT(*) as orders FROM orders WHERE created_at >= ?",
+            (month_start_str,), one=True)
+        if mtd:
+            lines.append(f"  Month-to-date (DB): ${mtd['rev']:,.2f} from {mtd['orders']} orders")
+            if mtd['orders'] > 0:
+                lines.append(f"  AOV (month): ${mtd['rev']/mtd['orders']:,.2f}")
+            avg_daily = mtd['rev'] / days_elapsed if days_elapsed > 0 else 0
+            needed_daily = (monthly_target - mtd['rev']) / days_remaining if days_remaining > 0 else 0
+            lines.append(f"  Required daily pace: ${needed_daily:,.0f}/day ({days_remaining} days remaining)")
 
-    # Period data (last N days) from DB
+    lines.append("")
+
+    # ── Top products + attribution from DB (DB is fine for historical detail) ─
+    month_start_str = now.strftime("%Y-%m-01")
+
+    products = _query_db("customer_intelligence.db",
+        "SELECT products, COUNT(*) as orders, COALESCE(SUM(total_price), 0) as rev "
+        "FROM orders WHERE created_at >= ? GROUP BY products ORDER BY rev DESC LIMIT 8",
+        (month_start_str,))
+    if products:
+        lines.append("  Top Products (this month, DB):")
+        for p in products:
+            lines.append(f"    {p['products']}: {p['orders']} orders, ${p['rev']:,.2f}")
+
+    channels = _query_db("customer_intelligence.db",
+        "SELECT channel, COUNT(*) as orders, COALESCE(SUM(total_price), 0) as rev "
+        "FROM orders WHERE created_at >= ? GROUP BY channel ORDER BY rev DESC",
+        (month_start_str,))
+    if channels:
+        total_rev = sum(c['rev'] for c in channels)
+        lines.append("  Revenue Attribution (this month, DB):")
+        for c in channels:
+            pct = round(c['rev'] / total_rev * 100, 1) if total_rev else 0
+            lines.append(f"    {c['channel']}: ${c['rev']:,.2f} ({pct}%) — {c['orders']} orders")
+
+    # ── Period data (last N days) from DB ────────────────────────────────────
     if days > 1:
         cutoff = (now - timedelta(days=days)).strftime("%Y-%m-%d")
         period = _query_db("customer_intelligence.db",
             "SELECT COALESCE(SUM(total_price), 0) as rev, COUNT(*) as orders FROM orders WHERE created_at >= ?",
             (cutoff,), one=True)
         if period:
-            lines.append(f"  Last {days} days: ${period['rev']:,.2f} from {period['orders']} orders")
-
-    # Top products this month
-    products = _query_db("customer_intelligence.db",
-        "SELECT products, COUNT(*) as orders, COALESCE(SUM(total_price), 0) as rev "
-        "FROM orders WHERE created_at >= ? GROUP BY products ORDER BY rev DESC LIMIT 8",
-        (month_start,))
-    if products:
-        lines.append("  Top Products (this month):")
-        for p in products:
-            lines.append(f"    {p['products']}: {p['orders']} orders, ${p['rev']:,.2f}")
-
-    # Attribution breakdown
-    channels = _query_db("customer_intelligence.db",
-        "SELECT channel, COUNT(*) as orders, COALESCE(SUM(total_price), 0) as rev "
-        "FROM orders WHERE created_at >= ? GROUP BY channel ORDER BY rev DESC",
-        (month_start,))
-    if channels:
-        total_rev = sum(c['rev'] for c in channels)
-        lines.append("  Revenue Attribution (this month):")
-        for c in channels:
-            pct = round(c['rev'] / total_rev * 100, 1) if total_rev else 0
-            lines.append(f"    {c['channel']}: ${c['rev']:,.2f} ({pct}%) — {c['orders']} orders")
-
-    # 90-day cumulative
-    ninety_day = _query_db("customer_intelligence.db",
-        "SELECT COALESCE(SUM(total_price), 0) as rev, COUNT(*) as orders FROM orders WHERE created_at >= '2026-03-01'",
-        one=True)
-    if ninety_day:
-        lines.append(f"  90-Day Cumulative (since Mar 1): ${ninety_day['rev']:,.2f} from {ninety_day['orders']} orders")
-        lines.append(f"  90-Day Target: $277,500 (Mar $50K → Apr $62.5K → May $77.5K → Jun $87.5K)")
+            lines.append(f"  Last {days} days (DB): ${period['rev']:,.2f} from {period['orders']} orders")
 
     return "\n".join(lines)
 
@@ -580,6 +649,60 @@ def _email_intel_brief() -> str:
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
+# SECTION 6B: CREATIVE INTELLIGENCE (from intelligence.db)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def _creative_intel_brief() -> str:
+    """Creative intelligence summary — hypothesis testing status and proven learnings."""
+    lines = ["CREATIVE INTELLIGENCE — Hypothesis Testing Summary"]
+
+    # Hypothesis counts
+    for status in ["testing", "proven", "disproven"]:
+        rows = _query_db("intelligence.db",
+            "SELECT COUNT(*) as c FROM creative_hypotheses WHERE status = ?", (status,), one=True)
+        count = rows["c"] if rows else 0
+        lines.append(f"  {status.title()} hypotheses: {count}")
+
+    # Active tests
+    active = _query_db("intelligence.db",
+        "SELECT COUNT(*) as c FROM creative_tests WHERE status = 'live'", one=True)
+    active_count = active["c"] if active else 0
+    lines.append(f"  Active creative tests: {active_count}")
+
+    # Active test details
+    if active_count > 0:
+        tests = _query_db("intelligence.db",
+            "SELECT hypothesis_id, meta_ad_name, spend, roas, cpa, hook_rate "
+            "FROM creative_tests WHERE status = 'live' ORDER BY created_at DESC LIMIT 5")
+        if tests:
+            lines.append("  Live tests:")
+            for t in tests:
+                roas_str = f"{t['roas']:.2f}x" if t['roas'] > 0 else "pending"
+                cpa_str = f"${t['cpa']:.2f}" if t['cpa'] > 0 else "pending"
+                lines.append(f"    [{t['hypothesis_id']}] {t['meta_ad_name']}: ROAS {roas_str}, CPA {cpa_str}, spend ${t['spend']:.2f}")
+
+    # Top proven creative learnings
+    proven = _query_db("intelligence.db",
+        "SELECT hypothesis_id, hypothesis, confidence FROM creative_hypotheses "
+        "WHERE status = 'proven' ORDER BY confidence DESC LIMIT 3")
+    if proven:
+        lines.append("  Proven creative patterns:")
+        for h in proven:
+            lines.append(f"    [{h['hypothesis_id']}] ({h['confidence']:.0%}) {h['hypothesis'][:100]}")
+
+    # Top disproven (things to avoid)
+    disproven = _query_db("intelligence.db",
+        "SELECT hypothesis_id, hypothesis FROM creative_hypotheses "
+        "WHERE status = 'disproven' ORDER BY confidence ASC LIMIT 3")
+    if disproven:
+        lines.append("  Disproven (avoid):")
+        for h in disproven:
+            lines.append(f"    [{h['hypothesis_id']}] {h['hypothesis'][:100]}")
+
+    return "\n".join(lines)
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
 # SECTION 7: CUSTOMER INTELLIGENCE (from customer_intelligence.db)
 # ═══════════════════════════════════════════════════════════════════════════════
 
@@ -653,6 +776,8 @@ def build_data_brief(days: int = 1, include_seo: bool = True, include_email_inte
     if include_email_intel:
         sections.append("")
         sections.append(_email_intel_brief())
+        sections.append("")
+        sections.append(_creative_intel_brief())
 
     if include_customers:
         sections.append("")

@@ -2150,6 +2150,391 @@ async def log_evidence(request: Request):
     return {"status": "logged", "hypothesis_id": hyp_id}
 
 
+# ═══════════════════════════════════════════════════════════════════════════════
+# CREATIVE INTELLIGENCE — Hypothesis-driven creative testing tracker
+# Based on Tom's Sales Masterclass (March 6, 2026)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def _ensure_creative_intel_tables():
+    """Create creative intelligence tables if they don't exist."""
+    conn = sqlite3.connect(str(INTEL_DB))
+    conn.executescript("""
+    CREATE TABLE IF NOT EXISTS creative_hypotheses (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        hypothesis_id TEXT NOT NULL,
+        hypothesis TEXT NOT NULL,
+        category TEXT,
+        format TEXT,
+        layers_tested TEXT,
+        status TEXT DEFAULT 'testing',
+        confidence REAL DEFAULT 0.5,
+        validations INTEGER DEFAULT 0,
+        contradictions INTEGER DEFAULT 0,
+        win_criteria TEXT,
+        test_budget TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS creative_tests (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        hypothesis_id TEXT NOT NULL,
+        meta_ad_name TEXT,
+        meta_ad_id TEXT,
+        format TEXT,
+        creative_description TEXT,
+        status TEXT DEFAULT 'draft',
+        start_date TEXT,
+        end_date TEXT,
+        spend REAL DEFAULT 0,
+        impressions INTEGER DEFAULT 0,
+        clicks INTEGER DEFAULT 0,
+        ctr REAL DEFAULT 0,
+        cpc REAL DEFAULT 0,
+        cpa REAL DEFAULT 0,
+        purchases INTEGER DEFAULT 0,
+        revenue REAL DEFAULT 0,
+        roas REAL DEFAULT 0,
+        hook_rate REAL DEFAULT 0,
+        completion_rate REAL DEFAULT 0,
+        thruplay_rate REAL DEFAULT 0,
+        result TEXT,
+        notes TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS creative_evidence (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        hypothesis_id TEXT NOT NULL,
+        test_id INTEGER REFERENCES creative_tests(id),
+        supports BOOLEAN,
+        metric_name TEXT,
+        metric_value REAL,
+        win_threshold REAL,
+        notes TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    """)
+    conn.commit()
+    conn.close()
+
+
+def _seed_creative_hypotheses():
+    """Seed creative hypotheses from Tom's Sales Masterclass + testing framework."""
+    conn = sqlite3.connect(str(INTEL_DB))
+    existing = conn.execute("SELECT COUNT(*) FROM creative_hypotheses").fetchone()[0]
+    if existing > 0:
+        conn.close()
+        return
+
+    hypotheses = [
+        # Testing hypotheses
+        ("H1", "UGC talking head with real customer review script outperforms AI narrative video",
+         "format", "FORMAT_A", "social_proof,trust,relatability,authenticity",
+         "testing", 0.5, 0, 0, "ROAS > 2.5x, CPA < $15", "$15/day x 7 days"),
+        ("H2", "Static graphics with real review headlines match or outperform AI narrative video on ROAS",
+         "format", "FORMAT_B", "social_proof,trust",
+         "testing", 0.5, 0, 0, "ROAS > 2x, CPA < $18", "$15/day x 7 days"),
+        ("H3", "Adding urgency/scarcity layer lifts conversion 20%+ on winning creative",
+         "offer", "layer", "urgency,scarcity",
+         "testing", 0.5, 0, 0, "CPA improves 20% vs same creative without urgency", "$15/day x 5 days"),
+        ("H4", "Split screen before/after beats narrative video on hook rate and ROAS",
+         "format", "FORMAT_D", "visual_proof",
+         "testing", 0.5, 0, 0, "Hook rate > 35%, ROAS > 2x", "$15/day x 7 days"),
+        ("H5", "Male audience creative (farmer + working dog) unlocks new segment",
+         "audience", "FORMAT_A", "audience_targeting",
+         "testing", 0.5, 0, 0, "Male audience share > 40%, ROAS > 2x", "$15/day x 7 days"),
+
+        # Proven from existing data
+        ("P1", "Trust + Social Proof creative formula produces highest ROAS for supplements",
+         "formula", "all", "social_proof,trust",
+         "proven", 0.95, 7, 0, "ROAS > 5x", "Proven: 7.78x ROAS on GLM Social Proof"),
+        ("P2", "Product Focus + Education without social proof underperforms",
+         "formula", "FORMAT_C", "education",
+         "disproven", 0.1, 0, 5, "ROAS > 2x", "Disproven: 1.4x ROAS on Pure Pets TOF"),
+
+        # Disproven from analysis
+        ("D1", "Underwater ingredient education in TOF video improves conversion",
+         "structure", "video", "education",
+         "disproven", 0.05, 0, 3, "Completion rate improvement", "Disproven: kills retention at 4-second mark"),
+        ("D2", "Inconsistent characters (breed change) don't affect trust",
+         "authenticity", "video", "authenticity",
+         "disproven", 0.05, 0, 3, "CTR improvement", "Disproven: pet parents detect breed changes immediately"),
+        ("D3", "Business POV selling (founder/CEO talking head) builds trust",
+         "format", "video", "trust",
+         "disproven", 0.1, 0, 2, "ROAS > 2x", "Disproven: Tony's video felt too salesy, no trust"),
+    ]
+
+    for h in hypotheses:
+        conn.execute("""
+            INSERT INTO creative_hypotheses
+                (hypothesis_id, hypothesis, category, format, layers_tested,
+                 status, confidence, validations, contradictions, win_criteria, test_budget)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, h)
+
+    conn.commit()
+    conn.close()
+    logger.info(f"Seeded {len(hypotheses)} creative hypotheses")
+
+
+@app.get("/api/creative-intel/seed")
+def seed_creative_intel():
+    """Manually trigger creative hypothesis seeding (idempotent)."""
+    _ensure_creative_intel_tables()
+    _seed_creative_hypotheses()
+    return {"status": "seeded"}
+
+
+@app.get("/api/creative-intel/hypotheses")
+def get_creative_hypotheses():
+    """All creative hypotheses grouped by status."""
+    _ensure_creative_intel_tables()
+    _seed_creative_hypotheses()
+    conn = sqlite3.connect(str(INTEL_DB))
+    conn.row_factory = sqlite3.Row
+    rows = conn.execute("""
+        SELECT h.*, COUNT(e.id) as evidence_count,
+               COUNT(t.id) as test_count
+        FROM creative_hypotheses h
+        LEFT JOIN creative_evidence e ON e.hypothesis_id = h.hypothesis_id
+        LEFT JOIN creative_tests t ON t.hypothesis_id = h.hypothesis_id
+        GROUP BY h.id
+        ORDER BY h.confidence DESC
+    """).fetchall()
+    conn.close()
+
+    grouped = {"testing": [], "proven": [], "disproven": []}
+    for r in rows:
+        d = dict(r)
+        status = d.get("status", "testing")
+        if status not in grouped:
+            grouped[status] = []
+        grouped[status].append(d)
+    return grouped
+
+
+@app.get("/api/creative-intel/tests")
+def get_creative_tests(hypothesis: str = "", status: str = "", limit: int = 50):
+    """Active creative tests with optional filters."""
+    _ensure_creative_intel_tables()
+    conn = sqlite3.connect(str(INTEL_DB))
+    conn.row_factory = sqlite3.Row
+
+    query = "SELECT * FROM creative_tests WHERE 1=1"
+    params = []
+    if hypothesis:
+        query += " AND hypothesis_id = ?"
+        params.append(hypothesis)
+    if status:
+        query += " AND status = ?"
+        params.append(status)
+    query += " ORDER BY created_at DESC LIMIT ?"
+    params.append(limit)
+
+    rows = conn.execute(query, params).fetchall()
+    conn.close()
+    return {"tests": [dict(r) for r in rows], "total": len(rows)}
+
+
+@app.post("/api/creative-intel/hypotheses")
+async def create_creative_hypothesis(request: Request):
+    """Create a new creative hypothesis."""
+    _ensure_creative_intel_tables()
+    body = await request.json()
+    hypothesis = body.get("hypothesis", "")
+    hypothesis_id = body.get("hypothesis_id", "")
+    if not hypothesis:
+        return {"error": "hypothesis text required"}
+
+    conn = sqlite3.connect(str(INTEL_DB))
+    cursor = conn.execute("""
+        INSERT INTO creative_hypotheses
+            (hypothesis_id, hypothesis, category, format, layers_tested, win_criteria, test_budget)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+    """, (
+        hypothesis_id, hypothesis, body.get("category", ""),
+        body.get("format", ""), body.get("layers_tested", ""),
+        body.get("win_criteria", ""), body.get("test_budget", "")
+    ))
+    row_id = cursor.lastrowid
+    conn.commit()
+    conn.close()
+    return {"id": row_id, "status": "created"}
+
+
+@app.post("/api/creative-intel/tests")
+async def create_creative_test(request: Request):
+    """Register a new creative test (when an ad goes live)."""
+    _ensure_creative_intel_tables()
+    body = await request.json()
+
+    conn = sqlite3.connect(str(INTEL_DB))
+    cursor = conn.execute("""
+        INSERT INTO creative_tests
+            (hypothesis_id, meta_ad_name, meta_ad_id, format,
+             creative_description, status, start_date)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+    """, (
+        body.get("hypothesis_id", ""),
+        body.get("meta_ad_name", ""),
+        body.get("meta_ad_id", ""),
+        body.get("format", ""),
+        body.get("creative_description", ""),
+        body.get("status", "live"),
+        body.get("start_date", datetime.now().strftime("%Y-%m-%d"))
+    ))
+    test_id = cursor.lastrowid
+    conn.commit()
+    conn.close()
+    return {"id": test_id, "status": "created"}
+
+
+@app.post("/api/creative-intel/tests/{test_id}/results")
+async def update_creative_test_results(test_id: int, request: Request):
+    """Update a creative test with performance data (from Meta API or manual)."""
+    _ensure_creative_intel_tables()
+    body = await request.json()
+
+    conn = sqlite3.connect(str(INTEL_DB))
+
+    # Update metrics
+    conn.execute("""
+        UPDATE creative_tests SET
+            spend = ?, impressions = ?, clicks = ?, ctr = ?, cpc = ?,
+            cpa = ?, purchases = ?, revenue = ?, roas = ?,
+            hook_rate = ?, completion_rate = ?, thruplay_rate = ?,
+            status = ?, result = ?, notes = ?,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+    """, (
+        body.get("spend", 0), body.get("impressions", 0),
+        body.get("clicks", 0), body.get("ctr", 0), body.get("cpc", 0),
+        body.get("cpa", 0), body.get("purchases", 0),
+        body.get("revenue", 0), body.get("roas", 0),
+        body.get("hook_rate", 0), body.get("completion_rate", 0),
+        body.get("thruplay_rate", 0),
+        body.get("status", "completed"),
+        body.get("result", ""),
+        body.get("notes", ""),
+        test_id
+    ))
+
+    conn.commit()
+    conn.close()
+    return {"status": "updated", "test_id": test_id}
+
+
+@app.post("/api/creative-intel/evidence")
+async def log_creative_evidence(request: Request):
+    """Log evidence for/against a creative hypothesis. Auto-updates confidence."""
+    _ensure_creative_intel_tables()
+    body = await request.json()
+    hyp_id = body.get("hypothesis_id")
+    supports = body.get("supports", True)
+    if not hyp_id:
+        return {"error": "hypothesis_id required"}
+
+    conn = sqlite3.connect(str(INTEL_DB))
+    conn.row_factory = sqlite3.Row
+
+    conn.execute("""
+        INSERT INTO creative_evidence
+            (hypothesis_id, test_id, supports, metric_name,
+             metric_value, win_threshold, notes)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+    """, (
+        hyp_id, body.get("test_id"), supports,
+        body.get("metric_name", ""), body.get("metric_value"),
+        body.get("win_threshold"), body.get("notes", "")
+    ))
+
+    # Update hypothesis confidence
+    if supports:
+        conn.execute("""
+            UPDATE creative_hypotheses SET
+                validations = validations + 1,
+                confidence = MIN(1.0, confidence + 0.10),
+                updated_at = CURRENT_TIMESTAMP
+            WHERE hypothesis_id = ?
+        """, (hyp_id,))
+    else:
+        conn.execute("""
+            UPDATE creative_hypotheses SET
+                contradictions = contradictions + 1,
+                confidence = MAX(0.0, confidence - 0.20),
+                updated_at = CURRENT_TIMESTAMP
+            WHERE hypothesis_id = ?
+        """, (hyp_id,))
+
+    # Auto-promote/demote
+    hyp = conn.execute(
+        "SELECT * FROM creative_hypotheses WHERE hypothesis_id = ?", (hyp_id,)
+    ).fetchone()
+    if hyp:
+        h = dict(hyp)
+        new_status = h["status"]
+        if h["validations"] >= 3 and h["confidence"] >= 0.85:
+            new_status = "proven"
+        elif h["contradictions"] > h["validations"] and h["confidence"] < 0.25:
+            new_status = "disproven"
+
+        if new_status != h["status"]:
+            conn.execute(
+                "UPDATE creative_hypotheses SET status = ? WHERE hypothesis_id = ?",
+                (new_status, hyp_id)
+            )
+
+    conn.commit()
+    conn.close()
+    return {"status": "logged", "hypothesis_id": hyp_id}
+
+
+@app.get("/api/creative-intel/summary")
+def get_creative_intel_summary():
+    """Dashboard summary — active tests, hypothesis status, proven learnings."""
+    _ensure_creative_intel_tables()
+    _seed_creative_hypotheses()
+    conn = sqlite3.connect(str(INTEL_DB))
+    conn.row_factory = sqlite3.Row
+
+    summary = {}
+
+    # Hypothesis counts
+    for status in ["testing", "proven", "disproven"]:
+        row = conn.execute(
+            "SELECT COUNT(*) as c FROM creative_hypotheses WHERE status = ?", (status,)
+        ).fetchone()
+        summary[f"{status}_count"] = row["c"] if row else 0
+
+    # Active tests
+    active = conn.execute(
+        "SELECT COUNT(*) as c FROM creative_tests WHERE status = 'live'"
+    ).fetchone()
+    summary["active_tests"] = active["c"] if active else 0
+
+    # Best performing test
+    best = conn.execute("""
+        SELECT meta_ad_name, hypothesis_id, roas, cpa, hook_rate
+        FROM creative_tests WHERE roas > 0
+        ORDER BY roas DESC LIMIT 1
+    """).fetchone()
+    if best:
+        summary["best_test"] = dict(best)
+
+    # Proven learnings
+    proven = conn.execute("""
+        SELECT hypothesis_id, hypothesis, confidence
+        FROM creative_hypotheses WHERE status = 'proven'
+        ORDER BY confidence DESC
+    """).fetchall()
+    summary["proven_learnings"] = [dict(p) for p in proven]
+
+    conn.close()
+    return summary
+
+
 @app.get("/", response_class=HTMLResponse)
 def serve_dashboard():
     if DASHBOARD_FILE.exists():
