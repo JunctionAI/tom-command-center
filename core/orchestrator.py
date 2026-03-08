@@ -1572,7 +1572,7 @@ Customers: {snapshot['new_customers']} new, {snapshot['returning_customers']} re
         "weekly_compilation": "Execute your weekly experiment compilation. Gather all A/B test results and hypothesis outcomes from this week. Analyse patterns and recommend next experiments.",
         "weekly_codification": "Execute your weekly principle extraction. Review this week's decisions, outcomes, and patterns. Extract and codify any new principles. Follow your AGENT.md format.",
         "weekly_audit": "Execute your weekly efficiency audit. Analyse where time and money went, what generated returns, and what should change. Be data-driven. Follow your AGENT.md format.",
-        "deep_dive_lesson": "Generate tonight's deep-dive lesson. Follow the topic selection and format in your AGENT.md. Make it practical and connected to Tom's current situation.",
+        "deep_dive_lesson": "Generate tonight's deep-dive lesson. CRITICAL: Read your CONTEXT.md above — find the 'CURRENT CURRICULUM DAY' field and advance to the NEXT uncompleted day. Do NOT repeat a day that is already marked COMPLETED. Follow the 90-day curriculum in your AGENT.md. Use the exact output format specified. At the end of your lesson, you MUST emit: [STATE UPDATE: CURRENT CURRICULUM DAY: X | COMPLETED: Day X — <topic name> on <today's date> | NEXT: Day X+1 — <next topic>]",
         "reflection_session": "Conduct a therapeutic reflection session. Review Tom's emotional state, relationships, and life direction. Follow your AGENT.md format. Be genuine, not generic.",
         "tony_report": "Generate this week's Tony CEO report. Pull all performance data, decisions made, campaigns launched, and strategic progress. Follow the weekly report format in your AGENT.md. File-based output for Tom to review before sending.",
     }
@@ -1586,6 +1586,14 @@ Customers: {snapshot['new_customers']} new, {snapshot['returning_customers']} re
             reading = get_tonight_reading()
             task_prompt = reading["prompt"]
             logger.info(f"Evening reading: {reading['primary_concept']} (score: {reading['primary_score']})")
+            # Write selected concept to CONTEXT.md immediately -- backup cooldown in case
+            # reading_log.db doesn't persist on Railway. This ensures we NEVER repeat.
+            from datetime import date as _date_eve
+            _tonight_str = _date_eve.today().isoformat()
+            update_agent_state("evening-reading",
+                f"DELIVERED READING — {_tonight_str}: {reading['primary_concept']} "
+                f"(domain: {reading['primary_domain']}, key: {reading['primary_key']}) "
+                f"| Do NOT repeat this concept for at least 30 days.")
         except Exception as e:
             logger.error(f"Knowledge engine failed: {e}")
             task_prompt = "Deliver a foundational knowledge lesson for Tom's evening reading. Pick a mental model or strategic concept and connect it to running a DTC health supplement business. 500-800 words, practical, Telegram-friendly."
@@ -2197,6 +2205,16 @@ The daily plan should reference the 90-day execution map from Meridian's intelli
                 f"{agent_display}/{task_name}: API call failed. Will retry next schedule.\n\nError: {response[11:200]}",
                 bot_token, severity="IMPORTANT", agent="command-center")
         return
+
+    # Extract and apply state updates BEFORE learning loop cleans the markers.
+    # process_response_learning() strips [STATE UPDATE:] markers, so we must
+    # persist them to CONTEXT.md first — otherwise scheduled tasks never update state.
+    raw_response_for_state = response
+    _, _sched_state_updates = _extract_state_updates(raw_response_for_state)
+    for _state_info in _sched_state_updates:
+        if _state_info:
+            update_agent_state(agent_name, _state_info)
+            logger.info(f"State update applied for {agent_name} (scheduled): {_state_info[:80]}")
 
     # Process through learning loop (extract insights, clean markers)
     response = process_response_learning(

@@ -1397,6 +1397,20 @@ def select_evening_reading(context: dict, reading_log: ReadingLog = None) -> dic
     log = reading_log or ReadingLog()
     recent_concepts = log.get_recent_concepts()
 
+    # Fallback cooldown: also check ASI's CONTEXT.md for delivered readings.
+    # This guards against reading_log.db being reset (e.g., Railway re-deploy with
+    # no persistent volume for this file). CONTEXT.md is always written before Claude runs.
+    try:
+        asi_context_path = AGENTS_DIR / "evening-reading" / "state" / "CONTEXT.md"
+        if asi_context_path.exists():
+            asi_text = asi_context_path.read_text(encoding="utf-8")
+            import re as _re_el
+            # Extract concept keys from lines like: "DELIVERED READING — date: Name (key: concept_key)"
+            for _match in _re_el.finditer(r'key:\s*([a-z_]+)\)', asi_text):
+                recent_concepts.add(_match.group(1).strip())
+    except Exception:
+        pass  # non-fatal — primary cooldown is reading_log.db
+
     # Score every concept
     scored = []
     for key, concept in KNOWLEDGE_LIBRARY.items():
