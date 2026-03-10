@@ -10,8 +10,8 @@
     {
       "agent": "daily-briefing",
       "task": "morning_briefing",
-      "cron": "DISABLED",
-      "description": "Oracle master briefing — DISABLED (PREP covers this)"
+      "cron": "0 7 31 2 *",
+      "description": "Oracle master briefing — DISABLED (PREP covers this, never fires Feb 31)"
     },
     {
       "agent": "dbh-marketing",
