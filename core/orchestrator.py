@@ -1649,7 +1649,23 @@ Customers: {snapshot['new_customers']} new, {snapshot['returning_customers']} re
     task_prompts = {
         "morning_protocol": "Execute your morning protocol. Generate today's training plan, meal plan, and any notes. Use the format specified in your AGENT.md.",
         "morning_briefing": "Generate the daily master briefing NOW. You have all agent states and LIVE DATA injected below this prompt — Shopify revenue, Klaviyo emails, Meta Ads, Asana tasks, financial data. USE THE ACTUAL NUMBERS from the injected data. Do NOT say 'unavailable' or 'not connected' — the data IS below. If a specific source shows an error in brackets like [Shopify error: ...], report that specific error. Deliver the full briefing using the exact format from your AGENT.md. Never ask permission or offer options — just brief.",
-        "morning_brief": "Generate your morning operations brief NOW using the LIVE DATA injected below this prompt. The orchestrator has already fetched Shopify, Klaviyo, Meta, and Asana data for you — it appears below. Use ACTUAL NUMBERS from the injected data. Do NOT say 'data unavailable' or 'not yet connected' — the data IS here. If a specific data source shows an error in brackets like [Klaviyo error: ...], report that specific error. Flag issues, list priorities. Use the format specified in your AGENT.md.\n\nIMPORTANT: If you identify a campaign opportunity or creative need, emit [BRIEF: description of insight] and the system will auto-generate a designer-ready brief for Roie and create an Asana task.",
+        "morning_brief": """Generate your morning operations brief NOW using the LIVE DATA injected below this prompt. The orchestrator has already fetched Shopify, Klaviyo, Meta, and Asana data for you — it appears below. Use ACTUAL NUMBERS from the injected data. Do NOT say 'data unavailable' or 'not yet connected' — the data IS here. If a specific data source shows an error in brackets like [Klaviyo error: ...], report that specific error. Flag issues, list priorities. Use the format specified in your AGENT.md.
+
+CRITICAL — THIS-WEEK.md EXECUTION:
+After your performance numbers, check THIS-WEEK.md (in agents/shared/strategy/). For every task assigned to you that has NOT yet been done today:
+- PRODUCE the work right now (write the copy, write the brief, write the strategy)
+- Emit [TASK:] markers for everything needing Tom's approval before it goes live
+- Do NOT recommend. Do NOT say "we should consider". WRITE IT and emit [TASK: Review X|priority|copy pasted in notes]
+
+Priority order from THIS-WEEK.md:
+1. Any email copy due to be sent today → write subject, preview text, body copy → [TASK:]
+2. Any campaign creative needed → write it → [TASK:]
+3. Pure Pets ROAS check → pull number, state verdict (pause/hold/scale)
+4. Any Asana tasks for blocked items → emit [TASK:] so Tom sees them
+
+You are the executor. The work gets done in this morning brief, not recommended for later.
+
+If you identify a campaign opportunity or creative need, emit [BRIEF: description of insight] and the system will auto-generate a designer-ready brief for Roie and create an Asana task.""",
         "scan": "Execute your monitoring scan. Search for updates on your watchlist topics. Report only what's NEW since your last scan. Use the format specified in your AGENT.md.",
         "model_scan": "Execute your AI model release scan. Search for new video model announcements, updates to tracked models. If anything could handle action sequences, mark as CRITICAL. Use the format specified in your AGENT.md.",
         "weekly_plan": "Generate your weekly social plan. Review contact list, flag overdue catch-ups, suggest activities. Use the format specified in your AGENT.md.",
