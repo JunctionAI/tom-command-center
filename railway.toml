@@ -7,3 +7,9 @@ restartPolicyType = "ON_FAILURE"
 restartPolicyMaxRetries = 10
 # No health check -- this is a worker process (Telegram poller), not a web server
 healthcheckPath = ""
+
+# Persistent volume — databases survive redeploys
+# Mount at /app/data so all existing DB paths (data/*.db) work without code changes
+[[volumes]]
+name = "command-center-data"
+mountPath = "/app/data"

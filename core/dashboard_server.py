@@ -752,11 +752,19 @@ def get_dbh_targets():
     daily_needed = (revenue_target - month_revenue) / max(days_left, 1)
     pct_complete = round(month_revenue / revenue_target * 100, 1) if revenue_target else 0
 
-    # Channel breakdown this month
+    # Channel breakdown this month — prefer first_click_channel (pixel data) over last-click
     channels = query_db("customer_intelligence.db",
-        "SELECT channel, COUNT(*) as orders, COALESCE(SUM(total_price), 0) as revenue, "
-        "ROUND(AVG(total_price), 2) as aov FROM orders WHERE created_at >= ? GROUP BY channel ORDER BY revenue DESC",
+        "SELECT CASE WHEN first_click_channel != '' THEN first_click_channel ELSE channel END as channel, "
+        "COUNT(*) as orders, COALESCE(SUM(total_price), 0) as revenue, "
+        "ROUND(AVG(total_price), 2) as aov FROM orders WHERE created_at >= ? "
+        "GROUP BY CASE WHEN first_click_channel != '' THEN first_click_channel ELSE channel END ORDER BY revenue DESC",
         (month_start,))
+
+    # First-click coverage: how many orders this month have pixel data
+    fc_coverage = query_db("customer_intelligence.db",
+        "SELECT COUNT(*) as total, SUM(CASE WHEN first_click_channel != '' THEN 1 ELSE 0 END) as with_pixel "
+        "FROM orders WHERE created_at >= ?",
+        (month_start,), one=True)
 
     # 90-day goal: Mar-Jun cumulative trajectory
     ninety_day_targets = {
@@ -824,6 +832,11 @@ def get_dbh_targets():
         "today_orders": today_orders,
         "yesterday_revenue": round(yesterday_rev["rev"] if yesterday_rev else 0, 2),
         "channels": channels,
+        "first_click_coverage": {
+            "total": fc_coverage["total"] if fc_coverage else 0,
+            "with_pixel": fc_coverage["with_pixel"] if fc_coverage else 0,
+            "pct": round((fc_coverage["with_pixel"] or 0) / max(fc_coverage["total"] or 1, 1) * 100, 1) if fc_coverage else 0,
+        },
         "on_track": daily_run_rate >= (revenue_target / days_in_month),
         "last_db_sync": _last_sync.isoformat() if _last_sync else None,
         "ninety_day": {
@@ -2533,6 +2546,197 @@ def get_creative_intel_summary():
 
     conn.close()
     return summary
+
+
+@app.get("/api/dbh/ltv")
+def get_ltv_data():
+    """CAC:LTV tracker — new customer feed, channel cohorts, repeat rate."""
+    import json as _json
+    from datetime import date as _date
+
+    today = datetime.now(NZ_TZ).date()
+
+    # --- New customer feed (first order in last 60 days) ---
+    new_customers_raw = query_db("customer_intelligence.db", """
+        SELECT
+            c.shopify_id, c.first_name, c.last_name, c.email,
+            c.first_order_date, c.last_order_date, c.total_orders,
+            c.products_bought, c.channels_used, c.segment, c.location,
+            -- Actual spend from orders table (customers.total_spent is unreliable)
+            COALESCE((SELECT SUM(o2.total_price) FROM orders o2
+                      WHERE o2.shopify_customer_id = c.shopify_id), 0) as real_ltv,
+            COALESCE((SELECT COUNT(*) FROM orders o2
+                      WHERE o2.shopify_customer_id = c.shopify_id), 0) as real_orders,
+            -- First-click channel from their first order
+            (SELECT CASE WHEN o3.first_click_channel != '' THEN o3.first_click_channel
+                         ELSE o3.channel END
+             FROM orders o3 WHERE o3.shopify_customer_id = c.shopify_id
+             ORDER BY o3.created_at ASC LIMIT 1) as acq_channel,
+            -- First product bought
+            (SELECT o4.products FROM orders o4
+             WHERE o4.shopify_customer_id = c.shopify_id
+             ORDER BY o4.created_at ASC LIMIT 1) as first_products
+        FROM customers c
+        WHERE c.first_order_date >= date('now', '-60 days')
+        ORDER BY c.first_order_date DESC
+        LIMIT 50
+    """)
+
+    customers_out = []
+    for c in (new_customers_raw or []):
+        first_order = c["first_order_date"] or ""
+        last_order  = c["last_order_date"]  or ""
+        try:
+            days_since_first = (today - _date.fromisoformat(first_order[:10])).days
+        except Exception:
+            days_since_first = None
+        try:
+            days_since_last = (today - _date.fromisoformat(last_order[:10])).days
+        except Exception:
+            days_since_last = None
+
+        # Parse first products from JSON
+        try:
+            prods = _json.loads(c["first_products"] or "[]")
+            entry_product = prods[0] if prods else "Unknown"
+        except Exception:
+            entry_product = c["first_products"] or "Unknown"
+
+        real_orders = c["real_orders"] or 0
+        real_ltv    = round(c["real_ltv"] or 0, 2)
+
+        # LTV health status
+        if real_orders >= 3:
+            ltv_status = "loyal"
+        elif real_orders == 2:
+            ltv_status = "repeat"
+        elif days_since_last is not None and days_since_last > 45:
+            ltv_status = "at_risk"
+        else:
+            ltv_status = "new"
+
+        customers_out.append({
+            "name": f"{c['first_name'] or ''} {(c['last_name'] or '')[:1]}.",
+            "location": c["location"] or "",
+            "first_order": first_order[:10],
+            "last_order": last_order[:10],
+            "days_since_first": days_since_first,
+            "days_since_last": days_since_last,
+            "orders": real_orders,
+            "ltv": real_ltv,
+            "aov": round(real_ltv / real_orders, 2) if real_orders else 0,
+            "acq_channel": c["acq_channel"] or "Unknown",
+            "entry_product": entry_product,
+            "segment": c["segment"] or "",
+            "ltv_status": ltv_status,
+        })
+
+    # --- Channel LTV cohort (aggregate from orders, all time) ---
+    channel_cohorts_raw = query_db("customer_intelligence.db", """
+        SELECT
+            COALESCE(NULLIF(acq.acq_channel,''), 'Unknown') as channel,
+            COUNT(DISTINCT acq.shopify_customer_id) as customers,
+            ROUND(AVG(agg.total_ltv), 2) as avg_ltv,
+            ROUND(AVG(agg.order_count), 2) as avg_orders,
+            ROUND(AVG(agg.total_ltv / MAX(agg.order_count, 1)), 2) as avg_aov,
+            SUM(CASE WHEN agg.order_count = 1 THEN 1 ELSE 0 END) as one_time,
+            SUM(CASE WHEN agg.order_count >= 2 THEN 1 ELSE 0 END) as repeat_buyers,
+            ROUND(SUM(CASE WHEN agg.order_count >= 2 THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 1) as repeat_rate
+        FROM (
+            SELECT shopify_customer_id,
+                   CASE WHEN first_click_channel != '' THEN first_click_channel ELSE channel END as acq_channel
+            FROM orders WHERE created_at = (
+                SELECT MIN(o2.created_at) FROM orders o2
+                WHERE o2.shopify_customer_id = orders.shopify_customer_id
+            )
+        ) acq
+        JOIN (
+            SELECT shopify_customer_id,
+                   SUM(total_price) as total_ltv,
+                   COUNT(*) as order_count
+            FROM orders GROUP BY shopify_customer_id
+        ) agg ON agg.shopify_customer_id = acq.shopify_customer_id
+        GROUP BY channel
+        ORDER BY avg_ltv DESC
+    """)
+
+    # CAC benchmarks (from Triple Whale NC CPA data — update as data improves)
+    cac_benchmarks = {
+        "Google Ads": 60.30,
+        "Google Shopping": 55.0,
+        "Meta Ads": None,       # Unknown until Meta NC CPA verified
+        "Google Organic": 0.0,  # Organic = no paid CAC
+        "Organic Search & Social": 0.0,
+        "Direct": 0.0,
+        "Klaviyo": 0.0,
+        "ChatGPT": 0.0,
+    }
+
+    cohorts_out = []
+    for row in (channel_cohorts_raw or []):
+        ch = row["channel"]
+        avg_ltv = row["avg_ltv"] or 0
+        cac = cac_benchmarks.get(ch)
+        cac_ltv_ratio = round(avg_ltv / cac, 2) if cac and cac > 0 and avg_ltv > 0 else None
+        cohorts_out.append({
+            "channel": ch,
+            "customers": row["customers"],
+            "avg_ltv": avg_ltv,
+            "avg_orders": row["avg_orders"],
+            "avg_aov": row["avg_aov"],
+            "one_time": row["one_time"],
+            "repeat_buyers": row["repeat_buyers"],
+            "repeat_rate": row["repeat_rate"] or 0,
+            "cac": cac,
+            "cac_ltv_ratio": cac_ltv_ratio,
+        })
+
+    # --- Overall stats ---
+    overall = query_db("customer_intelligence.db", """
+        SELECT
+            COUNT(DISTINCT shopify_customer_id) as total_customers,
+            ROUND(AVG(agg.ltv), 2) as avg_ltv_all,
+            ROUND(SUM(CASE WHEN agg.orders >= 2 THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 1) as overall_repeat_rate,
+            ROUND(AVG(CASE WHEN agg.orders >= 2 THEN agg.ltv END), 2) as repeat_customer_ltv
+        FROM (
+            SELECT shopify_customer_id, SUM(total_price) as ltv, COUNT(*) as orders
+            FROM orders GROUP BY shopify_customer_id
+        ) agg
+    """, one=True)
+
+    return {
+        "new_customers": customers_out,
+        "channel_cohorts": cohorts_out,
+        "overall": {
+            "avg_ltv": (overall or {}).get("avg_ltv_all") or 0,
+            "repeat_rate": (overall or {}).get("overall_repeat_rate") or 0,
+            "repeat_customer_ltv": (overall or {}).get("repeat_customer_ltv") or 0,
+            "total_customers": (overall or {}).get("total_customers") or 0,
+        },
+        "cac_note": "CAC benchmarks from Triple Whale NC CPA (Mar 2-8). Google Ads $60.30 verified. Others pending.",
+        # Shopify full-history verified numbers (pulled 2026-03-10, 24,055 orders paginated)
+        "shopify_verified": {
+            "last_updated": "2026-03-10",
+            "total_paid_orders": 24055,
+            "total_unique_customers": 12276,
+            "one_time_buyers": 8472,
+            "one_time_pct": 69.0,
+            "repeat_2plus": 3804,
+            "repeat_2plus_pct": 31.0,
+            "repeat_3plus": 2035,
+            "repeat_3plus_pct": 16.6,
+            "mature_cohort_total": 11898,
+            "mature_cohort_repeat": 3774,
+            "mature_cohort_repeat_pct": 31.7,
+            "in_reorder_window": 378,
+            "in_reorder_window_pct": 3.1,
+            "avg_days_to_reorder": 170,
+            "median_days_to_reorder": 75,
+            "avg_orders_per_customer": round(24055 / 12276, 2),
+            "josh_claim": 3.1,
+            "josh_claim_debunked": "Josh's 3.1% = % of total customers in reorder window, NOT retention rate. Real repeat rate = 31.7%",
+        },
+    }
 
 
 @app.get("/", response_class=HTMLResponse)

@@ -714,6 +714,7 @@
     <button class="nav-tab" onclick="switchTab('channels')">Channels</button>
     <button class="nav-tab" onclick="switchTab('customers')">Customers</button>
     <button class="nav-tab" onclick="switchTab('emailintel')">Email Intelligence</button>
+    <button class="nav-tab" onclick="switchTab('ltv')">CAC:LTV</button>
   </div>
   <div class="header-right">
     <div class="view-switch">
@@ -770,10 +771,24 @@
             <div class="ts-sub" id="ts-next-date">--</div>
           </div>
           <div class="ts-stat" style="min-width:80px;">
+            <div class="ts-label">First-Click Coverage</div>
+            <div class="ts-big b" style="font-size:18px;" id="ts-fc-pct">--%</div>
+            <div class="ts-sub" id="ts-fc-detail">Pixel accumulating</div>
+          </div>
+          <div class="ts-stat" style="min-width:80px;">
             <div class="ts-label">Data Sync</div>
             <div class="ts-big g" style="font-size:14px;" id="ts-sync-status">--</div>
             <div class="ts-sub" id="ts-sync-detail">Auto every 30min</div>
           </div>
+        </div>
+
+        <!-- FIRST-CLICK CHANNEL BREAKDOWN -->
+        <div id="ts-channel-breakdown" style="display:none; background:var(--bg2); border:1px solid var(--border); border-radius:10px; padding:14px 18px; margin-bottom:12px;">
+          <div style="font-size:10px; text-transform:uppercase; letter-spacing:1px; color:var(--text3); margin-bottom:10px; display:flex; align-items:center; gap:8px;">
+            First-Click Attribution — Month to Date
+            <span id="ts-fc-model-badge" style="font-size:9px; padding:2px 8px; border-radius:4px; background:rgba(59,130,246,0.12); color:var(--blue); font-weight:600;">FIRST-CLICK MODEL</span>
+          </div>
+          <div id="ts-channel-rows" style="display:flex; flex-wrap:wrap; gap:8px;"></div>
         </div>
 
         <!-- LIVE PERFORMANCE — Real-time API data -->
@@ -1073,7 +1088,7 @@
         </div>
         <div class="dbh-phase-desc">Every customer is tracked from first order to repeat buyer. The system knows when their product runs out and triggers reorder emails automatically. No customer falls through the cracks.</div>
         <div class="dbh-steps">
-          <div class="dbh-step"><div class="dbh-box ok"><div class="dbh-box-name">Order Attribution</div><div class="dbh-box-what">Every order tagged with channel + campaign + cohort</div><div class="dbh-box-status">11pm nightly</div></div><div class="dbh-arrow ok">&#8594;</div></div>
+          <div class="dbh-step"><div class="dbh-box ok"><div class="dbh-box-name">First-Click Attribution</div><div class="dbh-box-what">Pixel captures true acquisition channel. Every order tagged with first-click source + cohort</div><div class="dbh-box-status">Live — pixel on store</div></div><div class="dbh-arrow ok">&#8594;</div></div>
           <div class="dbh-step"><div class="dbh-box ok"><div class="dbh-box-name">Customer Profile</div><div class="dbh-box-what">228 profiles: LTV, orders, segment, acquisition source</div><div class="dbh-box-status">Auto-accumulating</div></div><div class="dbh-arrow ok">&#8594;</div></div>
           <div class="dbh-step"><div class="dbh-box ok"><div class="dbh-box-name">Replenishment</div><div class="dbh-box-what">Product depletion calculated per customer per product</div><div class="dbh-box-status">10pm nightly</div></div><div class="dbh-arrow ok">&#8594;</div></div>
           <div class="dbh-step"><div class="dbh-box ok"><div class="dbh-box-name">Klaviyo Events</div><div class="dbh-box-what">Reorder trigger fired at 70% product consumed</div><div class="dbh-box-status">Automatic</div></div><div class="dbh-arrow ok">&#8594;</div></div>
@@ -1140,7 +1155,7 @@
           <div class="pipe-label">Processing</div>
           <div class="pipe-row">
             <div class="node a"><div class="nd"></div><div class="nn">Data Fetcher</div><div class="nr">Multi-source pulls</div><div class="nx">Core pulling works</div></div>
-            <div class="node a"><div class="nd"></div><div class="nn">Order Intelligence</div><div class="nr">Attribution + customer DB</div><div class="nx">228 customers synced</div></div>
+            <div class="node a"><div class="nd"></div><div class="nn">Order Intelligence</div><div class="nr">First-click attribution + customer DB</div><div class="nx">Pixel live — coverage growing</div></div>
             <div class="node a"><div class="nd"></div><div class="nn">Daily Snapshot</div><div class="nr">Locks 24hr figures</div><div class="nx">Running at 11:59pm</div></div>
             <div class="node p" onclick="showD('roas')"><div class="nd"></div><div class="nn">ROAS Tracker</div><div class="nr">Shopify-verified ROAS</div><div class="nx">Ready — waiting for live campaigns</div></div>
             <div class="node a"><div class="nd"></div><div class="nn">Replenishment</div><div class="nr">Product depletion rates</div><div class="nx">Wired — 10pm daily Klaviyo events</div></div>
@@ -1409,12 +1424,12 @@
           <div class="chain-title"><div class="ct-icon" style="background:rgba(6,182,212,0.15);color:var(--cyan);">5</div> Customer Lifecycle Chain</div>
           <div class="chain-flow" id="chain-lifecycle">
             <div class="cf-step"><div class="cf-node ok">Shopify Orders<span class="cf-sub">daily - new orders</span></div><div class="cf-arrow ok">&#8594;</div></div>
-            <div class="cf-step"><div class="cf-node ok">Attribution<span class="cf-sub">11pm - channel tagging</span></div><div class="cf-arrow ok">&#8594;</div></div>
+            <div class="cf-step"><div class="cf-node ok">First-Click Attribution<span class="cf-sub">pixel → cart → order → DB</span></div><div class="cf-arrow ok">&#8594;</div></div>
             <div class="cf-step"><div class="cf-node ok">Replenishment<span class="cf-sub">10pm - depletion rates</span></div><div class="cf-arrow ok">&#8594;</div></div>
             <div class="cf-step"><div class="cf-node ok">Klaviyo Events<span class="cf-sub">auto - reorder triggers</span></div><div class="cf-arrow ok">&#8594;</div></div>
             <div class="cf-step"><div class="cf-node ok">LTV Analysis<span class="cf-sub">1st of month - cohorts</span></div></div>
           </div>
-          <div class="chain-desc">Orders flow into attribution (channel + cohort tags written to Shopify). Replenishment tracker calculates when products run out. Fires Klaviyo events at 70% depletion to trigger reorder emails. Monthly LTV analysis tracks cohort health.</div>
+          <div class="chain-desc">JavaScript pixel on Shopify storefront captures each customer's true acquisition channel on first visit (localStorage, never overwritten). Syncs to cart attributes → copied to order note_attributes at checkout → webhook pulls into DB. First-click attribution replaces Triple Whale (~$300 USD/month saved). Coverage grows to 100% as new orders accumulate.</div>
         </div>
 
       </div>
@@ -1651,6 +1666,109 @@
 
     </div>
 
+    <!-- ═══ CAC:LTV TAB ═══════════════════════════════════════════════════ -->
+    <div class="tab-content" id="tab-ltv">
+      <div class="section-title">CAC:LTV — Customer Acquisition & Lifetime Value</div>
+      <div class="ei-subtitle">Track every new customer from first click to loyal buyer. CAC benchmarks from Triple Whale NC CPA data. LTV calculated from real order history.</div>
+
+      <!-- Shopify Verified Retention — Full History Panel -->
+      <div style="background:rgba(34,197,94,0.06);border:1px solid rgba(34,197,94,0.25);border-radius:12px;padding:16px 20px;margin-bottom:16px;" id="shopify-retention-panel">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+          <div style="font-size:12px;font-weight:700;color:var(--green);">SHOPIFY VERIFIED — FULL HISTORY (24,055 orders · 12,276 customers)</div>
+          <span style="font-size:9px;padding:2px 8px;border-radius:4px;background:rgba(34,197,94,0.15);color:var(--green);" id="sv-updated">Updated 2026-03-10</span>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:12px;">
+          <div style="background:var(--bg2);border-radius:8px;padding:12px;text-align:center;">
+            <div style="font-size:24px;font-weight:800;color:var(--green);" id="sv-repeat-rate">31.7%</div>
+            <div style="font-size:10px;color:var(--text3);margin-top:3px;">Real Repeat Rate</div>
+            <div style="font-size:9px;color:var(--text2);margin-top:2px;">Mature cohort (90+ days)</div>
+          </div>
+          <div style="background:var(--bg2);border-radius:8px;padding:12px;text-align:center;">
+            <div style="font-size:24px;font-weight:800;color:var(--blue);" id="sv-repeat-count">3,804</div>
+            <div style="font-size:10px;color:var(--text3);margin-top:3px;">Repeat Buyers (2+ orders)</div>
+            <div style="font-size:9px;color:var(--text2);margin-top:2px;" id="sv-3plus">2,035 ordered 3+ times</div>
+          </div>
+          <div style="background:var(--bg2);border-radius:8px;padding:12px;text-align:center;">
+            <div style="font-size:24px;font-weight:800;color:var(--yellow);" id="sv-median-days">75 days</div>
+            <div style="font-size:10px;color:var(--text3);margin-top:3px;">Median Reorder Time</div>
+            <div style="font-size:9px;color:var(--text2);margin-top:2px;" id="sv-avg-days">Avg 170 days</div>
+          </div>
+          <div style="background:var(--bg2);border-radius:8px;padding:12px;text-align:center;">
+            <div style="font-size:24px;font-weight:800;color:var(--cyan);" id="sv-apc">1.96x</div>
+            <div style="font-size:10px;color:var(--text3);margin-top:3px;">Orders Per Customer</div>
+            <div style="font-size:9px;color:var(--text2);margin-top:2px;" id="sv-total-c">12,276 total customers</div>
+          </div>
+        </div>
+        <!-- Josh debunk callout -->
+        <div style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);border-radius:8px;padding:10px 14px;display:flex;align-items:flex-start;gap:10px;">
+          <div style="font-size:16px;line-height:1;">⚠️</div>
+          <div>
+            <div style="font-size:11px;font-weight:700;color:var(--red);">Josh's 3.1% claim is wrong</div>
+            <div style="font-size:10px;color:var(--text2);margin-top:3px;" id="sv-debunk">Josh's "3.1% retention rate" = % of total customers still in reorder window (&lt;90 days) — not a retention metric. Real repeat rate from 11,898 mature-cohort customers = 31.7%. That's 10x his number.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- KPI Bar -->
+      <div class="metrics-bar" style="margin-bottom:16px;">
+        <div class="metric b"><div class="metric-l">Avg Customer LTV</div><div class="metric-v" id="ltv-avg">--</div><div class="metric-d">All channels, all time</div></div>
+        <div class="metric g"><div class="metric-l">Repeat Purchase Rate</div><div class="metric-v" id="ltv-repeat">--%</div><div class="metric-d">% who ordered 2+x</div></div>
+        <div class="metric g"><div class="metric-l">Repeat Customer LTV</div><div class="metric-v" id="ltv-repeat-ltv">--</div><div class="metric-d">Avg LTV if they come back</div></div>
+        <div class="metric b"><div class="metric-l">Total Customers</div><div class="metric-v" id="ltv-customers">--</div><div class="metric-d">In intelligence DB</div></div>
+      </div>
+
+      <!-- Channel CAC:LTV Cohort Table -->
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:20px;">
+        <div style="padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
+          <div>
+            <div style="font-size:13px;font-weight:600;">CAC:LTV by Acquisition Channel</div>
+            <div style="font-size:11px;color:var(--text3);margin-top:2px;">Which channels bring the most valuable customers</div>
+          </div>
+          <span style="font-size:9px;padding:2px 8px;border-radius:4px;background:rgba(59,130,246,0.12);color:var(--blue);">FIRST-CLICK ATTRIBUTION</span>
+        </div>
+        <div style="overflow-x:auto;">
+          <table style="width:100%;border-collapse:collapse;font-size:12px;">
+            <thead>
+              <tr style="background:rgba(0,0,0,0.2);">
+                <th style="padding:9px 14px;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:0.7px;color:var(--text3);font-weight:600;">Channel</th>
+                <th style="padding:9px 14px;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:0.7px;color:var(--text3);font-weight:600;">Customers</th>
+                <th style="padding:9px 14px;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:0.7px;color:var(--text3);font-weight:600;">Avg LTV</th>
+                <th style="padding:9px 14px;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:0.7px;color:var(--text3);font-weight:600;">Avg Orders</th>
+                <th style="padding:9px 14px;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:0.7px;color:var(--text3);font-weight:600;">Avg AOV</th>
+                <th style="padding:9px 14px;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:0.7px;color:var(--text3);font-weight:600;">Repeat Rate</th>
+                <th style="padding:9px 14px;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:0.7px;color:var(--text3);font-weight:600;">NC CPA</th>
+                <th style="padding:9px 14px;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:0.7px;color:var(--text3);font-weight:600;">LTV:CAC</th>
+              </tr>
+            </thead>
+            <tbody id="ltv-cohort-rows">
+              <tr><td colspan="8" style="padding:20px;text-align:center;color:var(--text3);">Loading...</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div style="padding:10px 14px;border-top:1px solid var(--border);font-size:10px;color:var(--text3);" id="ltv-cac-note"></div>
+      </div>
+
+      <!-- New Customer Feed -->
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;overflow:hidden;">
+        <div style="padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
+          <div>
+            <div style="font-size:13px;font-weight:600;">Newly Acquired Customers — Last 60 Days</div>
+            <div style="font-size:11px;color:var(--text3);margin-top:2px;">Individual journeys: entry product, acquisition channel, days since last purchase, LTV so far</div>
+          </div>
+          <div style="display:flex;gap:12px;font-size:10px;color:var(--text3);">
+            <span><span style="color:var(--green);">●</span> Loyal (3+ orders)</span>
+            <span><span style="color:var(--blue);">●</span> Repeat (2 orders)</span>
+            <span><span style="color:var(--text3);">●</span> New</span>
+            <span><span style="color:var(--red);">●</span> At risk (45d+)</span>
+          </div>
+        </div>
+        <div style="padding:12px 16px;max-height:600px;overflow-y:auto;" id="ltv-customer-feed">
+          <div style="color:var(--text3);padding:20px;text-align:center;">Loading customer data...</div>
+        </div>
+      </div>
+    </div>
+    <!-- ═══ END CAC:LTV TAB ═══════════════════════════════════════════════ -->
+
   </div>
 
   <!-- LIVE FEED SIDEBAR -->
@@ -1725,11 +1843,117 @@ const DETAILS = {
   'brief-gen': { t:'Brief Generator', s:'a', sl:'Active', desc:'Ogilvy DO Brief methodology. Generates structured briefs from [BRIEF:] markers in agent responses. Wired into orchestrator response processing.', deps:[{n:'Orchestrator Hook',ok:1},{n:'Brief Code',ok:1},{n:'Asana Writer',ok:1}] },
 };
 
+// ── CAC:LTV TAB ──────────────────────────────────────────────────────────────
+async function fetchLTVData() {
+  try {
+    const d = await fetch(API + '/api/dbh/ltv').then(r => r.ok ? r.json() : null);
+    if (!d) return;
+    renderLTV(d);
+  } catch(e) { console.error('LTV fetch:', e); }
+}
+
+function renderLTV(d) {
+  const overall = d.overall || {};
+  const cohorts = d.channel_cohorts || [];
+  const customers = d.new_customers || [];
+  const sv = d.shopify_verified || {};
+
+  // ── Shopify Verified Retention Panel ──
+  if (sv.last_updated) {
+    document.getElementById('sv-updated').textContent = 'Verified ' + sv.last_updated;
+    document.getElementById('sv-repeat-rate').textContent = (sv.mature_cohort_repeat_pct || 31.7) + '%';
+    document.getElementById('sv-repeat-count').textContent = (sv.repeat_2plus || 3804).toLocaleString();
+    document.getElementById('sv-3plus').textContent = (sv.repeat_3plus || 2035).toLocaleString() + ' ordered 3+ times';
+    document.getElementById('sv-median-days').textContent = (sv.median_days_to_reorder || 75) + ' days';
+    document.getElementById('sv-avg-days').textContent = 'Avg ' + (sv.avg_days_to_reorder || 170) + ' days';
+    document.getElementById('sv-apc').textContent = (sv.avg_orders_per_customer || 1.96) + 'x';
+    document.getElementById('sv-total-c').textContent = (sv.total_unique_customers || 12276).toLocaleString() + ' total customers';
+    document.getElementById('sv-debunk').textContent = sv.josh_claim_debunked || '';
+  }
+
+  // ── KPI bar ──
+  document.getElementById('ltv-avg').textContent = '$' + Math.round(overall.avg_ltv || 0);
+  document.getElementById('ltv-repeat').textContent = (overall.repeat_rate || 0) + '%';
+  document.getElementById('ltv-repeat-ltv').textContent = '$' + Math.round(overall.repeat_customer_ltv || 0);
+  document.getElementById('ltv-customers').textContent = overall.total_customers || 0;
+
+  // ── Channel cohort table ──
+  const ctbl = document.getElementById('ltv-cohort-rows');
+  ctbl.innerHTML = cohorts.map(c => {
+    const cacStr = c.cac != null ? (c.cac === 0 ? 'Organic' : '$' + c.cac.toFixed(0)) : '—';
+    const ratioStr = c.cac_ltv_ratio != null ? c.cac_ltv_ratio + 'x' : '—';
+    const ratioColor = c.cac_ltv_ratio >= 3 ? 'var(--green)' : c.cac_ltv_ratio >= 1.5 ? 'var(--yellow)' : c.cac_ltv_ratio ? 'var(--red)' : 'var(--text3)';
+    const repeatColor = c.repeat_rate >= 30 ? 'var(--green)' : c.repeat_rate >= 15 ? 'var(--yellow)' : 'var(--red)';
+    return '<tr>' +
+      '<td style="font-weight:600;">' + c.channel + '</td>' +
+      '<td>' + c.customers + '</td>' +
+      '<td style="color:var(--green);font-weight:600;">$' + Math.round(c.avg_ltv || 0) + '</td>' +
+      '<td>' + (c.avg_orders || 0).toFixed(1) + '</td>' +
+      '<td>$' + Math.round(c.avg_aov || 0) + '</td>' +
+      '<td style="color:' + repeatColor + ';">' + (c.repeat_rate || 0) + '%</td>' +
+      '<td>' + cacStr + '</td>' +
+      '<td style="color:' + ratioColor + ';font-weight:700;">' + ratioStr + '</td>' +
+    '</tr>';
+  }).join('');
+
+  // ── New customer feed ──
+  const feed = document.getElementById('ltv-customer-feed');
+  const statusColors = { loyal:'var(--green)', repeat:'var(--blue)', new:'var(--text3)', at_risk:'var(--red)' };
+  const statusLabels = { loyal:'LOYAL', repeat:'REPEAT', new:'NEW', at_risk:'AT RISK' };
+  const chColors = {
+    'Google Ads':'var(--blue)', 'Google Organic':'var(--cyan)', 'Google Shopping':'var(--cyan)',
+    'Organic Search & Social':'var(--cyan)', 'Organic & Social':'var(--cyan)',
+    'Meta Ads':'var(--orange)', 'Klaviyo':'var(--purple)',
+    'Direct':'var(--text3)', 'ChatGPT':'var(--green)', 'Unknown':'var(--gray)'
+  };
+  feed.innerHTML = customers.map(c => {
+    const sc = statusColors[c.ltv_status] || 'var(--text3)';
+    const sl = statusLabels[c.ltv_status] || c.ltv_status;
+    const cc = chColors[c.acq_channel] || 'var(--text2)';
+    const daysLabel = c.days_since_last != null ? c.days_since_last + 'd ago' : '—';
+    const repeatFlag = c.orders >= 2 ? '<span style="font-size:9px;padding:1px 5px;border-radius:3px;background:rgba(34,197,94,0.12);color:var(--green);margin-left:4px;">REPEAT</span>' : '';
+    return '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:12px 16px;display:flex;align-items:center;gap:16px;margin-bottom:8px;">' +
+      // Status dot
+      '<div style="width:8px;height:8px;border-radius:50%;background:' + sc + ';flex-shrink:0;box-shadow:0 0 6px ' + sc + ';"></div>' +
+      // Name + entry product
+      '<div style="flex:1;min-width:0;">' +
+        '<div style="font-size:13px;font-weight:600;">' + c.name + repeatFlag + '</div>' +
+        '<div style="font-size:11px;color:var(--text3);margin-top:2px;">' + c.entry_product.substring(0,40) + ' · ' + (c.location || '').split(',').slice(-2).join(',').trim() + '</div>' +
+      '</div>' +
+      // Channel
+      '<div style="text-align:center;min-width:100px;">' +
+        '<div style="font-size:10px;color:' + cc + ';font-weight:600;">' + c.acq_channel + '</div>' +
+        '<div style="font-size:9px;color:var(--text3);">Acquisition</div>' +
+      '</div>' +
+      // Orders
+      '<div style="text-align:center;min-width:50px;">' +
+        '<div style="font-size:16px;font-weight:700;color:var(--blue);">' + c.orders + '</div>' +
+        '<div style="font-size:9px;color:var(--text3);">Orders</div>' +
+      '</div>' +
+      // LTV
+      '<div style="text-align:center;min-width:70px;">' +
+        '<div style="font-size:16px;font-weight:700;color:var(--green);">$' + Math.round(c.ltv) + '</div>' +
+        '<div style="font-size:9px;color:var(--text3);">LTV so far</div>' +
+      '</div>' +
+      // Last purchase
+      '<div style="text-align:center;min-width:70px;">' +
+        '<div style="font-size:13px;font-weight:600;color:' + (c.days_since_last > 45 ? 'var(--red)' : c.days_since_last > 20 ? 'var(--yellow)' : 'var(--green)') + ';">' + daysLabel + '</div>' +
+        '<div style="font-size:9px;color:var(--text3);">Last purchase</div>' +
+      '</div>' +
+      // Status badge
+      '<div style="font-size:9px;padding:2px 8px;border-radius:4px;background:rgba(0,0,0,0.2);border:1px solid ' + sc + ';color:' + sc + ';font-weight:700;flex-shrink:0;">' + sl + '</div>' +
+    '</div>';
+  }).join('') || '<div style="color:var(--text3);padding:20px;text-align:center;">No new customers in last 60 days</div>';
+
+  document.getElementById('ltv-cac-note').textContent = d.cac_note || '';
+}
+
 // TAB SWITCHING
 function switchTab(tab) {
   document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
   document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
   document.getElementById('tab-' + tab).classList.add('active');
+  if (tab === 'ltv') fetchLTVData();
   event.target.classList.add('active');
   if (tab === 'emailintel') loadEmailIntel();
 }
@@ -2676,6 +2900,39 @@ function renderTargetStrip(d) {
   } else {
     document.getElementById('ts-sync-status').textContent = 'Syncing...';
     document.getElementById('ts-sync-detail').textContent = 'First sync in progress';
+  }
+
+  // First-click coverage
+  const fc = d.first_click_coverage || {};
+  const fcPct = fc.pct || 0;
+  const fcWith = fc.with_pixel || 0;
+  const fcTotal = fc.total || 0;
+  const fcEl = document.getElementById('ts-fc-pct');
+  fcEl.textContent = fcPct + '%';
+  fcEl.style.color = fcPct >= 80 ? 'var(--green)' : fcPct >= 30 ? 'var(--yellow)' : 'var(--blue)';
+  document.getElementById('ts-fc-detail').textContent = fcWith + ' of ' + fcTotal + ' orders';
+
+  // Channel breakdown
+  if (d.channels && d.channels.length > 0) {
+    const breakdown = document.getElementById('ts-channel-breakdown');
+    const rows = document.getElementById('ts-channel-rows');
+    breakdown.style.display = 'block';
+    const totalRev = d.channels.reduce((s, c) => s + (c.revenue || 0), 0);
+    const chColors = {
+      'Google Ads': 'var(--blue)', 'Google Organic': 'var(--cyan)', 'Google Shopping': 'var(--cyan)',
+      'Organic Search & Social': 'var(--teal, #06b6d4)', 'Organic & Social': 'var(--cyan)',
+      'Direct': 'var(--text2)', 'Klaviyo': 'var(--purple)', 'Meta Ads': 'var(--orange)',
+      'ChatGPT': 'var(--green)', 'Non-attributed': 'var(--gray)'
+    };
+    rows.innerHTML = d.channels.map(ch => {
+      const pct = totalRev > 0 ? Math.round((ch.revenue || 0) / totalRev * 100) : 0;
+      const color = chColors[ch.channel] || 'var(--text2)';
+      return '<div style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px 12px;min-width:140px;">' +
+        '<div style="font-size:10px;color:var(--text3);margin-bottom:2px;">' + (ch.channel || 'Unknown') + '</div>' +
+        '<div style="font-size:16px;font-weight:700;color:' + color + ';">$' + Math.round(ch.revenue || 0).toLocaleString() + '</div>' +
+        '<div style="font-size:10px;color:var(--text3);">' + ch.orders + ' orders · ' + pct + '% · AOV $' + Math.round(ch.aov || 0) + '</div>' +
+        '</div>';
+    }).join('');
   }
 }
 

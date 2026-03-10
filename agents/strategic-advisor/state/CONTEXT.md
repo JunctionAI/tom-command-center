@@ -1,5 +1,5 @@
 # PREP -- Strategic Context
-## Last Updated: 2026-03-09
+## Last Updated: 2026-03-10
 
 ### Current State
 - Full background loaded (0-26 years, including latest March 2026 update)
@@ -14,20 +14,21 @@
 - Monthly target: $50,000
 - Required pace: $1,688/day for remaining 22 days (+18% above current avg)
 - AOV: ~$151
-- Top channel: Referral (52%), Google Organic (21%), Direct (13%), Email (9%)
+- Top channel (first-click, Mar 2-8 via Triple Whale): Direct $3,523 (32%), Organic Search & Social $2,533 (23%), Google Ads $1,949 (18%), Klaviyo $1,717 (15%), Non-attributed $686 (6%), ChatGPT $475 (4%), Meta $71 (1%)
+- NOTE: "Organic Search & Social" = Google SEO + other organic search + organic social posts. Not just social.
 - Sea Cucumber: dominant product (11 orders, $1,514 MTD)
 - March 8 best day: $1,043 (trigger unknown — investigate referral source)
 - DATA SOURCE: Live Shopify API (reliable). DB sync was stale — now fixed.
 
 ### Active Threads (Priority Order)
-1. **URGENT: Email execution** -- Emails not sending (design bottleneck removed today)
-   Ship text-heavy emails immediately without waiting for Roie graphics
-2. **Meta decision** -- Pure Pets showing zero verified ROAS. Sea Cucumber ~$20/day test ready.
-3. **Referral spike investigation** -- 61% revenue from Referral, source unknown
-4. **Financial rebalancing** -- Cut Alternate spend, maximise DBH revenue
-5. **Personal Brand** -- TikTok strategy built, content production next
-6. **Health/Lifestyle** -- Training consistent (5:20am wake, push sessions, running)
-7. **Social** -- First Compass session revealed: professionally strong, personally isolated
+1. **Email cadence — ON TRACK** -- 4 emails sent week of Mar 2-8 (Sea Cucumber Mar 4, Marine Collagen Mar 5, Pure Pets Educational Mar 5, Pure Pets Bundle Launch Mar 7). Design bottleneck resolved. Target 3/week being met. Do NOT flag email volume as a problem — verify against Klaviyo before raising.
+2. **Meta — video test underway** -- Pure Pets Bi-Active has zero verified ROAS. Tom added new video creative Mar 10 to test whether video is the bottleneck. Do NOT recommend killing campaign until video has been live 5-7 days and results assessed. Sea Cucumber and Marine Collagen on hold until Pure Pets post-click experience is audited.
+3. **Google Ads API access** -- Applied for Standard Access Mar 10. Developer token in test mode (500 errors). Pending approval. Josh admin access confirmed not needed.
+4. **First-click attribution live** -- Pixel installed Mar 9. Replaces Triple Whale (~$300 USD/month saved). Coverage growing. First-click data flowing into customer_intelligence.db.
+5. **Financial rebalancing** -- Cut Alternate spend, maximise DBH revenue
+6. **Personal Brand** -- TikTok strategy built, content production next
+7. **Health/Lifestyle** -- Training consistent (5:20am wake, push sessions, running)
+8. **Social** -- First Compass session revealed: professionally strong, personally isolated
 
 ### Financial Separation (CRITICAL - March 2026)
 

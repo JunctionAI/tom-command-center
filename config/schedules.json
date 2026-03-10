@@ -56,6 +56,18 @@
       "description": "Meridian weekly performance review (Monday 9am)"
     },
     {
+      "agent": "dbh-marketing",
+      "task": "google_ads_review",
+      "cron": "0 8 * * 3",
+      "description": "Meridian Google Ads autonomous weekly review (Wednesday 8am)"
+    },
+    {
+      "agent": "command-center",
+      "task": "health_digest",
+      "cron": "50 8 * * *",
+      "description": "Nexus daily health digest — what ran/failed in last 24h (8:50am)"
+    },
+    {
       "agent": "global-events",
       "task": "weekly_deep_dive",
       "cron": "0 8 * * 0",

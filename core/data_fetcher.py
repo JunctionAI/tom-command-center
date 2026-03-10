@@ -68,21 +68,33 @@ def fetch_shopify_data(days: int = 1) -> str:
 
         top_products = sorted(product_counts.items(), key=lambda x: x[1], reverse=True)[:5]
 
-        # Attribution breakdown
+        # Attribution breakdown — prefer first-click pixel data from note_attributes
         sources = {}
+        first_click_count = 0
         for order in orders:
-            source = order.get("source_name", "Unknown")
-            ref = order.get("referring_site", "")
-            if "klaviyo" in str(ref).lower() or "email" in str(source).lower():
-                key = "Email/Klaviyo"
-            elif "facebook" in str(ref).lower() or "fb" in str(ref).lower() or "instagram" in str(ref).lower():
-                key = "Meta Ads"
-            elif "google" in str(ref).lower():
-                key = "Google"
-            elif ref:
-                key = f"Referral ({ref[:30]})"
+            # Check for first-click pixel data first (dbh_fc_channel from theme.liquid pixel)
+            fc_channel = next(
+                (a.get("value", "") for a in order.get("note_attributes", [])
+                 if a.get("name") == "dbh_fc_channel"),
+                ""
+            )
+            if fc_channel:
+                key = fc_channel
+                first_click_count += 1
             else:
-                key = "Direct/Other"
+                # Fall back to last-click heuristic
+                source = order.get("source_name", "Unknown")
+                ref = order.get("referring_site", "")
+                if "klaviyo" in str(ref).lower() or "email" in str(source).lower():
+                    key = "Email/Klaviyo"
+                elif "facebook" in str(ref).lower() or "fb" in str(ref).lower() or "instagram" in str(ref).lower():
+                    key = "Meta Ads"
+                elif "google" in str(ref).lower():
+                    key = "Google"
+                elif ref:
+                    key = f"Referral ({ref[:30]})"
+                else:
+                    key = "Direct/Other"
             sources[key] = sources.get(key, 0) + float(order.get("total_price", 0))
 
         lines = [
@@ -97,7 +109,8 @@ def fetch_shopify_data(days: int = 1) -> str:
             lines.append(f"    {name}: {qty} units")
 
         lines.append("")
-        lines.append("  Revenue Attribution:")
+        attribution_model = f"first-click ({first_click_count}/{total_orders} orders)" if first_click_count else "last-click (pixel not yet active)"
+        lines.append(f"  Revenue Attribution ({attribution_model}):")
         for source, rev in sorted(sources.items(), key=lambda x: x[1], reverse=True):
             pct = (rev / total_revenue * 100) if total_revenue > 0 else 0
             lines.append(f"    {source}: ${rev:,.2f} ({pct:.0f}%)")
@@ -142,17 +155,17 @@ def fetch_klaviyo_data(days: int = 1) -> str:
 
         campaigns = resp.json().get("data", [])
 
-        # Filter to recent sent campaigns + a few for context
-        cutoff = (datetime.now(NZ_TZ) - timedelta(days=max(days, 7))).isoformat()
+        # Filter to recent sent campaigns — 14-day window, up to 15 campaigns
+        cutoff = (datetime.now(NZ_TZ) - timedelta(days=max(days, 14))).isoformat()
         recent = []
         for c in campaigns:
             attrs = c.get("attributes", {})
             send_time = attrs.get("send_time", "")
             status = attrs.get("status", "")
             if status in ("Sent", "Sending") and send_time:
-                if send_time >= cutoff or len(recent) < 5:
+                if send_time >= cutoff or len(recent) < 3:
                     recent.append(c)
-            if len(recent) >= 5:
+            if len(recent) >= 15:
                 break
 
         lines = [

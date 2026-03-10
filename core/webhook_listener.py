@@ -240,6 +240,25 @@ def _publish_event(event_type: str, severity: str, payload: dict, source_agent: 
         logger.error(f"Failed to publish event: {e}")
 
 
+def _parse_first_click_note_attributes(order_data: dict) -> dict:
+    """
+    Extract first-click attribution from Shopify order note_attributes.
+
+    The DBH pixel (theme.liquid) writes cart attributes (dbh_fc_*) which
+    Shopify automatically copies to note_attributes at checkout.
+
+    Returns dict with first_click_source, first_click_medium, first_click_channel,
+    first_click_campaign, first_click_referrer. All empty strings if no pixel data.
+    """
+    result = {}
+    for attr in order_data.get("note_attributes", []):
+        name = attr.get("name", "")
+        if name.startswith("dbh_fc_"):
+            key = "first_click_" + name[7:]
+            result[key] = attr.get("value", "") or ""
+    return result
+
+
 def _classify_and_tag(order_data: dict) -> dict:
     """
     Run order attribution and tag the customer in Shopify.
@@ -250,8 +269,9 @@ def _classify_and_tag(order_data: dict) -> dict:
     Returns the attribution result dict.
     """
     try:
-        from core.order_intelligence import classify_order_source, save_order_to_db, get_db
-        attribution = classify_order_source(order_data)
+        from core.order_intelligence import classify_first_click, save_order_to_db, get_db
+        first_click = _parse_first_click_note_attributes(order_data)
+        attribution = classify_first_click(order_data, note_attributes_parsed=first_click)
 
         # Save to customer intelligence DB
         customer = order_data.get("customer") or {}
@@ -275,6 +295,11 @@ def _classify_and_tag(order_data: dict) -> dict:
             "customer_type": "returning" if (customer.get("orders_count", 0) or 0) > 1 else "new",
             "location": f"{customer.get('default_address', {}).get('city', '')}, {customer.get('default_address', {}).get('country', '')}" if customer.get("default_address") else "Unknown",
             "customer_raw": customer,
+            "first_click_source":   attribution.get("first_click_source", ""),
+            "first_click_medium":   attribution.get("first_click_medium", ""),
+            "first_click_channel":  attribution.get("first_click_channel", ""),
+            "first_click_campaign": attribution.get("first_click_campaign", ""),
+            "first_click_referrer": attribution.get("first_click_referrer", ""),
         }
 
         try:
@@ -374,12 +399,17 @@ async def shopify_order_created(request: Request):
     if len(products) > 5:
         product_list += f" (+{len(products) - 5} more)"
 
+    fc_channel = attribution.get("first_click_channel", "")
+    channel_display = (
+        f"{fc_channel} [first-click]" if fc_channel
+        else f"{attribution.get('channel', 'Unknown')} ({attribution.get('confidence', 'low')} conf)"
+    )
     message = (
         f"NEW ORDER {order_name}\n"
         f"Customer: {customer_name}\n"
         f"Total: ${order_total:.2f}\n"
         f"Products: {product_list}\n"
-        f"Channel: {attribution.get('channel', 'Unknown')} ({attribution.get('confidence', 'low')} confidence)\n"
+        f"Channel: {channel_display}\n"
         f"Source: {attribution.get('source', 'Unknown')}"
     )
 

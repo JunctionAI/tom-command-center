@@ -183,9 +183,12 @@ class EventBus:
             The event ID.
         """
         severity = severity.upper()
+        # Map non-standard severity aliases agents sometimes emit
+        _alias = {"HIGH": "IMPORTANT", "MEDIUM": "NOTABLE", "LOW": "NOTABLE", "WARN": "NOTABLE", "WARNING": "NOTABLE"}
+        severity = _alias.get(severity, severity)
         if severity not in SEVERITIES:
-            logger.warning(f"Unknown severity '{severity}', defaulting to INFO")
-            severity = "INFO"
+            logger.warning(f"Unknown severity '{severity}', defaulting to NOTABLE")
+            severity = "NOTABLE"
 
         payload_json = json.dumps(payload or {})
 

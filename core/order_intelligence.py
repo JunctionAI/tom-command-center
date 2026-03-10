@@ -94,6 +94,19 @@ def get_db() -> sqlite3.Connection:
             created_at TEXT DEFAULT CURRENT_TIMESTAMP
         );
     """)
+    # First-click attribution columns — safe to run repeatedly
+    for col_def in [
+        ("first_click_source",   "TEXT DEFAULT ''"),
+        ("first_click_medium",   "TEXT DEFAULT ''"),
+        ("first_click_channel",  "TEXT DEFAULT ''"),
+        ("first_click_campaign", "TEXT DEFAULT ''"),
+        ("first_click_referrer", "TEXT DEFAULT ''"),
+    ]:
+        try:
+            conn.execute(f"ALTER TABLE orders ADD COLUMN {col_def[0]} {col_def[1]}")
+        except sqlite3.OperationalError:
+            pass  # Column already exists
+    conn.commit()
     return conn
 
 
@@ -106,15 +119,20 @@ def save_order_to_db(conn: sqlite3.Connection, order_data: dict):
         (order_id, shopify_customer_id, order_name, created_at, total_price,
          products, channel, source, campaign, attribution_confidence,
          discount_code, discount_amount, customer_type, location,
-         klaviyo_email_match, meta_campaign_match)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         klaviyo_email_match, meta_campaign_match,
+         first_click_source, first_click_medium, first_click_channel,
+         first_click_campaign, first_click_referrer)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, (
         o.get("order_id"), o.get("customer_id"), o.get("name"), o.get("created"),
         o.get("total"), json.dumps(o.get("products", [])),
         o.get("channel"), o.get("source"), o.get("campaign"),
         o.get("confidence"), o.get("discount_code", ""),
         o.get("discount", 0), o.get("customer_type"), o.get("location"),
-        o.get("klaviyo_match", ""), o.get("meta_match", "")
+        o.get("klaviyo_match", ""), o.get("meta_match", ""),
+        o.get("first_click_source", ""), o.get("first_click_medium", ""),
+        o.get("first_click_channel", ""), o.get("first_click_campaign", ""),
+        o.get("first_click_referrer", ""),
     ))
 
     # Upsert customer
@@ -355,6 +373,63 @@ def classify_order_source(order: dict) -> dict:
     }
 
 
+def classify_first_click(order: dict, note_attributes_parsed: dict = None) -> dict:
+    """
+    First-click attribution using pixel data from Shopify note_attributes.
+
+    The DBH pixel (theme.liquid) captures the traffic source on the visitor's
+    very first visit and writes it to cart attributes (dbh_fc_*). Shopify
+    automatically copies cart attributes to order note_attributes at checkout.
+
+    Falls back to classify_order_source() (last-click) when no pixel data exists —
+    this covers orders placed before the pixel was installed.
+
+    Returns a superset of classify_order_source() so all downstream callers
+    work without changes.
+    """
+    # Parse note_attributes if not pre-parsed
+    if note_attributes_parsed is None:
+        note_attributes_parsed = {}
+        for attr in order.get("note_attributes", []):
+            name = attr.get("name", "")
+            if name.startswith("dbh_fc_"):
+                key = "first_click_" + name[7:]  # strip "dbh_fc_"
+                note_attributes_parsed[key] = attr.get("value", "") or ""
+
+    fc_channel  = note_attributes_parsed.get("first_click_channel", "")
+    fc_source   = note_attributes_parsed.get("first_click_source", "")
+    fc_medium   = note_attributes_parsed.get("first_click_medium", "")
+    fc_campaign = note_attributes_parsed.get("first_click_campaign", "")
+    fc_referrer = note_attributes_parsed.get("first_click_referrer", "")
+
+    if fc_channel:
+        return {
+            "channel":  fc_channel,
+            "source":   fc_source,
+            "campaign": fc_campaign,
+            "confidence": "high",
+            "evidence": f"First-click pixel: {fc_source}/{fc_medium} ref={fc_referrer[:50]}",
+            "is_first_click":       True,
+            "first_click_channel":  fc_channel,
+            "first_click_source":   fc_source,
+            "first_click_medium":   fc_medium,
+            "first_click_campaign": fc_campaign,
+            "first_click_referrer": fc_referrer,
+        }
+
+    # No pixel data — fall back to last-click
+    result = classify_order_source(order)
+    result.update({
+        "is_first_click":       False,
+        "first_click_channel":  "",
+        "first_click_source":   "",
+        "first_click_medium":   "",
+        "first_click_campaign": "",
+        "first_click_referrer": "",
+    })
+    return result
+
+
 def _enrich_customer_from_shopify(customer_id: str) -> dict:
     """Fetch full customer record from Shopify to get accurate orders_count/total_spent."""
     store_url = _shopify_url()
@@ -573,7 +648,7 @@ def fetch_order_intelligence(days: int = 1, yesterday_only: bool = True) -> str:
         category_totals = {}
 
         for order in orders:
-            attribution = classify_order_source(order)
+            attribution = classify_first_click(order)
             customer = build_customer_profile(order, db)
             order_total = float(order.get("total_price", 0))
             discount = float(order.get("total_discounts", 0))
@@ -646,6 +721,11 @@ def fetch_order_intelligence(days: int = 1, yesterday_only: bool = True) -> str:
                 "klaviyo_match": klaviyo_match,
                 "meta_match": meta_match,
                 "customer_raw": order.get("customer", {}),
+                "first_click_source":   attribution.get("first_click_source", ""),
+                "first_click_medium":   attribution.get("first_click_medium", ""),
+                "first_click_channel":  attribution.get("first_click_channel", ""),
+                "first_click_campaign": attribution.get("first_click_campaign", ""),
+                "first_click_referrer": attribution.get("first_click_referrer", ""),
             }
             order_analyses.append(analysis)
 
@@ -672,7 +752,7 @@ def fetch_order_intelligence(days: int = 1, yesterday_only: bool = True) -> str:
         ]
 
         # Channel attribution summary
-        lines.append("  CHANNEL ATTRIBUTION:")
+        lines.append("  CHANNEL ATTRIBUTION (first-click pixel where available, last-click fallback):")
         for ch, data in sorted(channel_totals.items(), key=lambda x: x[1]["revenue"], reverse=True):
             pct = (data["revenue"] / total_revenue * 100) if total_revenue > 0 else 0
             aov = data["revenue"] / data["orders"] if data["orders"] > 0 else 0

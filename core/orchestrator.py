@@ -136,6 +136,18 @@ def load_agent_brain(agent_name: str) -> str:
     agent_dir = AGENTS_DIR / agent_name
     brain_parts = []
 
+    # 0. CURRENT DATE -- Always inject first so agents NEVER get confused by stale state files.
+    #    This is authoritative. Do not rely on CONTEXT.md "Last Updated" for the current date.
+    from datetime import date as _date_cls, datetime as _dt_cls
+    _now = _dt_cls.now()
+    _date_str = _now.strftime("%A, %B %d, %Y")
+    _time_str = _now.strftime("%H:%M")
+    brain_parts.append(
+        f"=== CURRENT DATE & TIME ===\n"
+        f"Today is {_date_str} ({_time_str} NZST). "
+        f"This is the authoritative date. Do NOT infer the date from state file timestamps or session log filenames."
+    )
+
     # 1. IDENTITY -- Always read AGENT.md first (equivalent to CLAUDE.md)
     agent_md = agent_dir / "AGENT.md"
     if agent_md.exists():
@@ -153,19 +165,40 @@ def load_agent_brain(agent_name: str) -> str:
     from datetime import date, timedelta
     today = date.today().isoformat()
     yesterday = (date.today() - timedelta(days=1)).isoformat()
-    yesterday_log = agent_dir / "state" / f"session-log-{yesterday}.md"
-    if yesterday_log.exists():
-        try:
-            yesterday_content = yesterday_log.read_text(encoding='utf-8')
-            # Extract just the summary section (first 1000 chars)
-            if "## SUMMARY" in yesterday_content:
-                summary_start = yesterday_content.find("## SUMMARY")
-                summary_section = yesterday_content[summary_start:summary_start+1000]
-            else:
-                summary_section = yesterday_content[:500]
-            brain_parts.append(f"=== YESTERDAY'S SUMMARY ===\n{summary_section}")
-        except Exception as e:
-            logger.warning(f"Could not load yesterday's session log: {e}")
+
+    # Diary-tracking agents load last 7 days of session logs for continuity.
+    # Other agents load yesterday only.
+    DIARY_AGENTS = ["asclepius-brain", "marcus-stoic", "compass"]
+    if agent_name in DIARY_AGENTS:
+        recent_logs = []
+        for days_back in range(1, 8):  # Last 7 days
+            log_date = (date.today() - timedelta(days=days_back)).isoformat()
+            log_file = agent_dir / "state" / f"session-log-{log_date}.md"
+            if log_file.exists():
+                try:
+                    log_content = log_file.read_text(encoding='utf-8')
+                    summary = log_content[:600] if len(log_content) > 600 else log_content
+                    recent_logs.append(f"--- {log_date} ---\n{summary}")
+                except Exception:
+                    pass
+        if recent_logs:
+            brain_parts.append(f"=== RECENT DIARY (Last 7 Days) ===\n" + "\n\n".join(recent_logs))
+        else:
+            brain_parts.append(f"=== RECENT DIARY (Last 7 Days) ===\nNo previous session logs found. Today ({today}) is Day 1 of tracking.")
+    else:
+        yesterday_log = agent_dir / "state" / f"session-log-{yesterday}.md"
+        if yesterday_log.exists():
+            try:
+                yesterday_content = yesterday_log.read_text(encoding='utf-8')
+                # Extract just the summary section (first 1000 chars)
+                if "## SUMMARY" in yesterday_content:
+                    summary_start = yesterday_content.find("## SUMMARY")
+                    summary_section = yesterday_content[summary_start:summary_start+1000]
+                else:
+                    summary_section = yesterday_content[:500]
+                brain_parts.append(f"=== YESTERDAY'S SUMMARY ===\n{summary_section}")
+            except Exception as e:
+                logger.warning(f"Could not load yesterday's session log: {e}")
 
     # 2. TRAINING -- Deep domain knowledge (mental models, frameworks, anti-patterns)
     training_dir = agent_dir / "training"
@@ -421,7 +454,7 @@ def call_claude(system_prompt: str, user_message: str, task_type: str = "chat") 
     # Choose model based on task complexity
     # Use Sonnet for routine tasks, Opus for deep analysis
     model = "claude-sonnet-4-6"
-    if task_type in ("weekly_review", "weekly_deep_dive", "deep_analysis", "evening_reading"):
+    if task_type in ("weekly_review", "weekly_deep_dive", "deep_analysis", "evening_reading", "google_ads_review"):
         model = "claude-opus-4-6"
 
     logger.info(f"Calling Claude API: model={model}, system_len={len(system_prompt)}, user_len={len(user_message)}")
@@ -800,7 +833,7 @@ def call_claude_vision(system_prompt: str, image_b64: str, media_type: str,
     client = anthropic.Anthropic()
 
     model = "claude-sonnet-4-6"
-    if task_type in ("weekly_review", "weekly_deep_dive", "deep_analysis", "evening_reading"):
+    if task_type in ("weekly_review", "weekly_deep_dive", "deep_analysis", "evening_reading", "google_ads_review"):
         model = "claude-opus-4-6"
 
     # Build content blocks: image first, then caption text if present
@@ -1494,6 +1527,71 @@ Customers: {snapshot['new_customers']} new, {snapshot['returning_customers']} re
             logger.error(f"llms.txt generation failed: {e}")
         return
 
+    # --- NEXUS health_digest — daily 8:50am summary of what ran/failed yesterday ---
+    if task_name == "health_digest" and agent_name == "command-center":
+        try:
+            db_path = BASE_DIR / "data" / "intelligence.db"
+            conn = sqlite3.connect(str(db_path), check_same_thread=False)
+            conn.row_factory = sqlite3.Row
+
+            # Tasks that ran in the last 24 hours
+            rows = conn.execute("""
+                SELECT agent, task, status, elapsed_secs, output_chars, error_msg, ran_at
+                FROM task_execution_log
+                WHERE ran_at >= datetime('now', '-24 hours')
+                ORDER BY ran_at ASC
+            """).fetchall()
+
+            total = len(rows)
+            successes = [r for r in rows if r["status"] == "success"]
+            errors = [r for r in rows if r["status"] != "success"]
+
+            # Build message — no markdown tables (Telegram rules)
+            lines = [f"NEXUS — Daily System Report {datetime.now(NZ_TZ).strftime('%a %d %b, %H:%M NZST')}"]
+            lines.append(f"\n✅ {len(successes)}/{total} tasks completed successfully")
+            if errors:
+                lines.append(f"⚠️ {len(errors)} task(s) failed:\n")
+                for r in errors:
+                    lines.append(f"  ✗ {AGENT_DISPLAY.get(r['agent'], r['agent'])} / {r['task']}")
+                    if r["error_msg"]:
+                        lines.append(f"    Error: {r['error_msg'][:120]}")
+            else:
+                lines.append("  No failures. All systems go.")
+
+            lines.append("\n─ What ran ─")
+            for r in successes:
+                t = r["ran_at"][11:16]  # HH:MM
+                name = AGENT_DISPLAY.get(r["agent"], r["agent"])
+                lines.append(f"  {t} — {name} / {r['task']} ({r['elapsed_secs']}s)")
+
+            # Check if key automations ran
+            ran_tasks = {(r["agent"], r["task"]) for r in rows}
+            expected = [
+                ("dbh-marketing", "morning_brief", "Meridian morning brief"),
+                ("beacon", "write_article", "Beacon SEO article"),
+                ("dbh-marketing", "intelligence_sync", "Customer DB sync"),
+                ("dbh-marketing", "replenishment_scan", "Replenishment scan"),
+                ("command-center", "roas_check", "ROAS check"),
+            ]
+            missing = [label for (ag, tk, label) in expected if (ag, tk) not in ran_tasks]
+            if missing:
+                lines.append("\n⚠️ Expected but did NOT run:")
+                for m in missing:
+                    lines.append(f"  ✗ {m}")
+
+            conn.close()
+            msg = "\n".join(lines)
+
+            chat_id = telegram_config.get("chat_ids", {}).get("command-center", "")
+            if chat_id:
+                bot_token = telegram_config.get("bot_token", os.environ.get("TELEGRAM_BOT_TOKEN", ""))
+                from core.notification_router import route_notification
+                route_notification(chat_id, msg, bot_token, severity="IMPORTANT", agent="command-center")
+            logger.info(f"Health digest sent: {total} tasks, {len(errors)} errors")
+        except Exception as e:
+            logger.error(f"Health digest failed: {e}")
+        return
+
     # --- SENTINEL health_check (gathers real system data — Python, then Claude analyses) ---
     if task_name == "health_check" and agent_name == "sentinel":
         try:
@@ -1514,7 +1612,7 @@ Customers: {snapshot['new_customers']} new, {snapshot['returning_customers']} re
                     from core.notification_router import route_notification
                     severity = "CRITICAL" if "CRITICAL" in response else "IMPORTANT" if "DEGRADED" in response else "NOTABLE"
                     route_notification(chat_id, response, bot_token, severity=severity, agent=agent_name)
-                _extract_state_updates(response, agent_name)
+                _extract_state_updates(response)
             logger.info("Sentinel health_check complete")
         except Exception as e:
             logger.error(f"Sentinel health_check failed: {e}")
@@ -2251,7 +2349,7 @@ The daily plan should reference the 90-day execution map from Meridian's intelli
                                     name=f"Design Brief: {insight.strip()[:80]}",
                                     notes=f"Auto-generated from {AGENT_DISPLAY.get(agent_name, agent_name)} intelligence.\n\nBrief ID: {brief_id}\nReview the full brief in briefs.db or run: python brief_generator.py view {brief_id}",
                                     assignee="Roie",
-                                    due_days=14
+                                    due_on=(datetime.now() + timedelta(days=14)).strftime("%Y-%m-%d")
                                 )
                         except Exception as asana_e:
                             logger.warning(f"Asana task for brief failed (non-fatal): {asana_e}")

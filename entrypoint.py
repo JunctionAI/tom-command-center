@@ -23,12 +23,118 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+def _init_intelligence_db():
+    """Create all required tables in intelligence.db at startup.
+    Runs every boot — CREATE TABLE IF NOT EXISTS is idempotent.
+    Fixes: email_hypotheses, email_campaigns, creative_hypotheses, creative_tests,
+           and the new task_execution_log table for the health digest.
+    """
+    import sqlite3
+    db_path = os.path.join(os.path.dirname(__file__), "data", "intelligence.db")
+    os.makedirs(os.path.dirname(db_path), exist_ok=True)
+    conn = sqlite3.connect(db_path, check_same_thread=False)
+    conn.executescript("""
+        CREATE TABLE IF NOT EXISTS email_hypotheses (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            hypothesis TEXT NOT NULL,
+            category TEXT DEFAULT '',
+            status TEXT DEFAULT 'active',
+            confidence REAL DEFAULT 0.5,
+            validations INTEGER DEFAULT 0,
+            contradictions INTEGER DEFAULT 0,
+            created_at TEXT DEFAULT (datetime('now')),
+            updated_at TEXT DEFAULT (datetime('now'))
+        );
+        CREATE TABLE IF NOT EXISTS email_campaigns (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            klaviyo_id TEXT UNIQUE,
+            name TEXT,
+            subject TEXT,
+            formula TEXT DEFAULT '',
+            segment TEXT DEFAULT '',
+            tier TEXT DEFAULT '',
+            send_date TEXT,
+            open_rate REAL,
+            click_rate REAL,
+            revenue REAL,
+            orders INTEGER,
+            hypothesis_id INTEGER REFERENCES email_hypotheses(id),
+            created_at TEXT DEFAULT (datetime('now'))
+        );
+        CREATE TABLE IF NOT EXISTS creative_hypotheses (
+            hypothesis_id TEXT PRIMARY KEY,
+            hypothesis TEXT NOT NULL,
+            category TEXT DEFAULT '',
+            status TEXT DEFAULT 'active',
+            confidence REAL DEFAULT 0.5,
+            validations INTEGER DEFAULT 0,
+            contradictions INTEGER DEFAULT 0,
+            created_at TEXT DEFAULT (datetime('now')),
+            updated_at TEXT DEFAULT (datetime('now'))
+        );
+        CREATE TABLE IF NOT EXISTS creative_tests (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            hypothesis_id TEXT REFERENCES creative_hypotheses(hypothesis_id),
+            test_name TEXT,
+            variant TEXT,
+            control TEXT,
+            status TEXT DEFAULT 'running',
+            result TEXT,
+            confidence REAL,
+            started_at TEXT DEFAULT (datetime('now')),
+            completed_at TEXT
+        );
+        CREATE TABLE IF NOT EXISTS task_execution_log (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            agent TEXT NOT NULL,
+            task TEXT NOT NULL,
+            status TEXT NOT NULL,
+            elapsed_secs REAL,
+            output_chars INTEGER DEFAULT 0,
+            error_msg TEXT DEFAULT '',
+            ran_at TEXT DEFAULT (datetime('now'))
+        );
+    """)
+    conn.commit()
+    conn.close()
+    logger.info("intelligence.db: all tables verified/created")
+
+
+def _log_task_execution(agent: str, task: str, status: str, elapsed: float, output_chars: int = 0, error_msg: str = ""):
+    """Write one row to task_execution_log in intelligence.db."""
+    import sqlite3
+    db_path = os.path.join(os.path.dirname(__file__), "data", "intelligence.db")
+    try:
+        conn = sqlite3.connect(db_path, check_same_thread=False)
+        conn.execute(
+            "INSERT INTO task_execution_log (agent, task, status, elapsed_secs, output_chars, error_msg) VALUES (?,?,?,?,?,?)",
+            (agent, task, status, round(elapsed, 1), output_chars, error_msg[:200])
+        )
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        logger.warning(f"task_execution_log write failed (non-fatal): {e}")
+
+
 def run_scheduler(telegram_config, schedule_config):
     """Run APScheduler in a background thread."""
     from apscheduler.schedulers.background import BackgroundScheduler
     from apscheduler.triggers.cron import CronTrigger
     from apscheduler.executors.pool import ThreadPoolExecutor
     from core.orchestrator import run_scheduled_task
+
+    def _tracked_task(agent, task_name, telegram_config):
+        """Wrap run_scheduled_task with execution logging."""
+        import time
+        start = time.time()
+        try:
+            run_scheduled_task(agent, task_name, telegram_config)
+            elapsed = round(time.time() - start, 1)
+            _log_task_execution(agent, task_name, "success", elapsed)
+        except Exception as e:
+            elapsed = round(time.time() - start, 1)
+            _log_task_execution(agent, task_name, "error", elapsed, error_msg=str(e))
+            raise
 
     timezone = schedule_config.get("timezone", "Pacific/Auckland")
     executors = {
@@ -61,7 +167,7 @@ def run_scheduler(telegram_config, schedule_config):
                 "day_of_week": parts[4],
             }
             scheduler.add_job(
-                run_scheduled_task,
+                _tracked_task,
                 trigger=CronTrigger(**cron_kwargs, timezone=timezone),
                 args=[agent, task_name, telegram_config],
                 id=f"{agent}_{task_name}",
@@ -123,6 +229,9 @@ def main():
     from core.orchestrator import load_config, start_polling, get_learning_db
 
     telegram_config, schedule_config = load_config()
+
+    # Initialise all DB tables (idempotent — safe on every boot)
+    _init_intelligence_db()
 
     # Initialise learning DB
     db = get_learning_db()
