@@ -1654,7 +1654,28 @@ Customers: {snapshot['new_customers']} new, {snapshot['returning_customers']} re
         "model_scan": "Execute your AI model release scan. Search for new video model announcements, updates to tracked models. If anything could handle action sequences, mark as CRITICAL. Use the format specified in your AGENT.md.",
         "weekly_plan": "Generate your weekly social plan. Review contact list, flag overdue catch-ups, suggest activities. Use the format specified in your AGENT.md.",
         "midweek_checkin": "Mid-week social check-in. Review what was planned, what happened, anything coming up this weekend.",
-        "weekly_review": "Execute your weekly performance review. Full data pull, compare to targets, identify patterns, recommend optimisations. Use the format specified in your AGENT.md.\n\nIMPORTANT: If you identify a campaign opportunity or creative need, emit [BRIEF: description of insight] and the system will auto-generate a designer-ready brief for Roie and create an Asana task.",
+        "weekly_review": """Execute your weekly performance review. Full data pull, compare to targets, identify patterns.
+
+CRITICAL: This is not an advice session. This IS the execution briefing. After analysing the data:
+
+1. PRODUCE WORK — Do not just recommend. For each email identified as needed this week:
+   - Write the subject line and preview text right now
+   - Write the opening line of the body copy
+   - Emit [TASK: Review email draft: {subject}|urgent|Subject: {subject}\\nPreview: {preview}\\nOpening: {opening}] for Tom to approve in Asana
+
+2. For any Meta ad creative needed:
+   - Write the hook (first 3 seconds of video OR headline)
+   - Write the body copy
+   - Emit [TASK: Ad creative ready for review: {campaign}|high|Hook: {hook}\\nBody: {body}]
+
+3. For any ROAS decisions needed:
+   - State the verdict (pause/hold/scale) with the verified number
+   - If pausing: emit [TASK: Pause {campaign} — ROAS below floor|urgent|Verified ROAS: {x}x, floor is 2x]
+   - If scaling: emit [TASK: Scale {campaign} budget 50%|high|ROAS: {x}x verified]
+
+4. Emit [BRIEF: ...] for any creative need to auto-generate Roie brief.
+
+The system will auto-create Asana tasks from your [TASK:] markers. Tom reviews and approves. You are not a reporter — you are the executor. Do the work.""",
         "weekly_deep_dive": "Execute your weekly deep analysis. Pick the most important developing story and provide in-depth analysis. Use the format specified in your AGENT.md.",
         "evening_reading": "",  # Placeholder -- replaced below with knowledge engine output
         "content_generation": "Generate tonight's SEO/AEO article following your nightly workflow. Check your CONTEXT.md for the current keyword priority, select the next topic, and generate a full article using one of your proven content formulas. Include the complete article HTML, meta description, FAQ section, and JSON-LD schema. Save instructions and Shopify draft details should be in your output. After your article, emit a [STATE UPDATE:] with the article title and next priority keyword.",
@@ -2429,6 +2450,27 @@ The daily plan should reference the 90-day execution map from Meridian's intelli
         print(f"[{agent_name}] {task_name}")
         print(f"{'='*60}")
         print(response)
+
+    # --- Write THIS-WEEK.md after Meridian or PREP weekly review ---
+    # The agent produces this week's priorities in its response.
+    # We extract the [THIS-WEEK: ...] block if present and write it to the shared strategy file.
+    # If no block present, append a header so the file always gets refreshed.
+    if task_name == "weekly_review" and agent_name in ("dbh-marketing", "strategic-advisor"):
+        try:
+            this_week_path = AGENTS_DIR / "shared" / "strategy" / "THIS-WEEK.md"
+            # Check for explicit [THIS-WEEK: ... ] block in response
+            tw_match = re.search(r'\[THIS-WEEK:(.*?)\]', response, re.DOTALL)
+            if tw_match:
+                tw_content = tw_match.group(1).strip()
+            else:
+                # Use the full response as the THIS-WEEK content (it IS the weekly review)
+                tw_content = response.strip()
+            week_str = datetime.now(NZ_TZ).strftime("%B %d, %Y")
+            header = f"# THIS WEEK — Execution Priorities\n## Week from {week_str}\n**Written by:** {AGENT_DISPLAY.get(agent_name, agent_name)} weekly review\n\n---\n\n"
+            this_week_path.write_text(header + tw_content, encoding="utf-8")
+            logger.info(f"THIS-WEEK.md updated from {agent_name}/weekly_review")
+        except Exception as e:
+            logger.warning(f"THIS-WEEK.md write failed (non-fatal): {e}")
 
     logger.info(f"Completed: {agent_name}/{task_name}")
 

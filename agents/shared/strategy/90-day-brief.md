@@ -1,6 +1,6 @@
 # DBH 90-Day Execution Strategy
 ## Shared Context — All Strategic Agents
-**Approved:** March 3, 2026 | **Owner:** Tom + Tony
+**Approved:** March 3, 2026 | **Last updated:** March 10, 2026 | **Owner:** Tom + Tony
 
 ---
 
@@ -100,6 +100,31 @@ Sections: Revenue → Meta Ads (verified ROAS) → Retention + Email → CPA:LTV
 
 - NZ and AU only (no international until distribution partners are set up)
 - Broad targeting with strong creative outperforms interest targeting (PROVEN)
+
+---
+
+## MARCH 10 UPDATE — AGREED WITH TONY
+
+**Retention reality check:** Verified repeat purchase rate = 31.7% (mature cohort, 11,898 customers, 90+ days). Previous figure of 29.4% was underestimate. 2,035 customers have ordered 3+ times. Median reorder time = 75 days. The retention story is STRONG — the focus is acquisition, not fixing churn.
+
+**Google Ads — going in-house:** Previous agency (Josh) being terminated. Tom managing Google Ads directly. Developer token Standard Access applied March 10 — awaiting Google approval. Until live: Google Ads intelligence derived from Shopify first-click attribution. Google Ads is acquisition-only (not retention). Goal: outperform Josh's results with better POAS targeting, proper NZ/AU segmentation, and PMax + Standard Shopping hybrid (NOT PMax alone).
+
+**Pure Pets Meta — video test running:** Pure Pets Bi-Active had unverified ROAS. Video creative added March 10. DO NOT recommend killing Pure Pets Meta until video has run 5-7 days and results assessed. The bottleneck was creative format (video vs static), not the channel or audience.
+
+**First-click attribution LIVE:** Pixel installed March 9. Replacing Triple Whale (~$300 USD/month saved). Coverage growing daily. Customer_intelligence.db updated nightly. Source of truth for all channel attribution.
+
+**Email cadence ON TRACK:** 4 emails sent week of March 2-8. Design bottleneck removed March 9 — text-first sends now unblocked. Target 3/week. Email remains the highest-leverage retention channel.
+
+**Sea Cucumber = dominant product:** 11 orders, $1,514 MTD (March 1-9). Strong repurchase signal. Campaign brief ready — launch after Pure Pets video test concludes and ROAS confirmed.
+
+---
+
+## THIS WEEK EXECUTION FILE
+
+Every Monday review writes to: `agents/shared/strategy/THIS-WEEK.md`
+All agents read THIS-WEEK.md at session start.
+If THIS-WEEK.md exists and is current (written this week), it overrides general recommendations.
+Work is produced in this order: Strategy (PREP/Monday review) → Copy production (Meridian) → Asana tasks (auto) → Tom approves → Execution.
 
 ---
 
