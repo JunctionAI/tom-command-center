@@ -37,7 +37,7 @@ CONFIG_DIR = BASE_DIR / "config"
 AGENT_DISPLAY = {
     "global-events":     "Atlas",
     "dbh-marketing":     "Meridian",
-    "new-business":      "Venture",
+    "health-science":    "Helix",
     "health-fitness":    "Titan",
     "social":            "Compass",
     "creative-projects": "Lens",
@@ -57,6 +57,7 @@ AGENT_DISPLAY = {
     "efficiency":        "Auditor",
     "sentinel":          "Sentinel",
     "scout":             "Scout",
+    "muse":              "Muse",
 }
 
 # Logging configured by entrypoint.py — just get the logger here
@@ -252,7 +253,7 @@ def load_agent_brain(agent_name: str) -> str:
         pass  # Non-fatal, agent works fine without decision memory
 
     # 8. SHARED STRATEGY -- Load shared context for strategic agents
-    STRATEGY_AGENTS = ["dbh-marketing", "strategic-advisor", "daily-briefing", "beacon"]
+    STRATEGY_AGENTS = ["dbh-marketing", "strategic-advisor", "daily-briefing", "beacon", "health-science"]
     if agent_name in STRATEGY_AGENTS:
         shared_strategy_dir = AGENTS_DIR / "shared" / "strategy"
         if shared_strategy_dir.exists():
@@ -1710,6 +1711,8 @@ The system will auto-create Asana tasks from your [TASK:] markers. Tom reviews a
         "deep_dive_lesson": "Generate tonight's deep-dive lesson. CRITICAL: Read your CONTEXT.md above — find the 'CURRENT CURRICULUM DAY' field and advance to the NEXT uncompleted day. Do NOT repeat a day that is already marked COMPLETED. Follow the 90-day curriculum in your AGENT.md. Use the exact output format specified. At the end of your lesson, you MUST emit: [STATE UPDATE: CURRENT CURRICULUM DAY: X | COMPLETED: Day X — <topic name> on <today's date> | NEXT: Day X+1 — <next topic>]",
         "reflection_session": "Conduct a therapeutic reflection session. Review Tom's emotional state, relationships, and life direction. Follow your AGENT.md format. Be genuine, not generic.",
         "tony_report": "Generate this week's Tony CEO report. Pull all performance data, decisions made, campaigns launched, and strategic progress. Follow the weekly report format in your AGENT.md. File-based output for Tom to review before sending.",
+        "daily_drop": "Execute today's daily cultural drop. CRITICAL: First check CONTEXT.md — if STATUS is ONBOARDING_PHASE_1, do NOT run the standard drop. Instead, send Tom a warm opening message that starts the onboarding discovery (Phase 1: Music questions). If onboarding is complete, check today's day of week and deliver the correct domain drop (Monday=Music, Tuesday=Fashion, Wednesday=Art/Design, Thursday=Music different genre, Friday=Film/Photography, Saturday=Cultural concept, Sunday=skip — weekly_review handles Sunday). Make it specific, personal, and short (150-250 words). Always include one concrete action: listen to THIS, look up THIS, try THIS. Emit [TASTE_PROFILE:] and [STATE UPDATE:] markers after delivering.",
+        "weekly_review": "Execute this week's Sunday cultural review. Check CONTEXT.md for what was delivered this week and any resonance signals. Deliver: (1) what we explored this week with one-line reflections, (2) what's landing vs what's not based on Tom's responses, (3) this week's full playlist additions across all 5 playlists — specific songs, artist, why each one. Update knowledge.md playlist tracker. Emit [STATE UPDATE:] with full playlist state.",
     }
 
     task_prompt = task_prompts.get(task_name, f"Execute task: {task_name}. Follow the instructions and format in your AGENT.md.")
@@ -2008,7 +2011,7 @@ vs Roie, and identify campaigns that need fresh creative based on performance da
             data_status["Design Pipeline"] = f"FAILED: {e}"
 
     # 2f. Thought leader insights for Oracle, PREP, and Venture
-    if task_name in ("morning_briefing", "morning_brief", "weekly_review") and agent_name in ("daily-briefing", "strategic-advisor", "new-business"):
+    if task_name in ("morning_briefing", "morning_brief", "weekly_review") and agent_name in ("daily-briefing", "strategic-advisor", "health-science"):
         try:
             from core.thought_leader_scraper import format_thought_leader_brief, get_improvement_suggestions
             tl_brief = format_thought_leader_brief()
@@ -2216,7 +2219,7 @@ If someone posted that something is 'done' or 'shipped', note it."""
     if agent_name in ("daily-briefing", "strategic-advisor") and task_name in ("morning_briefing", "weekly_review"):
         try:
             agent_states = []
-            for other_agent in ("global-events", "dbh-marketing", "new-business",
+            for other_agent in ("global-events", "dbh-marketing", "health-science",
                                 "health-fitness", "social", "creative-projects"):
                 state_file = AGENTS_DIR / other_agent / "state" / "CONTEXT.md"
                 if state_file.exists():
@@ -2517,7 +2520,7 @@ def _inject_prep_context(brain: str) -> str:
     # 1. Agent states
     logger.info("PREP inject: loading agent states...")
     agent_states = []
-    for other_agent in ("global-events", "dbh-marketing", "new-business",
+    for other_agent in ("global-events", "dbh-marketing", "health-science",
                         "health-fitness", "social", "creative-projects", "daily-briefing"):
         state_file = AGENTS_DIR / other_agent / "state" / "CONTEXT.md"
         if state_file.exists():
@@ -3168,7 +3171,7 @@ Agents:
   run <agent-name> -- Trigger an agent's default task
   Example: run dbh-marketing
 
-Agent names: global-events, dbh-marketing, new-business,
+Agent names: global-events, dbh-marketing, health-science,
 health-fitness, social, creative-projects, daily-briefing,
 strategic-advisor, evening-reading, beacon"""
         from core.notification_router import route_notification
@@ -3231,7 +3234,7 @@ def start_polling(telegram_config: dict):
             "daily-briefing":    ["*"],  # Oracle sees everything for synthesis
             "creative-projects": ["campaign.*", "content.*"],
             "global-events":     ["market.*"],
-            "new-business":      ["market.*"],
+            "health-science":    ["campaign.*", "health.*", "customer.*"],
             "command-center":    ["system.*"],
             "beacon":            ["campaign.*", "content.*"],
             "asclepius-brain":   ["health.*"],   # Receives Titan's sleep/training/recovery events

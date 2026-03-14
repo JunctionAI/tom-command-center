@@ -20,10 +20,10 @@
       "description": "Meridian DBH morning ops brief"
     },
     {
-      "agent": "new-business",
-      "task": "morning_brief",
-      "cron": "0 9 * * *",
-      "description": "Venture new biz morning brief"
+      "agent": "health-science",
+      "task": "daily_education",
+      "cron": "30 8 * * *",
+      "description": "Helix daily health science education module (8:30am)"
     },
     {
       "agent": "global-events",
@@ -264,6 +264,18 @@
       "task": "daily_snapshot",
       "cron": "59 23 * * *",
       "description": "Daily snapshot -- locks calendar day figures at 11:59pm NZST (end of day)"
+    },
+    {
+      "agent": "muse",
+      "task": "daily_drop",
+      "cron": "0 16 * * *",
+      "description": "Muse daily cultural drop — music/fashion/art/film/concept (4pm, rotating domain)"
+    },
+    {
+      "agent": "muse",
+      "task": "weekly_review",
+      "cron": "0 12 * * 0",
+      "description": "Muse Sunday weekly cultural review + playlist update (12pm)"
     }
   ]
 }

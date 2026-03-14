@@ -4,7 +4,7 @@
   "chat_ids": {
     "global-events": "-5239319932",
     "dbh-marketing": "-5106475679",
-    "new-business": "-5163495386",
+    "health-science": "-5163495386",
     "health-fitness": "-5293529356",
     "social": "-4987072358",
     "creative-projects": "-5176660998",
@@ -23,12 +23,13 @@
     "principles": "-5011862674",
     "efficiency": "-5256082396",
     "sentinel": "-5068196377",
-    "scout": "-5253180673"
+    "scout": "-5253180673",
+    "muse": "-5133376549"
   },
   "agent_names": {
     "global-events": "Atlas",
     "dbh-marketing": "Meridian",
-    "new-business": "Venture",
+    "health-science": "Helix",
     "health-fitness": "Titan",
     "social": "Compass",
     "creative-projects": "Lens",
@@ -47,6 +48,7 @@
     "principles": "Codifier",
     "efficiency": "Auditor",
     "sentinel": "Sentinel",
-    "scout": "Scout"
+    "scout": "Scout",
+    "muse": "Muse"
   }
 }
