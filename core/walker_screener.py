@@ -275,6 +275,13 @@ What are the 3 most credible reasons this investment could go wrong? Be specific
 ## KEY FINANCIAL METRICS (last 3 years where available)
 Revenue, gross margin, EBITDA margin, FCF, ROIC, net debt/EBITDA, EPS growth.
 
+## COMPETITIVE EDGE
+Why is {name} ahead of its competitors RIGHT NOW? Be specific — not generic. Cover:
+- What does it do better than {peers_str}?
+- What structural advantages does it hold (IP, scale, switching costs, network effects, brand, cost position)?
+- What would it take for a competitor to close the gap?
+- Is this advantage widening or narrowing?
+
 ## COMPARABLE COMPANIES
 Compared to {peers_str}: how does {name} differ in business model, growth profile, and competitive positioning?
 
@@ -296,6 +303,7 @@ Be factual, specific, and investment-grade in quality. No filler."""
         'catalyst_detail': 'THE CATALYST',
         'bear_case': 'BEAR CASE',
         'key_metrics': 'KEY FINANCIAL METRICS',
+        'competitive_edge': 'COMPETITIVE EDGE',
         'comparable_companies_analysis': 'COMPARABLE COMPANIES',
     }
 

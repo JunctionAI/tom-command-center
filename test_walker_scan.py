@@ -205,8 +205,9 @@ for p in passed:
         ]
 
         sections = [
-            ("catalyst_detail", "📌 THE CATALYST"),
-            ("bear_case",       "⚠️ BEAR CASE"),
+            ("catalyst_detail",   "📌 THE CATALYST"),
+            ("competitive_edge",  "🥇 WHY AHEAD OF COMPETITORS"),
+            ("bear_case",         "⚠️ BEAR CASE"),
             ("competitive_position", "🏆 COMPETITIVE POSITION"),
             ("management_quality",   "👤 MANAGEMENT"),
         ]
