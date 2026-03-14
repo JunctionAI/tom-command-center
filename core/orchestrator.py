@@ -58,6 +58,9 @@ AGENT_DISPLAY = {
     "sentinel":          "Sentinel",
     "scout":             "Scout",
     "muse":              "Muse",
+    "walker-capital":    "Vesper",
+    "walker-capital-tom":   "Vesper",
+    "walker-capital-trent": "Vesper",
 }
 
 # Logging configured by entrypoint.py — just get the logger here
@@ -1617,6 +1620,101 @@ Customers: {snapshot['new_customers']} new, {snapshot['returning_customers']} re
             logger.info("Sentinel health_check complete")
         except Exception as e:
             logger.error(f"Sentinel health_check failed: {e}")
+        return
+
+    # --- WALKER CAPITAL pipeline tasks ---
+    if agent_name == "walker-capital":
+        try:
+            from core.walker_pipeline_db import get_pipeline_summary, get_companies_at_stage, add_company, advance_stage, update_catalyst
+            from core.walker_screener import run_discovery_scan, run_quantitative_screen, generate_research_brief
+            from core.walker_memo_generator import generate_daily_pipeline_brief
+
+            bot_token = telegram_config.get("bot_token", os.environ.get("TELEGRAM_BOT_TOKEN", ""))
+            chat_id_tom = telegram_config.get("chat_ids", {}).get("walker-capital-tom", "")
+            chat_id_trent = telegram_config.get("chat_ids", {}).get("walker-capital-trent", "")
+
+            def send_to_both(message):
+                """Send message to both Tom and Trent's Walker Capital channels."""
+                for cid in [chat_id_tom, chat_id_trent]:
+                    if cid and cid != "SETUP_NEEDED":
+                        try:
+                            from core.notification_router import route_notification
+                            route_notification(cid, message, bot_token, severity="IMPORTANT", agent="walker-capital")
+                        except Exception as send_err:
+                            logger.error(f"Walker Capital Telegram send error: {send_err}")
+
+            if task_name == "discovery_scan":
+                # Stage 1: Find new candidates
+                new_discoveries = []
+                candidates = run_discovery_scan()
+                for c in candidates:
+                    if not c.get('ticker') or not c.get('name'):
+                        continue
+                    company_id = add_company(
+                        ticker=c['ticker'], name=c['name'],
+                        exchange=c.get('exchange', ''), sector=c.get('sector', ''),
+                        discovery_thesis=c.get('discovery_thesis', '')
+                    )
+                    if company_id:
+                        new_discoveries.append(c)
+                        # Auto-run screen for new discoveries
+                        try:
+                            screen = run_quantitative_screen(c['ticker'], c.get('exchange', ''), c['name'])
+                            if screen.get('screen_passed'):
+                                advance_stage(company_id, 'SCREENED', notes=screen.get('screen_reason'))
+                                update_catalyst(company_id, screen.get('catalyst_score', 0), screen.get('catalyst_description', ''))
+                            elif screen.get('watchlist'):
+                                advance_stage(company_id, 'WATCHING', notes=screen.get('screen_reason'))
+                            else:
+                                advance_stage(company_id, 'REJECTED', notes=screen.get('screen_reason'))
+                        except Exception as screen_err:
+                            logger.warning(f"Auto-screen failed for {c['ticker']}: {screen_err}")
+
+                # Stage 3: Research brief for newly screened companies
+                screened = get_companies_at_stage('SCREENED')
+                for company in screened[:2]:  # Max 2 research briefs per day (cost control)
+                    try:
+                        brief = generate_research_brief(
+                            ticker=company['ticker'], exchange=company['exchange'],
+                            name=company['name'], sector=company.get('sector', ''),
+                            catalyst_description=company.get('catalyst_description', ''),
+                            comparable_companies=[]
+                        )
+                        if brief.get('brief_text'):
+                            from core.walker_pipeline_db import save_research_brief
+                            save_research_brief(company['id'], brief)
+                            advance_stage(company['id'], 'RESEARCHED')
+                    except Exception as brief_err:
+                        logger.warning(f"Research brief failed for {company['ticker']}: {brief_err}")
+
+                # Send daily pipeline brief to both channels
+                pipeline_summary = get_pipeline_summary()
+                brief_text = generate_daily_pipeline_brief(pipeline_summary, new_discoveries)
+                send_to_both(brief_text)
+                logger.info(f"Walker Capital discovery scan complete: {len(new_discoveries)} new companies")
+
+            elif task_name == "weekly_valuation_report":
+                # Friday: Full valuation memos on Stage 4+ companies
+                from core.walker_pipeline_db import get_companies_at_stage, get_company_full_profile
+                from core.walker_memo_generator import generate_investment_memo
+
+                decision_ready = get_companies_at_stage('DECISION_READY')
+                valued = get_companies_at_stage('VALUED')
+                memo_companies = decision_ready + valued
+
+                if not memo_companies:
+                    send_to_both("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n🏦 WALKER CAPITAL — WEEKLY REPORT\nNo companies ready for valuation memos this week.\nPipeline building — check back next Friday.\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+                else:
+                    for company in memo_companies[:3]:  # Max 3 memos per week
+                        try:
+                            profile = get_company_full_profile(company['id'])
+                            memo = generate_investment_memo(profile)
+                            send_to_both(memo)
+                        except Exception as memo_err:
+                            logger.error(f"Memo generation failed for {company['ticker']}: {memo_err}")
+
+        except Exception as walker_err:
+            logger.error(f"Walker Capital task {task_name} failed: {walker_err}", exc_info=True)
         return
 
     # --- SCOUT daily scan (scrapes AI creators — needs Python, not Claude) ---

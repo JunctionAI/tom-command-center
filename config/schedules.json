@@ -276,6 +276,18 @@
       "task": "weekly_review",
       "cron": "0 12 * * 0",
       "description": "Muse Sunday weekly cultural review + playlist update (12pm)"
+    },
+    {
+      "agent": "walker-capital",
+      "task": "discovery_scan",
+      "cron": "0 7 * * *",
+      "description": "Vesper daily company discovery scan + pipeline status brief (7am)"
+    },
+    {
+      "agent": "walker-capital",
+      "task": "weekly_valuation_report",
+      "cron": "0 18 * * 5",
+      "description": "Vesper weekly deep-dive — full valuation memos on Stage 4+ companies (Friday 6pm)"
     }
   ]
 }

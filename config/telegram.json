@@ -24,7 +24,9 @@
     "efficiency": "-5256082396",
     "sentinel": "-5068196377",
     "scout": "-5253180673",
-    "muse": "-5133376549"
+    "muse": "-5133376549",
+    "walker-capital-tom": "-5194232428",
+    "walker-capital-trent": "-5293852288"
   },
   "agent_names": {
     "global-events": "Atlas",
@@ -49,6 +51,8 @@
     "efficiency": "Auditor",
     "sentinel": "Sentinel",
     "scout": "Scout",
-    "muse": "Muse"
+    "muse": "Muse",
+    "walker-capital-tom": "Vesper",
+    "walker-capital-trent": "Vesper"
   }
 }

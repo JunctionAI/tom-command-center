@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Walker Capital Management — Investment Pipeline</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#080c10;color:#e6edf3;min-height:100vh}
+
+/* HEADER */
+header{background:#0d1117;border-bottom:1px solid #1e2a38;padding:14px 24px;display:flex;align-items:center;justify-content:space-between}
+.brand{display:flex;align-items:center;gap:14px}
+.brand-icon{width:36px;height:36px;background:linear-gradient(135deg,#1a3a5c,#0e6ba8);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px}
+.brand h1{font-size:16px;font-weight:700;color:#f0f6fc;letter-spacing:.02em}
+.brand span{font-size:11px;color:#6e7681;margin-top:1px;display:block}
+.header-right{display:flex;align-items:center;gap:12px}
+.badge{background:#1a3a5c;border:1px solid #1e4976;color:#58a6ff;font-size:11px;padding:3px 10px;border-radius:12px;font-weight:600}
+.status-dot{width:8px;height:8px;border-radius:50%;background:#3fb950;box-shadow:0 0 6px #3fb95080}
+.status-label{font-size:11px;color:#8b949e}
+
+/* PIPELINE FUNNEL */
+.pipeline-section{padding:24px;background:#0d1117;border-bottom:1px solid #1e2a38}
+.section-title{font-size:11px;font-weight:700;color:#6e7681;text-transform:uppercase;letter-spacing:.08em;margin-bottom:16px}
+.funnel{display:flex;gap:0;align-items:stretch}
+.funnel-stage{flex:1;background:#0d1117;border:1px solid #1e2a38;border-right:none;padding:14px 12px;position:relative;cursor:pointer;transition:background .15s}
+.funnel-stage:first-child{border-radius:6px 0 0 6px}
+.funnel-stage:last-child{border-right:1px solid #1e2a38;border-radius:0 6px 6px 0}
+.funnel-stage:hover{background:#161b22}
+.funnel-stage.active-stage{background:#0e2233;border-color:#1e4976}
+.stage-num{font-size:22px;font-weight:800;color:#58a6ff;line-height:1}
+.stage-label{font-size:9px;font-weight:600;color:#6e7681;text-transform:uppercase;letter-spacing:.06em;margin-top:4px}
+.stage-arrow{position:absolute;right:-8px;top:50%;transform:translateY(-50%);z-index:1;color:#30363d;font-size:14px}
+.funnel-stage:last-child .stage-arrow{display:none}
+
+/* MAIN GRID */
+.main-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1px;background:#1e2a38;flex:1}
+.panel{background:#0d1117;padding:20px}
+.panel-title{font-size:11px;font-weight:700;color:#6e7681;text-transform:uppercase;letter-spacing:.08em;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.panel-icon{font-size:13px}
+
+/* COMPANY CARDS */
+.company-card{background:#161b22;border:1px solid #21262d;border-radius:6px;padding:12px;margin-bottom:8px;cursor:pointer;transition:border-color .15s}
+.company-card:hover{border-color:#30363d}
+.company-card.stage-screened{border-left:3px solid #d29922}
+.company-card.stage-researched{border-left:3px solid #58a6ff}
+.company-card.stage-valued{border-left:3px solid #bc8cff}
+.company-card.stage-risk{border-left:3px solid #f0883e}
+.company-card.stage-simulated{border-left:3px solid #39d353}
+.company-card.stage-decision{border-left:3px solid #3fb950}
+.company-card.stage-approved{border-left:3px solid #3fb950;background:#0d2a1a}
+.company-card.stage-watching{border-left:3px solid #8b949e}
+.card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.ticker{font-size:13px;font-weight:700;color:#f0f6fc}
+.exchange-badge{font-size:9px;background:#21262d;color:#8b949e;padding:2px 6px;border-radius:4px}
+.company-name{font-size:11px;color:#8b949e;margin-bottom:5px}
+.thesis{font-size:10px;color:#6e7681;line-height:1.4;font-style:italic}
+.card-metrics{display:flex;gap:10px;margin-top:8px;flex-wrap:wrap}
+.metric{font-size:10px}
+.metric-label{color:#6e7681}
+.metric-val{color:#c9d1d9;font-weight:600}
+.metric-val.green{color:#3fb950}
+.metric-val.yellow{color:#d29922}
+.metric-val.red{color:#f85149}
+.catalyst-badge{display:inline-flex;align-items:center;gap:4px;font-size:9px;padding:2px 7px;border-radius:10px;font-weight:600}
+.catalyst-3{background:#1a3a1a;color:#3fb950;border:1px solid #2ea04330}
+.catalyst-2{background:#2a2a1a;color:#d29922;border:1px solid #d2992230}
+.catalyst-1{background:#2a1a1a;color:#f85149;border:1px solid #f8514930}
+
+/* VALUATION PANEL */
+.val-row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid #161b22;font-size:11px}
+.val-row:last-child{border:none}
+.val-label{color:#8b949e}
+.val-value{font-weight:600;color:#c9d1d9}
+.val-value.bullish{color:#3fb950}
+.val-value.bearish{color:#f85149}
+.val-value.neutral{color:#d29922}
+.scenario-bar{display:flex;gap:2px;margin:8px 0;height:6px;border-radius:3px;overflow:hidden}
+.bar-bull{background:#3fb950;flex:0.25}
+.bar-base{background:#58a6ff;flex:0.50}
+.bar-bear{background:#f85149;flex:0.25}
+
+/* RISK PANEL */
+.risk-gauge{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.gauge-label{font-size:10px;color:#6e7681;width:80px}
+.gauge-bar{flex:1;height:6px;background:#21262d;border-radius:3px;overflow:hidden}
+.gauge-fill{height:100%;border-radius:3px;transition:width .3s}
+.gauge-val{font-size:10px;font-weight:600;width:40px;text-align:right}
+.safe{color:#3fb950}.grey{color:#d29922}.distress{color:#f85149}
+.flag-item{font-size:10px;color:#f85149;padding:3px 0;border-bottom:1px solid #1a1a1a}
+.flag-item:last-child{border:none}
+.flag-item::before{content:"⚠ ";font-size:9px}
+
+/* DECISION MEMO */
+.memo-box{background:#0a1628;border:1px solid #1e4976;border-radius:6px;padding:14px;font-family:'SF Mono',monospace;font-size:10px;color:#c9d1d9;line-height:1.7;white-space:pre-wrap;max-height:420px;overflow-y:auto}
+.memo-box .rec-buy{color:#3fb950;font-weight:700}
+.memo-box .rec-watch{color:#d29922;font-weight:700}
+.memo-box .rec-avoid{color:#f85149;font-weight:700}
+.decision-buttons{display:flex;gap:8px;margin-top:12px}
+.btn-buy{flex:1;background:#1a3a1a;border:1px solid #3fb950;color:#3fb950;padding:8px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;transition:background .15s}
+.btn-buy:hover{background:#2a4a2a}
+.btn-watch{flex:1;background:#2a2a1a;border:1px solid #d29922;color:#d29922;padding:8px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;transition:background .15s}
+.btn-watch:hover{background:#3a3a2a}
+.btn-avoid{flex:1;background:#2a1a1a;border:1px solid #f85149;color:#f85149;padding:8px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;transition:background .15s}
+.btn-avoid:hover{background:#3a2a2a}
+
+/* MIROFISH SECTION */
+.fish-panel{background:#050d1a;border:1px solid #0e2233;border-radius:6px;padding:14px;margin-top:12px}
+.fish-title{font-size:10px;font-weight:700;color:#58a6ff;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;display:flex;align-items:center;gap:6px}
+.tam-row{display:flex;justify-content:space-between;margin-bottom:6px;font-size:10px}
+.tam-year{color:#6e7681}
+.tam-val{color:#58a6ff;font-weight:600}
+.tam-bar{height:3px;background:#1e4976;border-radius:2px;margin-bottom:8px}
+.tam-fill{height:100%;background:linear-gradient(90deg,#1e4976,#58a6ff);border-radius:2px;transition:width .5s}
+
+/* FISHER SCORE */
+.fisher-score-ring{display:flex;align-items:center;gap:14px;margin-bottom:12px}
+.ring-num{font-size:28px;font-weight:800}
+.ring-max{font-size:12px;color:#6e7681}
+.ring-label{font-size:10px;color:#8b949e;line-height:1.4}
+.fisher-point{display:flex;align-items:center;justify-content:space-between;padding:4px 0;border-bottom:1px solid #161b22;font-size:10px}
+.fisher-point:last-child{border:none}
+.fp-label{color:#8b949e;flex:1}
+.fp-stars{color:#d29922;letter-spacing:1px}
+
+/* EMPTY STATE */
+.empty-state{text-align:center;padding:40px 20px;color:#30363d}
+.empty-icon{font-size:32px;margin-bottom:10px}
+.empty-text{font-size:12px;color:#6e7681}
+.empty-sub{font-size:10px;color:#30363d;margin-top:4px}
+
+/* TABS */
+.tabs{display:flex;gap:1px;border-bottom:1px solid #21262d;margin-bottom:16px}
+.tab{padding:6px 14px;font-size:11px;color:#6e7681;cursor:pointer;border-bottom:2px solid transparent;transition:all .15s}
+.tab.active{color:#58a6ff;border-bottom-color:#58a6ff}
+.tab:hover:not(.active){color:#c9d1d9}
+
+/* WATCHLIST */
+.watchlist-item{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #161b22;font-size:11px}
+.watchlist-item:last-child{border:none}
+.wi-left{flex:1}
+.wi-ticker{font-weight:700;color:#f0f6fc}
+.wi-reason{color:#6e7681;font-size:10px;margin-top:2px}
+.wi-date{font-size:9px;color:#30363d;text-align:right}
+
+/* RESPONSIVE */
+@media(max-width:1100px){.main-grid{grid-template-columns:1fr 1fr}}
+@media(max-width:700px){.main-grid{grid-template-columns:1fr}.funnel{flex-wrap:wrap}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <div class="brand-icon">🏦</div>
+    <div>
+      <h1>Walker Capital Management</h1>
+      <span>Autonomous Investment Pipeline — Powered by Vesper (Claude Opus 4.6)</span>
+    </div>
+  </div>
+  <div class="header-right">
+    <span class="badge">NZX · ASX · NYSE</span>
+    <span class="badge" id="pipeline-count">0 in pipeline</span>
+    <span class="status-dot"></span>
+    <span class="status-label">Live</span>
+  </div>
+</header>
+
+<!-- PIPELINE FUNNEL -->
+<div class="pipeline-section">
+  <div class="section-title">Pipeline Funnel</div>
+  <div class="funnel" id="funnel">
+    <div class="funnel-stage" onclick="filterByStage('DISCOVERED')">
+      <div class="stage-num" id="cnt-discovered">0</div>
+      <div class="stage-label">Discovery</div>
+      <div class="stage-arrow">›</div>
+    </div>
+    <div class="funnel-stage" onclick="filterByStage('SCREENED')">
+      <div class="stage-num" id="cnt-screened">0</div>
+      <div class="stage-label">Screened</div>
+      <div class="stage-arrow">›</div>
+    </div>
+    <div class="funnel-stage" onclick="filterByStage('RESEARCHED')">
+      <div class="stage-num" id="cnt-researched">0</div>
+      <div class="stage-label">Researched</div>
+      <div class="stage-arrow">›</div>
+    </div>
+    <div class="funnel-stage" onclick="filterByStage('VALUED')">
+      <div class="stage-num" id="cnt-valued">0</div>
+      <div class="stage-label">Valued</div>
+      <div class="stage-arrow">›</div>
+    </div>
+    <div class="funnel-stage" onclick="filterByStage('RISK_ASSESSED')">
+      <div class="stage-num" id="cnt-risk">0</div>
+      <div class="stage-label">Risk Assessed</div>
+      <div class="stage-arrow">›</div>
+    </div>
+    <div class="funnel-stage" onclick="filterByStage('SIMULATED')">
+      <div class="stage-num" id="cnt-simulated">0</div>
+      <div class="stage-label">MiroFish</div>
+      <div class="stage-arrow">›</div>
+    </div>
+    <div class="funnel-stage" onclick="filterByStage('DECISION_READY')">
+      <div class="stage-num" id="cnt-decision">0</div>
+      <div class="stage-label">Decision Ready</div>
+      <div class="stage-arrow">›</div>
+    </div>
+    <div class="funnel-stage" onclick="filterByStage('APPROVED')">
+      <div class="stage-num" id="cnt-approved">0</div>
+      <div class="stage-label">Portfolio</div>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN CONTENT -->
+<div class="main-grid">
+
+  <!-- LEFT: COMPANY PIPELINE -->
+  <div class="panel">
+    <div class="panel-title"><span class="panel-icon">🔍</span>Pipeline Companies</div>
+    <div class="tabs">
+      <div class="tab active" onclick="switchTab('active',this)">Active</div>
+      <div class="tab" onclick="switchTab('watchlist',this)">Watchlist</div>
+      <div class="tab" onclick="switchTab('portfolio',this)">Portfolio</div>
+      <div class="tab" onclick="switchTab('rejected',this)">Rejected</div>
+    </div>
+    <div id="tab-active">
+      <div id="company-list">
+        <div class="empty-state">
+          <div class="empty-icon">📊</div>
+          <div class="empty-text">Pipeline initialising</div>
+          <div class="empty-sub">First discovery scan runs at 7am daily</div>
+        </div>
+      </div>
+    </div>
+    <div id="tab-watchlist" style="display:none">
+      <div id="watchlist-list">
+        <div class="empty-state">
+          <div class="empty-icon">👁</div>
+          <div class="empty-text">No companies on watchlist yet</div>
+          <div class="empty-sub">Weak-catalyst companies added here for review in 30 days</div>
+        </div>
+      </div>
+    </div>
+    <div id="tab-portfolio" style="display:none">
+      <div id="portfolio-list">
+        <div class="empty-state">
+          <div class="empty-icon">💼</div>
+          <div class="empty-text">No positions yet</div>
+          <div class="empty-sub">Approved companies appear here after Trent's decision</div>
+        </div>
+      </div>
+    </div>
+    <div id="tab-rejected" style="display:none">
+      <div id="rejected-list">
+        <div class="empty-state">
+          <div class="empty-icon">✗</div>
+          <div class="empty-text">No rejected companies yet</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CENTRE: VALUATION + RISK -->
+  <div class="panel">
+    <div class="panel-title"><span class="panel-icon">📐</span>Analysis</div>
+    <div id="analysis-placeholder">
+      <div class="empty-state">
+        <div class="empty-icon">📐</div>
+        <div class="empty-text">Select a company to view analysis</div>
+        <div class="empty-sub">Valuation, risk models, Fisher score</div>
+      </div>
+    </div>
+    <div id="analysis-panel" style="display:none">
+
+      <!-- Valuation -->
+      <div style="margin-bottom:16px">
+        <div style="font-size:10px;font-weight:700;color:#6e7681;text-transform:uppercase;letter-spacing:.07em;margin-bottom:10px">Scenario-Weighted DCF</div>
+        <div class="scenario-bar"><div class="bar-bull"></div><div class="bar-base"></div><div class="bar-bear"></div></div>
+        <div style="display:flex;justify-content:space-between;font-size:9px;color:#6e7681;margin-bottom:10px">
+          <span>Bull 25%</span><span>Base 50%</span><span>Bear 25%</span>
+        </div>
+        <div class="val-row"><span class="val-label">Bull case (25%)</span><span class="val-value bullish" id="v-bull">—</span></div>
+        <div class="val-row"><span class="val-label">Base case (50%)</span><span class="val-value neutral" id="v-base">—</span></div>
+        <div class="val-row"><span class="val-label">Bear case (25%)</span><span class="val-value bearish" id="v-bear">—</span></div>
+        <div class="val-row" style="border-top:1px solid #30363d;margin-top:4px;padding-top:8px"><span class="val-label" style="font-weight:600;color:#c9d1d9">Weighted value</span><span class="val-value" style="color:#f0f6fc;font-size:13px" id="v-weighted">—</span></div>
+        <div class="val-row"><span class="val-label">Current price</span><span class="val-value" id="v-price">—</span></div>
+        <div class="val-row"><span class="val-label">Upside</span><span class="val-value" id="v-upside">—</span></div>
+        <div class="val-row"><span class="val-label">Margin of safety</span><span class="val-value" id="v-mos">—</span></div>
+      </div>
+
+      <!-- Comps -->
+      <div style="margin-bottom:16px">
+        <div style="font-size:10px;font-weight:700;color:#6e7681;text-transform:uppercase;letter-spacing:.07em;margin-bottom:10px">Relative Comps + Morningstar</div>
+        <div class="val-row"><span class="val-label">EV/EBITDA vs peers</span><span class="val-value" id="v-ebitda">—</span></div>
+        <div class="val-row"><span class="val-label">Forward P/E vs peers</span><span class="val-value" id="v-pe">—</span></div>
+        <div class="val-row"><span class="val-label">Morningstar FV</span><span class="val-value" id="v-ms-fv">—</span></div>
+        <div class="val-row"><span class="val-label">Moat / Stars</span><span class="val-value" id="v-ms-moat">—</span></div>
+        <div class="val-row"><span class="val-label">Comps signal</span><span class="val-value" id="v-signal">—</span></div>
+      </div>
+
+      <!-- Risk -->
+      <div style="margin-bottom:16px">
+        <div style="font-size:10px;font-weight:700;color:#6e7681;text-transform:uppercase;letter-spacing:.07em;margin-bottom:10px">Risk Models</div>
+        <div class="risk-gauge">
+          <span class="gauge-label">VaR 99% (1yr)</span>
+          <div class="gauge-bar"><div class="gauge-fill" id="g-var" style="width:0%;background:#f85149"></div></div>
+          <span class="gauge-val" id="lbl-var">—</span>
+        </div>
+        <div class="risk-gauge">
+          <span class="gauge-label">CVaR 99%</span>
+          <div class="gauge-bar"><div class="gauge-fill" id="g-cvar" style="width:0%;background:#f85149"></div></div>
+          <span class="gauge-val" id="lbl-cvar">—</span>
+        </div>
+        <div class="val-row"><span class="val-label">Altman Z-Score</span><span class="val-value" id="v-altman">—</span></div>
+        <div class="val-row"><span class="val-label">FCF Conversion</span><span class="val-value" id="v-fcf">—</span></div>
+        <div id="flags-section" style="margin-top:8px;display:none">
+          <div style="font-size:10px;color:#f85149;font-weight:600;margin-bottom:4px">Earnings Quality Flags</div>
+          <div id="flags-list"></div>
+        </div>
+      </div>
+
+      <!-- Fisher Score -->
+      <div>
+        <div style="font-size:10px;font-weight:700;color:#6e7681;text-transform:uppercase;letter-spacing:.07em;margin-bottom:10px">Fisher Analysis</div>
+        <div class="fisher-score-ring">
+          <div><span class="ring-num" id="fisher-num" style="color:#58a6ff">—</span><span class="ring-max">/75</span></div>
+          <div class="ring-label" id="fisher-label">Select a company to see Fisher analysis</div>
+        </div>
+        <div id="fisher-strengths" style="margin-bottom:8px"></div>
+        <div id="fisher-concerns"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- RIGHT: MEMO + MIROFISH -->
+  <div class="panel">
+    <div class="panel-title"><span class="panel-icon">📋</span>Decision Memo</div>
+
+    <div id="memo-placeholder">
+      <div class="empty-state">
+        <div class="empty-icon">🏦</div>
+        <div class="empty-text">No memo ready yet</div>
+        <div class="empty-sub">Memos generated when company reaches Stage 7</div>
+      </div>
+    </div>
+
+    <div id="memo-panel" style="display:none">
+      <div class="memo-box" id="memo-text"></div>
+      <div class="decision-buttons">
+        <button class="btn-buy" onclick="logDecision('BUY')">✓ BUY</button>
+        <button class="btn-watch" onclick="logDecision('WATCH')">⊙ WATCH</button>
+        <button class="btn-avoid" onclick="logDecision('AVOID')">✕ AVOID</button>
+      </div>
+    </div>
+
+    <!-- MiroFish Panel -->
+    <div class="fish-panel" id="fish-panel" style="display:none">
+      <div class="fish-title">🌊 MiroFish Competitive Simulation</div>
+      <div style="font-size:10px;color:#6e7681;margin-bottom:10px" id="fish-risk"></div>
+
+      <div style="font-size:10px;font-weight:600;color:#8b949e;margin-bottom:6px">MARKET SHARE TRAJECTORY</div>
+      <div class="tam-row"><span class="tam-year">Today</span><span class="tam-val" id="ms-today">—</span></div>
+      <div class="tam-row"><span class="tam-year">1 Year</span><span class="tam-val" id="ms-1yr">—</span></div>
+      <div class="tam-row"><span class="tam-year">3 Years</span><span class="tam-val" id="ms-3yr">—</span></div>
+      <div class="tam-row"><span class="tam-year">5 Years</span><span class="tam-val" id="ms-5yr">—</span></div>
+
+      <div style="font-size:10px;font-weight:600;color:#8b949e;margin:10px 0 6px">TOTAL ADDRESSABLE MARKET</div>
+      <div class="tam-row"><span class="tam-year">Today</span><span class="tam-val" id="tam-today">—</span></div>
+      <div class="tam-bar"><div class="tam-fill" id="tam-bar-today" style="width:10%"></div></div>
+      <div class="tam-row"><span class="tam-year">1 Year</span><span class="tam-val" id="tam-1yr">—</span></div>
+      <div class="tam-bar"><div class="tam-fill" id="tam-bar-1yr" style="width:30%"></div></div>
+      <div class="tam-row"><span class="tam-year">3 Years</span><span class="tam-val" id="tam-3yr">—</span></div>
+      <div class="tam-bar"><div class="tam-fill" id="tam-bar-3yr" style="width:60%"></div></div>
+      <div class="tam-row"><span class="tam-year">5 Years</span><span class="tam-val" id="tam-5yr">—</span></div>
+      <div class="tam-bar"><div class="tam-fill" id="tam-bar-5yr" style="width:90%"></div></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ─── DATA LAYER ───────────────────────────────────────────────────
+// In production this fetches from the Python pipeline DB via a simple API.
+// For standalone use, seed with demo data or connect to your backend.
+
+let companies = [];
+let currentCompany = null;
+let currentTab = 'active';
+let stageFilter = null;
+
+// Demo seed data — replace with actual DB fetch
+const demoCompanies = [
+  {
+    id:1, ticker:'FPH', name:'Fisher & Paykel Healthcare', exchange:'NZX', sector:'Healthcare',
+    segment:'A', stage:'RESEARCHED', catalyst_score:3,
+    catalyst_description:'Aging population + respiratory care market expansion accelerating post-COVID. Hospital infrastructure investment cycle in key markets.',
+    discovery_thesis:'Structural tailwind from aging demographics + respiratory care adoption',
+    valuation:{dcf_bull:28.50, dcf_base:22.80, dcf_bear:16.20, dcf_weighted:23.05, current_price:19.40,
+      margin_of_safety:0.158, comps_ev_ebitda:'22x vs peers 19x', comps_fwd_pe:'38x vs peers 32x',
+      ms_fair_value:24.00, ms_moat:'Narrow', ms_stars:3, valuation_confidence:'MEDIUM'},
+    risk:{var_99:32, cvar_99:41, altman_z:3.8, altman_zone:'SAFE', fcf_conversion:0.91, flags:[], fisher_score:58,
+      fisher_strengths:['Strong product R&D pipeline — Evora+, F&P 950','Outstanding customer retention in hospital segment','Long-term management orientation demonstrated'],
+      fisher_concerns:['Valuation premium limits margin of safety','FX exposure with ~90% revenue offshore'],
+      conviction_score:5.8},
+    simulation:null,
+    memo:null
+  },
+  {
+    id:2, ticker:'KMD', name:'Kathmandu Holdings', exchange:'NZX', sector:'Retail',
+    segment:'A', stage:'SCREENED', catalyst_score:2,
+    catalyst_description:'Brand restructure + Rip Curl integration synergies beginning to show in margin improvement. Market re-rating potential.',
+    discovery_thesis:'Post-integration margin recovery story with new management team',
+    valuation:null, risk:null, simulation:null, memo:null
+  },
+  {
+    id:3, ticker:'A2M', name:'A2 Milk Company', exchange:'NZX', sector:'Consumer Staples',
+    segment:'A', stage:'VALUED', catalyst_score:3,
+    catalyst_description:'China label registration (SAMR) approval for new formulations — direct-to-consumer channel opening. Step-change in addressable market.',
+    discovery_thesis:'Regulatory catalyst unlocks direct China channel',
+    valuation:{dcf_bull:7.20, dcf_base:5.80, dcf_bear:4.10, dcf_weighted:5.80, current_price:4.65,
+      margin_of_safety:0.198, comps_ev_ebitda:'14x vs peers 12x', comps_fwd_pe:'28x vs peers 22x',
+      ms_fair_value:6.50, ms_moat:'Narrow', ms_stars:4, valuation_confidence:'HIGH'},
+    risk:{var_99:38, cvar_99:49, altman_z:4.2, altman_zone:'SAFE', fcf_conversion:0.88, flags:[], fisher_score:52,
+      fisher_strengths:['Strong brand in premium infant formula','Management has deep China market experience','FCF positive and improving'],
+      fisher_concerns:['Regulatory concentration risk — single market dependence','Competitive pressure from local Chinese brands'],
+      conviction_score:6.4},
+    simulation:null,
+    memo:null
+  }
+];
+
+// ─── RENDER ───────────────────────────────────────────────────────
+
+function stageClass(stage){
+  const map={SCREENED:'stage-screened',RESEARCHED:'stage-researched',VALUED:'stage-valued',
+    RISK_ASSESSED:'stage-risk',SIMULATED:'stage-simulated',DECISION_READY:'stage-decision',
+    APPROVED:'stage-approved',WATCHING:'stage-watching'};
+  return map[stage]||'';
+}
+
+function catalystBadge(score){
+  const labels={3:'Strong',2:'Moderate',1:'Weak',0:'None'};
+  return `<span class="catalyst-badge catalyst-${score}">⚡ ${labels[score]||'—'}</span>`;
+}
+
+function renderCompanyCard(c){
+  return `<div class="company-card ${stageClass(c.stage)}" onclick="selectCompany(${c.id})">
+    <div class="card-header">
+      <span class="ticker">${c.ticker}</span>
+      <span class="exchange-badge">${c.exchange} · ${c.segment==='B'?'Growth':'Mature'}</span>
+    </div>
+    <div class="company-name">${c.name} · ${c.sector}</div>
+    <div class="thesis">${c.catalyst_description||c.discovery_thesis||''}</div>
+    <div class="card-metrics">
+      ${catalystBadge(c.catalyst_score)}
+      ${c.valuation ? `<span class="metric"><span class="metric-label">Upside: </span><span class="metric-val ${(c.valuation.dcf_weighted-c.valuation.current_price)/c.valuation.current_price>0.2?'green':'yellow'}">${(((c.valuation.dcf_weighted-c.valuation.current_price)/c.valuation.current_price)*100).toFixed(0)}%</span></span>` : ''}
+      ${c.risk ? `<span class="metric"><span class="metric-label">Conviction: </span><span class="metric-val ${c.risk.conviction_score>=7?'green':c.risk.conviction_score>=5?'yellow':'red'}">${c.risk.conviction_score}/10</span></span>` : ''}
+      <span class="metric"><span class="metric-label">Stage: </span><span class="metric-val">${c.stage.replace('_',' ')}</span></span>
+    </div>
+  </div>`;
+}
+
+function renderPipeline(){
+  const activeCompanies = companies.filter(c=>!['WATCHING','REJECTED','APPROVED'].includes(c.stage));
+  const watchlistCompanies = companies.filter(c=>c.stage==='WATCHING');
+  const portfolioCompanies = companies.filter(c=>c.stage==='APPROVED');
+  const rejectedCompanies = companies.filter(c=>c.stage==='REJECTED');
+
+  const filterFn = stageFilter ? c=>c.stage===stageFilter : c=>true;
+
+  document.getElementById('company-list').innerHTML = activeCompanies.filter(filterFn).length
+    ? activeCompanies.filter(filterFn).map(renderCompanyCard).join('')
+    : '<div class="empty-state"><div class="empty-icon">📊</div><div class="empty-text">Pipeline initialising</div><div class="empty-sub">First discovery scan runs at 7am</div></div>';
+
+  document.getElementById('watchlist-list').innerHTML = watchlistCompanies.length
+    ? watchlistCompanies.map(c=>`<div class="watchlist-item"><div class="wi-left"><div class="wi-ticker">${c.ticker} — ${c.name}</div><div class="wi-reason">${c.catalyst_description||'Weak catalyst — review in 30 days'}</div></div></div>`).join('')
+    : '<div class="empty-state"><div class="empty-icon">👁</div><div class="empty-text">Watchlist empty</div></div>';
+
+  document.getElementById('portfolio-list').innerHTML = portfolioCompanies.length
+    ? portfolioCompanies.map(renderCompanyCard).join('')
+    : '<div class="empty-state"><div class="empty-icon">💼</div><div class="empty-text">No positions yet</div></div>';
+
+  document.getElementById('rejected-list').innerHTML = rejectedCompanies.length
+    ? rejectedCompanies.map(c=>`<div class="watchlist-item"><div class="wi-left"><div class="wi-ticker">${c.ticker} — ${c.name}</div><div class="wi-reason">${c.notes||'Failed screening criteria'}</div></div></div>`).join('')
+    : '<div class="empty-state"><div class="empty-icon">✗</div><div class="empty-text">No rejected companies</div></div>';
+
+  updateFunnelCounts();
+}
+
+function updateFunnelCounts(){
+  const counts={};
+  companies.forEach(c=>{counts[c.stage]=(counts[c.stage]||0)+1});
+  document.getElementById('cnt-discovered').textContent=counts['DISCOVERED']||0;
+  document.getElementById('cnt-screened').textContent=counts['SCREENED']||0;
+  document.getElementById('cnt-researched').textContent=counts['RESEARCHED']||0;
+  document.getElementById('cnt-valued').textContent=counts['VALUED']||0;
+  document.getElementById('cnt-risk').textContent=counts['RISK_ASSESSED']||0;
+  document.getElementById('cnt-simulated').textContent=counts['SIMULATED']||0;
+  document.getElementById('cnt-decision').textContent=counts['DECISION_READY']||0;
+  document.getElementById('cnt-approved').textContent=counts['APPROVED']||0;
+
+  const total=companies.filter(c=>!['REJECTED'].includes(c.stage)).length;
+  document.getElementById('pipeline-count').textContent=`${total} in pipeline`;
+}
+
+function selectCompany(id){
+  currentCompany = companies.find(c=>c.id===id);
+  if(!currentCompany) return;
+
+  // Analysis panel
+  if(currentCompany.valuation || currentCompany.risk){
+    document.getElementById('analysis-placeholder').style.display='none';
+    document.getElementById('analysis-panel').style.display='block';
+
+    const v=currentCompany.valuation||{};
+    const r=currentCompany.risk||{};
+
+    // Valuation
+    document.getElementById('v-bull').textContent=v.dcf_bull?`$${v.dcf_bull.toFixed(2)}`:'—';
+    document.getElementById('v-base').textContent=v.dcf_base?`$${v.dcf_base.toFixed(2)}`:'—';
+    document.getElementById('v-bear').textContent=v.dcf_bear?`$${v.dcf_bear.toFixed(2)}`:'—';
+    document.getElementById('v-weighted').textContent=v.dcf_weighted?`$${v.dcf_weighted.toFixed(2)}`:'—';
+    document.getElementById('v-price').textContent=v.current_price?`$${v.current_price.toFixed(2)}`:'—';
+    const upside=v.dcf_weighted&&v.current_price?((v.dcf_weighted-v.current_price)/v.current_price*100).toFixed(1)+'%':'—';
+    document.getElementById('v-upside').textContent=upside;
+    document.getElementById('v-upside').className='val-value '+(v.margin_of_safety>=0.2?'bullish':'yellow');
+    const mosEl=document.getElementById('v-mos');
+    mosEl.textContent=v.margin_of_safety?(v.margin_of_safety*100).toFixed(1)+'%':'—';
+    mosEl.className='val-value '+(v.margin_of_safety>=0.2?'bullish':'bearish');
+
+    // Comps
+    document.getElementById('v-ebitda').textContent=v.comps_ev_ebitda||'—';
+    document.getElementById('v-pe').textContent=v.comps_fwd_pe||'—';
+    document.getElementById('v-ms-fv').textContent=v.ms_fair_value?`$${v.ms_fair_value.toFixed(2)}`:'—';
+    document.getElementById('v-ms-moat').textContent=v.ms_moat?(v.ms_moat+' · '+(v.ms_stars||'?')+'/5 ⭐'):'—';
+    document.getElementById('v-signal').textContent=v.valuation_confidence||'—';
+
+    // Risk
+    if(r.var_99!=null){
+      const varPct=Math.min(r.var_99,100);
+      document.getElementById('g-var').style.width=varPct+'%';
+      document.getElementById('lbl-var').textContent=r.var_99+'%';
+      document.getElementById('g-cvar').style.width=Math.min(r.cvar_99||0,100)+'%';
+      document.getElementById('lbl-cvar').textContent=(r.cvar_99||'—')+'%';
+    }
+    if(r.altman_z!=null){
+      const el=document.getElementById('v-altman');
+      el.textContent=`${r.altman_z} [${r.altman_zone}]`;
+      el.className='val-value '+(r.altman_zone==='SAFE'?'green':r.altman_zone==='GREY'?'yellow':'red');
+    }
+    if(r.fcf_conversion!=null){
+      const el=document.getElementById('v-fcf');
+      el.textContent=(r.fcf_conversion*100).toFixed(0)+'%';
+      el.className='val-value '+(r.fcf_conversion>=0.8?'green':r.fcf_conversion>=0.6?'yellow':'red');
+    }
+
+    // Flags
+    const flags=r.flags||[];
+    if(flags.length>0){
+      document.getElementById('flags-section').style.display='block';
+      document.getElementById('flags-list').innerHTML=flags.map(f=>`<div class="flag-item">${f}</div>`).join('');
+    } else {
+      document.getElementById('flags-section').style.display='none';
+    }
+
+    // Fisher
+    if(r.fisher_score!=null){
+      document.getElementById('fisher-num').textContent=r.fisher_score;
+      const label = r.fisher_score>=65?'Exceptional quality':'r.fisher_score>=50'?'Above average':'Below average';
+      document.getElementById('fisher-label').textContent=
+        r.fisher_score>=65?'Exceptional management & business quality':
+        r.fisher_score>=50?'Good — above average, minor concerns':
+        r.fisher_score>=35?'Average — structural concerns present':'Significant red flags';
+
+      const strengths=r.fisher_strengths||[];
+      const concerns=r.fisher_concerns||[];
+      document.getElementById('fisher-strengths').innerHTML=strengths.map(s=>`<div style="font-size:10px;color:#3fb950;padding:3px 0;border-bottom:1px solid #161b22">✓ ${s}</div>`).join('');
+      document.getElementById('fisher-concerns').innerHTML=concerns.map(c=>`<div style="font-size:10px;color:#f85149;padding:3px 0;border-bottom:1px solid #161b22">✗ ${c}</div>`).join('');
+    }
+  } else {
+    document.getElementById('analysis-placeholder').style.display='flex';
+    document.getElementById('analysis-panel').style.display='none';
+    document.getElementById('analysis-placeholder').innerHTML=`<div class="empty-state"><div class="empty-icon">📐</div><div class="empty-text">${currentCompany.name}</div><div class="empty-sub">Analysis pending — at ${currentCompany.stage.replace('_',' ')} stage</div></div>`;
+  }
+
+  // Memo panel
+  if(currentCompany.memo){
+    document.getElementById('memo-placeholder').style.display='none';
+    document.getElementById('memo-panel').style.display='block';
+    document.getElementById('memo-text').textContent=currentCompany.memo;
+  } else {
+    document.getElementById('memo-placeholder').style.display='block';
+    document.getElementById('memo-panel').style.display='none';
+    document.getElementById('memo-placeholder').innerHTML=`<div class="empty-state"><div class="empty-icon">📋</div><div class="empty-text">${currentCompany.name}</div><div class="empty-sub">Decision memo generated at Stage 7</div></div>`;
+  }
+
+  // MiroFish panel
+  const sim=currentCompany.simulation;
+  if(sim){
+    document.getElementById('fish-panel').style.display='block';
+    document.getElementById('fish-risk').textContent=sim.key_competitive_risk||'';
+    document.getElementById('ms-1yr').textContent=sim.market_share_1yr||'—';
+    document.getElementById('ms-3yr').textContent=sim.market_share_3yr||'—';
+    document.getElementById('ms-5yr').textContent=sim.market_share_5yr||'—';
+    document.getElementById('tam-today').textContent=sim.tam_current?`$${(sim.tam_current/1e9).toFixed(1)}B`:'—';
+    document.getElementById('tam-1yr').textContent=sim.tam_1yr?`$${(sim.tam_1yr/1e9).toFixed(1)}B`:'—';
+    document.getElementById('tam-3yr').textContent=sim.tam_3yr?`$${(sim.tam_3yr/1e9).toFixed(1)}B`:'—';
+    document.getElementById('tam-5yr').textContent=sim.tam_5yr?`$${(sim.tam_5yr/1e9).toFixed(1)}B`:'—';
+  } else {
+    document.getElementById('fish-panel').style.display='none';
+  }
+}
+
+function filterByStage(stage){
+  stageFilter = stageFilter===stage ? null : stage;
+  renderPipeline();
+}
+
+function switchTab(tab, el){
+  currentTab=tab;
+  ['active','watchlist','portfolio','rejected'].forEach(t=>{
+    document.getElementById('tab-'+t).style.display=t===tab?'block':'none';
+  });
+  document.querySelectorAll('.tabs .tab').forEach(t=>t.classList.remove('active'));
+  if(el) el.classList.add('active');
+}
+
+function logDecision(decision){
+  if(!currentCompany) return;
+  if(confirm(`Log decision: ${decision} for ${currentCompany.ticker}?`)){
+    currentCompany.decision=decision;
+    currentCompany.stage=decision==='BUY'?'APPROVED':decision==='WATCH'?'WATCHING':'REJECTED';
+    renderPipeline();
+    alert(`Decision logged: ${decision} — ${currentCompany.ticker}\nThis would be sent to the pipeline DB and Telegram in production.`);
+  }
+}
+
+// ─── INIT ─────────────────────────────────────────────────────────
+
+function init(){
+  // Load demo data — in production, fetch from /api/walker/pipeline
+  companies = demoCompanies;
+  renderPipeline();
+
+  // In production: poll for updates every 60 seconds
+  // setInterval(fetchLiveData, 60000);
+}
+
+init();
+</script>
+</body>
+</html>
