@@ -58,6 +58,7 @@ AGENT_DISPLAY = {
     "sentinel":          "Sentinel",
     "scout":             "Scout",
     "muse":              "Muse",
+    "medici":            "Medici",
     "walker-capital":    "Vesper",
     "walker-capital-tom":   "Vesper",
     "walker-capital-trent": "Vesper",
@@ -1811,6 +1812,9 @@ The system will auto-create Asana tasks from your [TASK:] markers. Tom reviews a
         "tony_report": "Generate this week's Tony CEO report. Pull all performance data, decisions made, campaigns launched, and strategic progress. Follow the weekly report format in your AGENT.md. File-based output for Tom to review before sending.",
         "daily_drop": "Execute today's daily cultural drop. CRITICAL: First check CONTEXT.md — if STATUS is ONBOARDING_PHASE_1, do NOT run the standard drop. Instead, send Tom a warm opening message that starts the onboarding discovery (Phase 1: Music questions). If onboarding is complete, check today's day of week and deliver the correct domain drop (Monday=Music, Tuesday=Fashion, Wednesday=Art/Design, Thursday=Music different genre, Friday=Film/Photography, Saturday=Cultural concept, Sunday=skip — weekly_review handles Sunday). Make it specific, personal, and short (150-250 words). Always include one concrete action: listen to THIS, look up THIS, try THIS. Emit [TASTE_PROFILE:] and [STATE UPDATE:] markers after delivering.",
         "weekly_review": "Execute this week's Sunday cultural review. Check CONTEXT.md for what was delivered this week and any resonance signals. Deliver: (1) what we explored this week with one-line reflections, (2) what's landing vs what's not based on Tom's responses, (3) this week's full playlist additions across all 5 playlists — specific songs, artist, why each one. Update knowledge.md playlist tracker. Emit [STATE UPDATE:] with full playlist state.",
+        # --- Medici (Global Power Intelligence) ---
+        "daily_intelligence": "Execute today's daily power intelligence lesson. CRITICAL: Read CONTEXT.md first — find NEXT field to know which elite/org/figure to cover today. Do NOT repeat one already covered. Use the DAILY LESSON FORMAT in your AGENT.md exactly. Pull live news from the injected feeds to find anything current on today's focus. Use your knowledge.md for the deep structure. Be specific: name names, cite real organisations, real documented events. Distinguish confirmed vs probable vs speculative clearly. End with [STATE UPDATE:] advancing your curriculum position to the next figure.",
+        "weekly_deep_dive": "Execute this Sunday's power deep dive. Pick ONE major current event from the live news that connects to elite financial or political interests. Follow the money: who benefits financially, what policy/regulatory angle is in play, which elite nodes are coordinating, what mainstream coverage misses. Use your knowledge.md power map to connect the dots. Include primary source trail — name the specific filings, organisations, people. 1000-1200 words. Dense. This is the lesson Tom reads on Sunday morning with coffee. Emit [STATE UPDATE:] with what was covered and any new watchlist additions.",
     }
 
     task_prompt = task_prompts.get(task_name, f"Execute task: {task_name}. Follow the instructions and format in your AGENT.md.")
@@ -1862,7 +1866,7 @@ Only emit these when genuinely useful. Do not force them."""
     data_status = {}
 
     # 1. Live news for scan/briefing tasks
-    live_news_tasks = ("scan", "model_scan", "morning_brief", "morning_briefing", "weekly_review", "weekly_deep_dive")
+    live_news_tasks = ("scan", "model_scan", "morning_brief", "morning_briefing", "weekly_review", "weekly_deep_dive", "daily_intelligence")
     if task_name in live_news_tasks:
         try:
             from core.news_fetcher import fetch_news_for_agent

@@ -53,6 +53,20 @@ FEEDS = {
     "bbc_science": "https://feeds.bbci.co.uk/news/science_and_environment/rss.xml",
     "guardian_science": "https://www.theguardian.com/science/rss",
     "nature_news": "https://www.nature.com/nature.rss",
+
+    # Power, Finance & Investigative Journalism (for Medici)
+    "guardian_politics": "https://www.theguardian.com/politics/rss",
+    "guardian_economics": "https://www.theguardian.com/business/economics/rss",
+    "guardian_finance": "https://www.theguardian.com/money/rss",
+    "propublica": "https://www.propublica.org/feeds/propublica/main",
+    "intercept": "https://theintercept.com/feed/?rss",
+    "icij": "https://www.icij.org/feed/",
+    "ft_markets": "https://www.ft.com/rss/markets",
+    "bloomberg_markets": "https://feeds.bloomberg.com/markets/news.rss",
+    "wsj_markets": "https://feeds.wsj.com/wsj/xml/rss/3_7031.xml",
+    "cnbc_finance": "https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=10000664",
+    "politico": "https://www.politico.com/rss/politicopicks.xml",
+    "axios": "https://api.axios.com/feed/",
 }
 
 # Which feeds each agent should use for scans
@@ -68,12 +82,19 @@ AGENT_FEEDS = {
         "bbc_business", "cnbc",
         "rnz_news",
     ],
-    "new-business": [
+    "health-science": [
         "techcrunch", "ars_technica",
         "cnbc",
     ],
     "creative-projects": [
         "techcrunch", "ars_technica", "verge",
+    ],
+    "medici": [
+        "guardian_politics", "guardian_economics", "guardian_finance",
+        "propublica", "intercept", "icij",
+        "ft_markets", "bloomberg_markets", "wsj_markets", "cnbc_finance",
+        "politico", "axios",
+        "bbc_world", "reuters_world",
     ],
     "daily-briefing": [
         "bbc_world", "ap_news",

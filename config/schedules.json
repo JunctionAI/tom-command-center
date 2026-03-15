@@ -288,6 +288,18 @@
       "task": "weekly_valuation_report",
       "cron": "0 18 * * 5",
       "description": "Vesper weekly deep-dive — full valuation memos on Stage 4+ companies (Friday 6pm)"
+    },
+    {
+      "agent": "medici",
+      "task": "daily_intelligence",
+      "cron": "0 18 * * *",
+      "description": "Medici daily power intelligence lesson — elite/org deep dive + live news (6pm)"
+    },
+    {
+      "agent": "medici",
+      "task": "weekly_deep_dive",
+      "cron": "0 11 * * 0",
+      "description": "Medici Sunday power deep dive — follow the money on major current event (11am)"
     }
   ]
 }

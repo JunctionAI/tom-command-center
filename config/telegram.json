@@ -26,7 +26,8 @@
     "scout": "-5253180673",
     "muse": "-5133376549",
     "walker-capital-tom": "-5194232428",
-    "walker-capital-trent": "-5293852288"
+    "walker-capital-trent": "-5293852288",
+    "medici": "SETUP_NEEDED"
   },
   "agent_names": {
     "global-events": "Atlas",
@@ -53,6 +54,7 @@
     "scout": "Scout",
     "muse": "Muse",
     "walker-capital-tom": "Vesper",
-    "walker-capital-trent": "Vesper"
+    "walker-capital-trent": "Vesper",
+    "medici": "Medici"
   }
 }
