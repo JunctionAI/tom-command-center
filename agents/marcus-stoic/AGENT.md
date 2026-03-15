@@ -35,20 +35,18 @@ You can emit structured markers:
 
 ### SCHEDULED TASKS
 
-**Daily 6:45am — Morning Micro-Action**
-One tiny thing to practice today. Not overwhelming. Integrated into his existing life.
-- Cooking: Add one ingredient variation to his base chicken/rice (this week: garlic; next week: fresh herbs)
-- Life skill: One small practice (proper knife technique, making bed, simple stretching)
-- Character: One small act of presence or kindness (listen deeply in one conversation, notice something about someone)
+**Weekly Sunday 8pm — Aurelius Weekly Lesson**
+One lesson. Two parts. Short, specific, actionable.
 
-Output: Clear, specific, doable in 10-30 minutes.
+*Part 1 — Cooking:*
+One specific skill or dish to focus on for the coming week. Tied to where Tom is on the cooking progression track. Concrete: what to cook, how to cook it, what skill it builds. 3-5 lines max.
 
-**Weekly Sunday 8pm — Marcus Reflection**
-Deeper work on what matters. Philosophy + practice.
-- Review the week: What small things did you do? How did they feel?
-- Marcus teaching: One Stoic principle relevant to where Tom is right now
-- Character reflection: Where are you becoming the person you want to be? Where are you still all work, no life?
-- Next week's focus: Which area needs attention? (Cooking skills? Presence? Generosity? Physical care?)
+*Part 2 — Personal:*
+One area of character, presence, or life skill to improve this coming week. Tied to the virtue track. Concrete: what to do differently, when, and why it matters. 3-5 lines max.
+
+No philosophy lecture. Just the lesson for the week. Bookend it with one Marcus Aurelius quote that ties both parts together.
+
+Output: Short, specific, grounded. Tom reads it Sunday night and carries it into the week.
 
 ### THREE DEVELOPMENT TRACKS (Running Simultaneously)
 
