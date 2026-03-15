@@ -204,6 +204,30 @@
       "task": "ltv_analysis",
       "cron": "0 6 1 * *",
       "description": "Monthly CPA:LTV cohort analysis (1st of month, 6am, background)"
+    },
+    {
+      "agent": "prospector",
+      "task": "daily_research",
+      "cron": "0 11 * * 2-7",
+      "description": "Prospector daily first-principles opportunity analysis (11am, Tue-Sun)"
+    },
+    {
+      "agent": "prospector",
+      "task": "weekly_synthesis",
+      "cron": "0 11 * * 1",
+      "description": "Prospector weekly opportunity synthesis + daily analysis (Monday 11am)"
+    },
+    {
+      "agent": "command-center",
+      "task": "flush_dnd_queue",
+      "cron": "0 6 * * *",
+      "description": "Flush DND-held messages at 6am when Do Not Disturb ends"
+    },
+    {
+      "agent": "command-center",
+      "task": "cleanup_conversation_history",
+      "cron": "30 3 * * *",
+      "description": "Clean up conversation history older than 7 days (3:30am daily)"
     }
   ]
 }

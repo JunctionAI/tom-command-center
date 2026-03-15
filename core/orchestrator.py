@@ -25,7 +25,14 @@ import json
 import subprocess
 import logging
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, date, timedelta
+
+try:
+    from zoneinfo import ZoneInfo
+except ImportError:
+    from backports.zoneinfo import ZoneInfo
+
+NZ_TZ = ZoneInfo("Pacific/Auckland")
 
 # --- Configuration ---
 
@@ -132,7 +139,7 @@ def get_learning_db():
 # THIS IS THE KEY FUNCTION. Every time an agent speaks, it reads its entire
 # knowledge stack first. Same pattern as DBH AIOS CLAUDE.md session startup.
 
-def load_agent_brain(agent_name: str) -> str:
+def load_agent_brain(agent_name: str, user_id: str = None) -> str:
     """
     Load the full brain for an agent. This is the equivalent of the
     CLAUDE.md session startup -- read identity, skills, playbooks, state.
@@ -144,8 +151,7 @@ def load_agent_brain(agent_name: str) -> str:
 
     # 0. CURRENT DATE -- Always inject first so agents NEVER get confused by stale state files.
     #    This is authoritative. Do not rely on CONTEXT.md "Last Updated" for the current date.
-    from datetime import date as _date_cls, datetime as _dt_cls
-    _now = _dt_cls.now()
+    _now = datetime.now(NZ_TZ)
     _date_str = _now.strftime("%A, %B %d, %Y")
     _time_str = _now.strftime("%H:%M")
     brain_parts.append(
@@ -168,9 +174,8 @@ def load_agent_brain(agent_name: str) -> str:
         brain_parts.append(f"=== PERSISTENT KNOWLEDGE (Learned Patterns) ===\n{knowledge_file.read_text(encoding='utf-8')}")
 
     # 1.7 YESTERDAY'S SUMMARY -- If first message of day, load yesterday's session log
-    from datetime import date, timedelta
-    today = date.today().isoformat()
-    yesterday = (date.today() - timedelta(days=1)).isoformat()
+    today = datetime.now(NZ_TZ).date().isoformat()
+    yesterday = (datetime.now(NZ_TZ).date() - timedelta(days=1)).isoformat()
 
     # Diary-tracking agents load last 7 days of session logs for continuity.
     # Other agents load yesterday only.
@@ -178,7 +183,7 @@ def load_agent_brain(agent_name: str) -> str:
     if agent_name in DIARY_AGENTS:
         recent_logs = []
         for days_back in range(1, 8):  # Last 7 days
-            log_date = (date.today() - timedelta(days=days_back)).isoformat()
+            log_date = (datetime.now(NZ_TZ).date() - timedelta(days=days_back)).isoformat()
             log_file = agent_dir / "state" / f"session-log-{log_date}.md"
             if log_file.exists():
                 try:
@@ -215,7 +220,7 @@ def load_agent_brain(agent_name: str) -> str:
                         try:
                             _start_str = _start_match.group(1).replace(',', '')
                             _start_date = _dt_diary.strptime(_start_str, "%B %d %Y").date()
-                            day_number = (date.today() - _start_date).days + 1  # Day 1 = start date
+                            day_number = (datetime.now(NZ_TZ).date() - _start_date).days + 1  # Day 1 = start date
                         except ValueError:
                             pass
                 except Exception:
@@ -309,6 +314,19 @@ def load_agent_brain(agent_name: str) -> str:
                     brain_parts.append(f"--- {f.name} ---\n{f.read_text(encoding='utf-8')}")
                 logger.info(f"Loaded {len(strategy_files)} shared strategy files for {agent_name}")
 
+    # 9. USER MEMORY -- Persistent learned knowledge about this user
+    # This is the production memory system: facts + summaries auto-extracted
+    # from every conversation. Loaded into every prompt, like CLAUDE.md.
+    if user_id:
+        try:
+            from core.user_memory import load_user_memory
+            user_memory = load_user_memory(user_id, agent_name)
+            if user_memory:
+                brain_parts.append(user_memory)
+                logger.info(f"Loaded user memory for {agent_name}/{user_id}: {len(user_memory)} chars")
+        except Exception as e:
+            logger.warning(f"User memory load failed (non-fatal): {e}")
+
     brain = "\n\n".join(brain_parts)
 
     # Log brain size for monitoring
@@ -335,7 +353,7 @@ def update_agent_state(agent_name: str, new_info: str):
         return
 
     current = state_file.read_text(encoding='utf-8')
-    timestamp = datetime.now().strftime("%B %d, %Y %H:%M")
+    timestamp = datetime.now(NZ_TZ).strftime("%B %d, %Y %H:%M")
 
     # Update the "Last Updated" line
     if "## Last Updated:" in current:
@@ -396,8 +414,7 @@ def append_to_session_log(agent_name: str, tom_input: str, agent_response: str, 
         'events': [...]
     }
     """
-    from datetime import date
-    today = date.today().isoformat()
+    today = datetime.now(NZ_TZ).date().isoformat()
 
     log_file = AGENTS_DIR / agent_name / "state" / f"session-log-{today}.md"
 
@@ -408,7 +425,7 @@ def append_to_session_log(agent_name: str, tom_input: str, agent_response: str, 
         logger.info(f"Created new session log: {log_file}")
 
     # Append interaction
-    timestamp = datetime.now().strftime("%H:%M:%S")
+    timestamp = datetime.now(NZ_TZ).strftime("%H:%M:%S")
     interaction_entry = f"""
 ### INTERACTION at {timestamp}
 **Tom said:** {tom_input[:200]}...
@@ -486,12 +503,16 @@ def extract_markers_from_response(response: str) -> dict:
 
 # --- Claude API Caller ---
 
-def call_claude(system_prompt: str, user_message: str, task_type: str = "chat") -> str:
+def call_claude(system_prompt: str, user_message: str, task_type: str = "chat",
+                conversation_history: list = None) -> str:
     """
     Call Claude API with the full agent brain as system prompt.
 
     For scheduled tasks, user_message is the task instruction.
     For chat responses, user_message is Tom's message.
+
+    conversation_history: Optional list of prior messages [{"role": "user"|"assistant", "content": "..."}]
+                          to give the agent multi-turn conversational memory.
     """
     import anthropic
 
@@ -507,13 +528,19 @@ def call_claude(system_prompt: str, user_message: str, task_type: str = "chat") 
     # Sonnet is much faster. Set timeout accordingly.
     api_timeout = 300.0 if model == "claude-opus-4-6" else 120.0
 
-    logger.info(f"Calling Claude API: model={model}, system_len={len(system_prompt)}, user_len={len(user_message)}, timeout={api_timeout}s")
+    # Build messages array: conversation history + current message
+    if conversation_history:
+        messages = conversation_history + [{"role": "user", "content": user_message}]
+    else:
+        messages = [{"role": "user", "content": user_message}]
+
+    logger.info(f"Calling Claude API: model={model}, system_len={len(system_prompt)}, user_len={len(user_message)}, history_turns={len(messages)-1}, timeout={api_timeout}s")
     try:
         response = client.messages.create(
             model=model,
             max_tokens=4096,
             system=system_prompt,
-            messages=[{"role": "user", "content": user_message}],
+            messages=messages,
             timeout=api_timeout,
         )
         logger.info(f"Claude API responded: {len(response.content[0].text)} chars, stop={response.stop_reason}")
@@ -749,8 +776,7 @@ def create_asana_tasks_from_response(agent_name: str, response: str):
             # Map priority to Asana due date offset
             due_days = {"urgent": 1, "high": 3, "medium": 7, "low": 14}.get(priority, 7)
 
-            from datetime import timedelta
-            due_date = (datetime.now() + timedelta(days=due_days)).strftime("%Y-%m-%d")
+            due_date = (datetime.now(NZ_TZ) + timedelta(days=due_days)).strftime("%Y-%m-%d")
 
             writer.create_task(
                 name=f"[{agent_name}] {title}",
@@ -923,10 +949,8 @@ def _gather_system_health(telegram_config: dict) -> str:
     Checks: agent state file freshness, database sizes, log errors, schedule completions.
     """
     import sqlite3
-    from datetime import datetime, timedelta
-
     lines = []
-    now = datetime.now()
+    now = datetime.now(NZ_TZ)
 
     # 1. Agent state file freshness
     lines.append("AGENT STATE FILE FRESHNESS:")
@@ -1211,6 +1235,29 @@ def run_scheduled_task(agent_name: str, task_name: str, telegram_config: dict):
 def _run_scheduled_task_inner(agent_name: str, task_name: str, telegram_config: dict):
     """Inner task runner — exceptions bubble up to run_scheduled_task wrapper."""
 
+    # --- Flush DND-held messages (6am daily) ---
+    if task_name == "flush_dnd_queue":
+        try:
+            from core.notification_router import get_router
+            bot_token = telegram_config.get("bot_token", os.environ.get("TELEGRAM_BOT_TOKEN", ""))
+            router = get_router(bot_token=bot_token)
+            result = router.flush_held()
+            logger.info(f"DND flush: delivered {result.get('delivered', 0)} held messages")
+        except Exception as e:
+            logger.error(f"DND flush failed: {e}")
+        return
+
+    # --- Generate daily summaries + compact old messages (3:30am daily) ---
+    if task_name == "cleanup_conversation_history":
+        try:
+            from core.user_memory import generate_all_daily_summaries, compact_old_messages
+            generate_all_daily_summaries(telegram_config)
+            compact_old_messages(days=30)
+            logger.info("Daily memory maintenance complete")
+        except Exception as e:
+            logger.error(f"Memory maintenance failed: {e}")
+        return
+
     # --- Silent intelligence sync (no Claude call, just DB update) ---
     if task_name == "intelligence_sync":
         try:
@@ -1232,9 +1279,9 @@ def _run_scheduled_task_inner(agent_name: str, task_name: str, telegram_config: 
                 cust_db = get_cust_db()
                 writer = ShopifyWriter()
                 if writer.available:
-                    from datetime import date as _date
-                    today_str = _date.today().isoformat()
-                    month_str = _date.today().strftime("%Y-%m")
+                    _nz_now = datetime.now(NZ_TZ).date()
+                    today_str = _nz_now.isoformat()
+                    month_str = _nz_now.strftime("%Y-%m")
 
                     # Find today's new customers (first-time buyers with known channel)
                     new_customers = cust_db.execute("""
@@ -1504,7 +1551,7 @@ Customers: {snapshot['new_customers']} new, {snapshot['returning_customers']} re
                     gsc_marker = "## GSC Performance"
                     if gsc_marker in content:
                         content = content[:content.index(gsc_marker)]
-                    content += f"\n{gsc_marker}\n*Updated: {datetime.now().strftime('%Y-%m-%d %H:%M')}*\n\n{briefing}\n"
+                    content += f"\n{gsc_marker}\n*Updated: {datetime.now(NZ_TZ).strftime('%Y-%m-%d %H:%M')}*\n\n{briefing}\n"
                     beacon_context.write_text(content, encoding='utf-8')
 
                 chat_id = telegram_config.get("chat_ids", {}).get("command-center", "")
@@ -1877,8 +1924,7 @@ The system will auto-create Asana tasks from your [TASK:] markers. Tom reviews a
             logger.info(f"Evening reading: {reading['primary_concept']} (score: {reading['primary_score']})")
             # Write selected concept to CONTEXT.md immediately -- backup cooldown in case
             # reading_log.db doesn't persist on Railway. This ensures we NEVER repeat.
-            from datetime import date as _date_eve
-            _tonight_str = _date_eve.today().isoformat()
+            _tonight_str = datetime.now(NZ_TZ).date().isoformat()
             update_agent_state("evening-reading",
                 f"DELIVERED READING — {_tonight_str}: {reading['primary_concept']} "
                 f"(domain: {reading['primary_domain']}, key: {reading['primary_key']}) "
@@ -2247,7 +2293,7 @@ Which are we already doing? Include the top 1-2 actionable ones in your briefing
 
                     # Daily rotation: pick entry based on day of year
                     from datetime import date as _date
-                    day_index = _date.today().timetuple().tm_yday % len(relevant)
+                    day_index = datetime.now(NZ_TZ).date().timetuple().tm_yday % len(relevant)
                     todays_evidence = relevant[day_index]
 
                     # Clean up the entry text
@@ -2282,8 +2328,7 @@ when selling. Keep it punchy — 3-4 lines max in the brief."""
             if partner_state.exists():
                 partner_context = partner_state.read_text(encoding='utf-8')
                 # Also grab partner's yesterday session log for recent insights
-                from datetime import date as _date2, timedelta as _td2
-                yesterday_str = (_date2.today() - _td2(days=1)).isoformat()
+                yesterday_str = (datetime.now(NZ_TZ).date() - timedelta(days=1)).isoformat()
                 partner_session = AGENTS_DIR / partner / "state" / f"session-log-{yesterday_str}.md"
                 partner_log = ""
                 if partner_session.exists():
@@ -2542,7 +2587,7 @@ The daily plan should reference the 90-day execution map from Meridian's intelli
                                     name=f"Design Brief: {insight.strip()[:80]}",
                                     notes=f"Auto-generated from {AGENT_DISPLAY.get(agent_name, agent_name)} intelligence.\n\nBrief ID: {brief_id}\nReview the full brief in briefs.db or run: python brief_generator.py view {brief_id}",
                                     assignee="Roie",
-                                    due_on=(datetime.now() + timedelta(days=14)).strftime("%Y-%m-%d")
+                                    due_on=(datetime.now(NZ_TZ) + timedelta(days=14)).strftime("%Y-%m-%d")
                                 )
                         except Exception as asana_e:
                             logger.warning(f"Asana task for brief failed (non-fatal): {asana_e}")
@@ -2565,10 +2610,9 @@ The daily plan should reference the 90-day execution map from Meridian's intelli
     # Beacon post-processing: save article + create Shopify draft
     if agent_name == "beacon" and task_name == "content_generation":
         try:
-            from datetime import date as _d
             import re as _re
 
-            today_str = _d.today().isoformat()
+            today_str = datetime.now(NZ_TZ).date().isoformat()
             # Extract title from response (look for # heading or **Title**)
             title_match = _re.search(r'(?:^#\s+(.+)|Title[:\s]*\*?\*?(.+?)\*?\*?$)', response, _re.MULTILINE)
             title = (title_match.group(1) or title_match.group(2)).strip() if title_match else f"Article {today_str}"
@@ -2760,6 +2804,18 @@ def handle_incoming_message(chat_id: str, message_text: str, telegram_config: di
         handle_command(message_text, telegram_config)
         return
 
+    # /memory command works in ANY agent chat — shows what that agent knows
+    msg_lower = message_text.strip().lower()
+    if msg_lower in ("/memory", "memory", "/what do you know about me"):
+        try:
+            user_id = str(telegram_config.get("owner_id", os.environ.get("TELEGRAM_OWNER_ID", "default")))
+            from core.user_memory import format_memory_for_display
+            memory_text = format_memory_for_display(user_id, agent_id=agent_name)
+            send_telegram(chat_id, memory_text, telegram_config["bot_token"])
+        except Exception as e:
+            send_telegram(chat_id, f"Memory system error: {e}", telegram_config["bot_token"])
+        return
+
     logger.info(f"Message from Tom to {agent_name}: {message_text[:50]}...")
 
     # Send "typing..." indicator so Tom knows the bot received the message.
@@ -2775,14 +2831,23 @@ def handle_incoming_message(chat_id: str, message_text: str, telegram_config: di
         pass  # Non-fatal — just a UX hint
 
     try:
-        # Load full brain and respond
-        brain = load_agent_brain(agent_name)
+        # Resolve user_id from telegram config (for multi-user: would come from message sender)
+        user_id = str(telegram_config.get("owner_id", os.environ.get("TELEGRAM_OWNER_ID", "default")))
+
+        # Load full brain WITH user memory injected
+        brain = load_agent_brain(agent_name, user_id=user_id)
 
         if not brain:
             from core.notification_router import route_notification
             route_notification(chat_id, f"[{agent_name}] Brain failed to load. Check AGENT.md exists.",
                                telegram_config["bot_token"], severity="CRITICAL", agent=agent_name)
             return
+
+        # Load conversation history for multi-turn context (permanent storage)
+        from core.user_memory import get_recent_messages as get_memory_messages, save_message as save_memory_message
+        conv_history = get_memory_messages(user_id, agent_name, chat_id, max_messages=20, max_age_hours=72)
+        # Save Tom's incoming message permanently
+        save_memory_message(user_id, agent_name, chat_id, "user", message_text)
 
         # PREP (strategic-advisor) gets all agent states + data injected
         if agent_name == "strategic-advisor":
@@ -2823,7 +2888,7 @@ def handle_incoming_message(chat_id: str, message_text: str, telegram_config: di
                     user_prompt = reading["prompt"]
                     logger.info(f"ASI on-demand reading: {reading['primary_concept']} (score: {reading['primary_score']})")
                     task_type = "deep_analysis"  # Use Opus for depth
-                    response = call_claude(brain, user_prompt, task_type=task_type)
+                    response = call_claude(brain, user_prompt, task_type=task_type, conversation_history=conv_history)
                 except Exception as e:
                     logger.error(f"Knowledge engine failed for on-demand reading: {e}")
                     is_new_reading = False
@@ -2831,9 +2896,8 @@ def handle_incoming_message(chat_id: str, message_text: str, telegram_config: di
             if not is_new_reading:
                 # Conversational mode -- discuss the last reading, go deeper, mentor chat
                 # Load today's session log so ASI knows what was discussed
-                from datetime import date as _d
                 recent_context = ""
-                today_log = AGENTS_DIR / "evening-reading" / "state" / f"session-log-{_d.today().isoformat()}.md"
+                today_log = AGENTS_DIR / "evening-reading" / "state" / f"session-log-{datetime.now(NZ_TZ).date().isoformat()}.md"
                 if today_log.exists():
                     try:
                         log_content = today_log.read_text(encoding='utf-8')
@@ -2867,7 +2931,7 @@ FORMATTING: Telegram. No tables. Bold with *single asterisks*. Short paragraphs.
 
 After your response, emit [STATE UPDATE: <what to remember from this exchange>]."""
                 task_type = "evening_reading"  # Use Opus for depth
-                response = call_claude(brain, user_prompt, task_type=task_type)
+                response = call_claude(brain, user_prompt, task_type=task_type, conversation_history=conv_history)
         else:
             # All other agents -- standard chat flow
             # Inject any pending cross-agent events
@@ -2892,7 +2956,7 @@ If something needs to be done, emit:
 If you identify a campaign opportunity or creative need (Meridian/PREP only), emit:
 [BRIEF: description of insight]"""
 
-            response = call_claude(brain, user_prompt, task_type=task_type)
+            response = call_claude(brain, user_prompt, task_type=task_type, conversation_history=conv_history)
 
         # Check for API errors before processing
         if response.startswith("API Error:"):
@@ -2942,12 +3006,33 @@ If you identify a campaign opportunity or creative need (Meridian/PREP only), em
             except Exception as bg_e:
                 logger.warning(f"Brief generator integration failed (non-fatal): {bg_e}")
 
+        # Save agent response to permanent memory
+        try:
+            save_memory_message(user_id, agent_name, chat_id, "assistant", clean_response)
+        except Exception as hist_e:
+            logger.warning(f"Failed to save message to memory: {hist_e}")
+
         # Send response
         sent = send_telegram(chat_id, clean_response, telegram_config["bot_token"])
         if sent:
             logger.info(f"Response from {agent_name} delivered to {chat_id}")
         else:
             logger.error(f"FAILED to deliver {agent_name} response to {chat_id}")
+
+        # AUTOMATIC MEMORY EXTRACTION — runs after every conversation
+        # Uses Haiku (~$0.001) to extract facts from the exchange.
+        # This is what makes the product work: continuous, automatic learning.
+        try:
+            from core.user_memory import extract_and_store_memories
+            agent_display = AGENT_DISPLAY.get(agent_name, agent_name)
+            # Build conversation from the exchange (current + history)
+            extraction_conv = conv_history + [
+                {"role": "user", "content": message_text},
+                {"role": "assistant", "content": clean_response}
+            ]
+            extract_and_store_memories(user_id, agent_name, extraction_conv, agent_display)
+        except Exception as mem_e:
+            logger.warning(f"Memory extraction failed (non-fatal): {mem_e}")
 
     except Exception as e:
         # CRITICAL: Never silently fail. Tom must ALWAYS get a response.
@@ -3316,6 +3401,41 @@ def handle_command(command: str, telegram_config: dict):
             from core.notification_router import route_notification
             route_notification(chat_id, f"Pure Pets setup error: {e}", bot_token, severity="INFO", agent="command-center")
 
+    elif cmd == "memory":
+        # Show what the system knows about the user
+        try:
+            user_id = str(telegram_config.get("owner_id", os.environ.get("TELEGRAM_OWNER_ID", "default")))
+            from core.user_memory import format_memory_for_display, get_memory_stats
+            stats = get_memory_stats(user_id)
+            memory_text = format_memory_for_display(user_id)
+            stats_line = (f"\n\nMemory Stats: {stats['active_facts']} facts, "
+                          f"{stats['total_messages']} messages archived, "
+                          f"{stats['session_summaries']} daily summaries, "
+                          f"{stats['extraction_runs']} extraction runs")
+            from core.notification_router import route_notification
+            route_notification(chat_id, memory_text + stats_line, bot_token, severity="INFO", agent="command-center")
+        except Exception as e:
+            from core.notification_router import route_notification
+            route_notification(chat_id, f"Memory system error: {e}", bot_token, severity="INFO", agent="command-center")
+
+    elif cmd.startswith("forget "):
+        # Delete memories matching text
+        try:
+            user_id = str(telegram_config.get("owner_id", os.environ.get("TELEGRAM_OWNER_ID", "default")))
+            search_text = cmd.split("forget ", 1)[1].strip()
+            from core.user_memory import delete_facts_by_text, delete_all_facts
+            if search_text == "all":
+                count = delete_all_facts(user_id)
+                msg = f"Deleted all {count} memories. Starting fresh."
+            else:
+                count = delete_facts_by_text(user_id, search_text)
+                msg = f"Deleted {count} memories matching '{search_text}'." if count > 0 else f"No memories found matching '{search_text}'."
+            from core.notification_router import route_notification
+            route_notification(chat_id, msg, bot_token, severity="INFO", agent="command-center")
+        except Exception as e:
+            from core.notification_router import route_notification
+            route_notification(chat_id, f"Forget failed: {e}", bot_token, severity="INFO", agent="command-center")
+
     else:
         # Unknown command -- show available commands instead of hallucinating
         help_text = """NEXUS -- Available Commands
@@ -3328,6 +3448,9 @@ System:
   briefs -- List active design briefs
   undo <action_id> -- Undo an auto-optimizer action
   citations -- Latest AI citation monitoring report
+  memory -- Show what all agents know about you
+  forget <text> -- Delete memories matching text
+  forget all -- Delete ALL memories (nuclear option)
 
 Campaigns:
   setup pure pets -- Create Pure Pets campaign via Meta API (PAUSED)
