@@ -1,5 +1,5 @@
 # CONTEXT.md — Marcus State
-## Last Updated: March 3, 2026
+## Last Updated: March 9, 2026
 
 ## CURRENT PHASE: Foundation (Week 1)
 Starting the journey of small, daily practices. Building the foundation for a life lived well.
@@ -89,3 +89,8 @@ By end of Q2 2026:
 - He's practicing daily virtue/character work
 - He has a clearer picture of what "being a good man" means to him practically
 - He sees that this personal development is as important as business growth
+
+## SYSTEM GAP NOTE
+System ran March 3, then had a gap through March 9. Week 1 garlic coaching did not happen in practice. As of March 9 (Week 1's final day), treat this as the beginning — introduce Week 2 fresh herbs skill on March 10 but check if Tom actually practiced the Week 1 garlic skill first.
+
+## LIVE UPDATES

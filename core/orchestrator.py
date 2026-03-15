@@ -62,6 +62,7 @@ AGENT_DISPLAY = {
     "walker-capital":    "Vesper",
     "walker-capital-tom":   "Vesper",
     "walker-capital-trent": "Vesper",
+    "prospector":           "Prospector",
 }
 
 # Logging configured by entrypoint.py — just get the logger here
@@ -189,7 +190,47 @@ def load_agent_brain(agent_name: str) -> str:
         if recent_logs:
             brain_parts.append(f"=== RECENT DIARY (Last 7 Days) ===\n" + "\n\n".join(recent_logs))
         else:
-            brain_parts.append(f"=== RECENT DIARY (Last 7 Days) ===\nNo previous session logs found. Today ({today}) is Day 1 of tracking.")
+            # Calculate actual day number from CONTEXT.md start date or LIVE UPDATES,
+            # rather than assuming Day 1 (session logs may not persist across deploys).
+            day_number = None
+            state_file_for_diary = agent_dir / "state" / "CONTEXT.md"
+            if state_file_for_diary.exists():
+                try:
+                    _ctx = state_file_for_diary.read_text(encoding='utf-8')
+                    # Check LIVE UPDATES for recent activity (proves agent has been running)
+                    _has_live_updates = "## LIVE UPDATES" in _ctx and _ctx.strip().endswith("## LIVE UPDATES") is False
+                    _live_section = ""
+                    if "## LIVE UPDATES" in _ctx:
+                        _live_section = _ctx[_ctx.index("## LIVE UPDATES"):]
+                    _has_entries = bool(re.search(r'- \[.+\]', _live_section))
+
+                    # Extract start date from CONTEXT.md (look for "Start Date:" or "Started" or "restarted" date)
+                    import re as _re_diary
+                    _start_match = _re_diary.search(
+                        r'(?:\*?\*?Start(?:ed)? Date?\*?\*?|restarted?|restarts)\s*[:\s—-]*\s*(\w+ \d{1,2},? \d{4})',
+                        _ctx, _re_diary.IGNORECASE
+                    )
+                    if _start_match:
+                        from datetime import datetime as _dt_diary
+                        try:
+                            _start_str = _start_match.group(1).replace(',', '')
+                            _start_date = _dt_diary.strptime(_start_str, "%B %d %Y").date()
+                            day_number = (date.today() - _start_date).days + 1  # Day 1 = start date
+                        except ValueError:
+                            pass
+                except Exception:
+                    pass
+
+            if day_number and day_number > 1:
+                brain_parts.append(
+                    f"=== RECENT DIARY (Last 7 Days) ===\n"
+                    f"No session log files found (may have been cleared on deploy). "
+                    f"However, based on the protocol start date in CONTEXT.md, today is Day {day_number} of tracking. "
+                    f"Do NOT say 'Day 1'. Check LIVE UPDATES in CONTEXT.md for the most recent state. "
+                    f"Continue from where you left off."
+                )
+            else:
+                brain_parts.append(f"=== RECENT DIARY (Last 7 Days) ===\nNo previous session logs found. Today ({today}) is Day 1 of tracking.")
     else:
         yesterday_log = agent_dir / "state" / f"session-log-{yesterday}.md"
         if yesterday_log.exists():
@@ -462,14 +503,18 @@ def call_claude(system_prompt: str, user_message: str, task_type: str = "chat") 
     if task_type in ("weekly_review", "weekly_deep_dive", "deep_analysis", "evening_reading", "google_ads_review"):
         model = "claude-opus-4-6"
 
-    logger.info(f"Calling Claude API: model={model}, system_len={len(system_prompt)}, user_len={len(user_message)}")
+    # Opus with large system prompts (PREP ~60K chars) can take 2-3 minutes.
+    # Sonnet is much faster. Set timeout accordingly.
+    api_timeout = 300.0 if model == "claude-opus-4-6" else 120.0
+
+    logger.info(f"Calling Claude API: model={model}, system_len={len(system_prompt)}, user_len={len(user_message)}, timeout={api_timeout}s")
     try:
         response = client.messages.create(
             model=model,
             max_tokens=4096,
             system=system_prompt,
             messages=[{"role": "user", "content": user_message}],
-            timeout=120.0,
+            timeout=api_timeout,
         )
         logger.info(f"Claude API responded: {len(response.content[0].text)} chars, stop={response.stop_reason}")
         return response.content[0].text
@@ -1816,6 +1861,9 @@ The system will auto-create Asana tasks from your [TASK:] markers. Tom reviews a
         # --- Medici (Global Power Intelligence) ---
         "daily_intelligence": "Execute today's daily power intelligence lesson. CRITICAL: Read CONTEXT.md first — find NEXT field to know which elite/org/figure to cover today. Do NOT repeat one already covered. Use the DAILY LESSON FORMAT in your AGENT.md exactly. Pull live news from the injected feeds to find anything current on today's focus. Use your knowledge.md for the deep structure. Be specific: name names, cite real organisations, real documented events. Distinguish confirmed vs probable vs speculative clearly. End with [STATE UPDATE:] advancing your curriculum position to the next figure.",
         "weekly_deep_dive": "Execute this Sunday's power deep dive. Pick ONE major current event from the live news that connects to elite financial or political interests. Follow the money: who benefits financially, what policy/regulatory angle is in play, which elite nodes are coordinating, what mainstream coverage misses. Use your knowledge.md power map to connect the dots. Include primary source trail — name the specific filings, organisations, people. 1000-1200 words. Dense. This is the lesson Tom reads on Sunday morning with coffee. Emit [STATE UPDATE:] with what was covered and any new watchlist additions.",
+        # --- Prospector (First-Principles Opportunity Scanner) ---
+        "daily_research": "Execute today's first-principles opportunity analysis. CRITICAL: Read CONTEXT.md first — find the NEXT field to know which human problem to cover today. Do NOT repeat a problem already covered (check LIVE UPDATES in CONTEXT.md for past analyses). Follow the DAILY RESEARCH format in your AGENT.md exactly. Be ruthlessly honest — if the market leader IS the best solution, say so. If supplements aren't the answer for this problem, say so. After your analysis, you MUST emit: [STATE UPDATE: LAST: {problem_name} | DOMAIN: {domain_number} | POS: {position} of 122 | NEXT: {next_problem_name} | SCORE: {X}/10 | TOP_BRAND: {name or 'none'}]",
+        "weekly_synthesis": "Execute this Monday's weekly opportunity synthesis. Review your CONTEXT.md for all problems analysed in the past 7 days (check LIVE UPDATES). Follow the WEEKLY SYNTHESIS format in your AGENT.md. Identify cross-cutting patterns, rank the top 3 opportunities, and update the cumulative brands watchlist. ALSO: after the synthesis, run today's daily first-principles analysis on the next problem in your rotation (check NEXT in CONTEXT.md). Emit [STATE UPDATE:] for both the synthesis and the new daily analysis position.",
     }
 
     task_prompt = task_prompts.get(task_name, f"Execute task: {task_name}. Follow the instructions and format in your AGENT.md.")
@@ -1867,7 +1915,7 @@ Only emit these when genuinely useful. Do not force them."""
     data_status = {}
 
     # 1. Live news for scan/briefing tasks
-    live_news_tasks = ("scan", "model_scan", "morning_brief", "morning_briefing", "weekly_review", "weekly_deep_dive", "daily_intelligence")
+    live_news_tasks = ("scan", "model_scan", "morning_brief", "morning_briefing", "weekly_review", "weekly_deep_dive", "daily_intelligence", "daily_research", "weekly_synthesis")
     if task_name in live_news_tasks:
         try:
             from core.news_fetcher import fetch_news_for_agent
@@ -2428,6 +2476,8 @@ The daily plan should reference the 90-day execution map from Meridian's intelli
         effective_task_type = "deep_analysis"
     elif agent_name == "beacon" and task_name == "content_generation":
         effective_task_type = "deep_analysis"  # Opus for quality content
+    elif agent_name == "prospector":
+        effective_task_type = "deep_analysis"  # Opus for deep first-principles research
     else:
         effective_task_type = task_name
     logger.info(f"Calling Claude for {agent_name}/{task_name}: brain={len(brain)} chars, prompt={len(task_prompt)} chars")
@@ -2711,6 +2761,18 @@ def handle_incoming_message(chat_id: str, message_text: str, telegram_config: di
         return
 
     logger.info(f"Message from Tom to {agent_name}: {message_text[:50]}...")
+
+    # Send "typing..." indicator so Tom knows the bot received the message.
+    # Especially important for PREP which can take 2+ minutes (Opus + data injection).
+    try:
+        import requests as _typing_req
+        _typing_req.post(
+            f"https://api.telegram.org/bot{telegram_config['bot_token']}/sendChatAction",
+            json={"chat_id": chat_id, "action": "typing"},
+            timeout=5,
+        )
+    except Exception:
+        pass  # Non-fatal — just a UX hint
 
     try:
         # Load full brain and respond
@@ -3404,7 +3466,12 @@ def start_polling(telegram_config: dict):
                     if photo:
                         caption = message.get("caption", "")
                         logger.info(f"Photo received (caption: {caption[:50] if caption else 'none'})")
-                        handle_photo_message(chat_id, photo, caption, bot_token, telegram_config)
+                        import threading
+                        threading.Thread(
+                            target=handle_photo_message,
+                            args=(chat_id, photo, caption, bot_token, telegram_config),
+                            daemon=True,
+                        ).start()
                         continue
 
                     # Handle image documents (screenshots sent as files)
@@ -3415,11 +3482,25 @@ def start_polling(telegram_config: dict):
                             caption = message.get("caption", "")
                             # Wrap as photo-like structure for reuse
                             logger.info(f"Image document received: {doc.get('file_name', 'unknown')}")
-                            handle_photo_message(chat_id, [doc], caption, bot_token, telegram_config)
+                            import threading
+                            threading.Thread(
+                                target=handle_photo_message,
+                                args=(chat_id, [doc], caption, bot_token, telegram_config),
+                                daemon=True,
+                            ).start()
                             continue
 
                     if text:
-                        handle_incoming_message(chat_id, text, telegram_config)
+                        # Run message handler in a thread so the polling loop
+                        # isn't blocked by slow agents (PREP uses Opus + heavy
+                        # data injection and can take 2+ minutes to respond).
+                        import threading
+                        t = threading.Thread(
+                            target=handle_incoming_message,
+                            args=(chat_id, text, telegram_config),
+                            daemon=True,
+                        )
+                        t.start()
 
         except requests.exceptions.Timeout:
             continue

@@ -12,7 +12,11 @@ COPY . .
 # Create data directory for SQLite (writable at runtime)
 RUN mkdir -p /app/data
 
+# Make state init script executable
+RUN chmod +x /app/scripts/init_state.sh
+
 # No port exposed -- this is a worker (Telegram poller + scheduler)
 # Secrets come from Railway env vars: ANTHROPIC_API_KEY, TELEGRAM_BOT_TOKEN, TELEGRAM_OWNER_ID
 
-CMD ["python", "entrypoint.py"]
+# init_state.sh symlinks agent state dirs to the persistent volume before starting
+CMD ["/bin/bash", "-c", "/app/scripts/init_state.sh && python entrypoint.py"]

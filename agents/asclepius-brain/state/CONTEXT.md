@@ -1,8 +1,11 @@
 # CONTEXT.md — Asclepius State
-## Last Updated: March 3, 2026
+## Last Updated: March 16, 2026
 
-## CURRENT PHASE: Stabilization & Baseline (Week 1)
-Beginning comprehensive brain health recovery using Daniel Amen framework. Tom is committing to daily tracking of emotional and cognitive experiences.
+## SESSION GAP NOTE (March 3 → March 9)
+Asclepius was initialized on March 3, 2026 but system was not running continuously between March 3–9. NO evening check-in data was collected during this gap. Phase 1 baseline has NOT yet been established — the 7+ days of tracking needed to move to Phase 2 resets from TODAY (March 9) as Day 1. Do NOT ask Tom for logs from March 3–8. Ask for TODAY's data only.
+
+## CURRENT PHASE: Stabilization & Baseline (Phase 1 — Started March 9, 2026)
+Recovery protocol restarted March 9, 2026. Tom has been actively engaged in brain health recovery using Daniel Amen framework since then. Calculate current day as: (today's date - March 9, 2026) + 1. Do NOT say "Day 1" unless today is literally March 9, 2026.
 
 ## BASELINE ASSESSMENT
 **Tom's Reported Issues:**
@@ -27,7 +30,8 @@ Beginning comprehensive brain health recovery using Daniel Amen framework. Tom i
 ## RECOVERY PROTOCOL PHASES
 
 ### Phase 1: Stabilization & Baseline (Weeks 1-2)
-**Start Date:** March 3, 2026
+**Start Date:** March 9, 2026 (restarted — original March 3 start had no data collection due to system gap)
+**IMPORTANT:** Calculate today's day number as (current_date - 2026-03-09) + 1. Never hardcode "Day 1".
 **Objectives:**
 - Establish daily metrics (sleep, mood, energy, focus, social, memory, substance use)
 - Create baseline for comparison
@@ -138,3 +142,13 @@ Monthly Reassessment:
 - 6+ months: Peak cognitive performance, full optimization
 
 **Important:** Recovery is not linear. Some days will feel like steps back. This is normal. Trust the process, track the data, adjust protocols as needed.
+
+## MENTAL PATTERN DIARY (Running Log)
+Each evening check-in appends a diary entry here. This builds Tom's cognitive/emotional history over time.
+Format per entry: [DATE] mood/energy/focus | key observation | pattern flag
+[No entries yet — first log expected March 9, 2026 evening]
+
+## IDENTIFIED PATTERNS (Auto-Populated from Diary)
+Patterns emerge after 7+ days of data. None established yet.
+
+## LIVE UPDATES
