@@ -2808,7 +2808,7 @@ def handle_incoming_message(chat_id: str, message_text: str, telegram_config: di
     msg_lower = message_text.strip().lower()
     if msg_lower in ("/memory", "memory", "/what do you know about me"):
         try:
-            user_id = str(telegram_config.get("owner_id", os.environ.get("TELEGRAM_OWNER_ID", "default")))
+            user_id = str(telegram_config.get("owner_user_id", os.environ.get("TELEGRAM_OWNER_ID", "default")))
             from core.user_memory import format_memory_for_display
             memory_text = format_memory_for_display(user_id, agent_id=agent_name)
             send_telegram(chat_id, memory_text, telegram_config["bot_token"])
@@ -2832,7 +2832,7 @@ def handle_incoming_message(chat_id: str, message_text: str, telegram_config: di
 
     try:
         # Resolve user_id from telegram config (for multi-user: would come from message sender)
-        user_id = str(telegram_config.get("owner_id", os.environ.get("TELEGRAM_OWNER_ID", "default")))
+        user_id = str(telegram_config.get("owner_user_id", os.environ.get("TELEGRAM_OWNER_ID", "default")))
 
         # Load full brain WITH user memory injected
         brain = load_agent_brain(agent_name, user_id=user_id)
@@ -3404,7 +3404,7 @@ def handle_command(command: str, telegram_config: dict):
     elif cmd == "memory":
         # Show what the system knows about the user
         try:
-            user_id = str(telegram_config.get("owner_id", os.environ.get("TELEGRAM_OWNER_ID", "default")))
+            user_id = str(telegram_config.get("owner_user_id", os.environ.get("TELEGRAM_OWNER_ID", "default")))
             from core.user_memory import format_memory_for_display, get_memory_stats
             stats = get_memory_stats(user_id)
             memory_text = format_memory_for_display(user_id)
@@ -3421,7 +3421,7 @@ def handle_command(command: str, telegram_config: dict):
     elif cmd.startswith("forget "):
         # Delete memories matching text
         try:
-            user_id = str(telegram_config.get("owner_id", os.environ.get("TELEGRAM_OWNER_ID", "default")))
+            user_id = str(telegram_config.get("owner_user_id", os.environ.get("TELEGRAM_OWNER_ID", "default")))
             search_text = cmd.split("forget ", 1)[1].strip()
             from core.user_memory import delete_facts_by_text, delete_all_facts
             if search_text == "all":
