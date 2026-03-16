@@ -9,6 +9,12 @@ import json
 import logging
 from datetime import datetime
 from pathlib import Path
+try:
+    from zoneinfo import ZoneInfo
+except ImportError:
+    from backports.zoneinfo import ZoneInfo
+
+NZ_TZ = ZoneInfo("Pacific/Auckland")
 
 import anthropic
 
@@ -182,7 +188,7 @@ def generate_daily_pipeline_brief(pipeline_summary: dict, recent_discoveries: li
     lines = [
         "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
         f"🏦 WALKER CAPITAL — DAILY BRIEF",
-        f"{datetime.now().strftime('%A %d %b %Y, %H:%M')}",
+        f"{datetime.now(NZ_TZ).strftime('%A %d %b %Y, %H:%M')}",
         "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
         "",
         "📊 PIPELINE STATUS",

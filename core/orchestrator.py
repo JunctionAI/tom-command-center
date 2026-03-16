@@ -1193,10 +1193,16 @@ def send_telegram(chat_id: str, text: str, bot_token: str):
 
 def identify_agent_from_chat(chat_id: str, telegram_config: dict) -> str:
     """Given a Telegram chat ID, identify which agent handles it."""
+    # Some chat IDs map to sub-channels (e.g. walker-capital-tom) that share
+    # a single agent folder. Resolve to the canonical agent name.
+    CHAT_ALIAS_MAP = {
+        "walker-capital-tom": "walker-capital",
+        "walker-capital-trent": "walker-capital",
+    }
     chat_ids = telegram_config.get("chat_ids", {})
     for agent_name, cid in chat_ids.items():
         if str(cid) == str(chat_id):
-            return agent_name
+            return CHAT_ALIAS_MAP.get(agent_name, agent_name)
     return None
 
 
@@ -1604,6 +1610,59 @@ Customers: {snapshot['new_customers']} new, {snapshot['returning_customers']} re
             logger.info(f"Pure Pets ranking check complete (severity: {severity})")
         except Exception as e:
             logger.error(f"Pure Pets ranking check failed: {e}")
+        return
+
+    # --- DBH keyword daily ranking check (6:30am daily, all 37 keywords x 3 markets) ---
+    if task_name == "dbh_keyword_daily_check":
+        try:
+            from core.dbh_keyword_tracker import track_rankings, format_for_briefing
+            result = track_rankings()
+            alerts = result.get("alerts", [])
+
+            # Build report message
+            report = f"DBH Keyword Rankings — Daily Check\n\n"
+            report += f"Checked {result.get('tracked', 0)} keywords across NZ/AUS/USA\n"
+            report += f"With GSC data: {result.get('with_data', 0)}\n"
+            report += f"Not ranking: {result.get('not_ranking', 0)}\n\n"
+            report += format_for_briefing("NZ")
+
+            severity = "INFO"
+            if alerts:
+                critical = [a for a in alerts if a.get("severity") == "CRITICAL"]
+                severity = "CRITICAL" if critical else "IMPORTANT"
+                report += f"\n\nRANKING ALERTS ({len(alerts)}):\n"
+                for a in alerts:
+                    report += f"  {a['keyword']} ({a['market']}): #{a['old_position']} → #{a['new_position']} ({a['change']:+.0f})\n"
+
+            chat_id = telegram_config.get("chat_ids", {}).get("beacon",
+                      telegram_config.get("chat_ids", {}).get("dbh-marketing", ""))
+            if chat_id:
+                bot_token = telegram_config.get("bot_token", os.environ.get("TELEGRAM_BOT_TOKEN", ""))
+                from core.notification_router import route_notification
+                route_notification(chat_id, report, bot_token, severity=severity, agent="beacon")
+
+            logger.info(f"DBH keyword check complete: {result.get('with_data', 0)} with data, {len(alerts)} alerts")
+        except Exception as e:
+            logger.error(f"DBH keyword daily check failed: {e}")
+        return
+
+    # --- AI visibility weekly check (Sunday 3am, all platforms) ---
+    if task_name == "ai_visibility_weekly_check":
+        try:
+            from core.ai_visibility_tracker import run_ai_visibility_check, get_weekly_report
+            result = run_ai_visibility_check()
+            report = get_weekly_report()
+
+            chat_id = telegram_config.get("chat_ids", {}).get("beacon",
+                      telegram_config.get("chat_ids", {}).get("command-center", ""))
+            if chat_id:
+                bot_token = telegram_config.get("bot_token", os.environ.get("TELEGRAM_BOT_TOKEN", ""))
+                from core.notification_router import route_notification
+                route_notification(chat_id, report, bot_token, severity="INFO", agent="beacon")
+
+            logger.info(f"AI visibility check complete: {result}")
+        except Exception as e:
+            logger.error(f"AI visibility weekly check failed: {e}")
         return
 
     # --- llms.txt regeneration (monthly, regenerates llms.txt for AEO) ---
