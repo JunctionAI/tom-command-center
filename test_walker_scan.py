@@ -225,8 +225,8 @@ for p in passed:
         brief_lines.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
         brief_lines.append("STAGE 3 COMPLETE — Research brief saved.")
         brief_lines.append("")
-        brief_lines.append("Ready for Stage 4: Full valuation (DCF + comps + Morningstar).")
-        brief_lines.append(f'Reply: "Value {p["ticker"]}" to run the full analysis.')
+        brief_lines.append("Ready for Stage 4+5+7: Full valuation → Risk → Memo.")
+        brief_lines.append(f'Reply: Value {p["ticker"]}')
         brief_lines.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 
         send_both("\n".join(brief_lines))

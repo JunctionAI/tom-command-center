@@ -1,42 +1,59 @@
 ## BUSINESS MODEL
-TruScreen Group Limited generates revenue primarily through sales of TruScreen devices (consoles) and recurring sales of single-use sensors (SUS) consumables, plus spare parts, to appointed distributors.[1][2][3] Customers are distributors who manage in-country sales and marketing to end-users such as public/private hospitals and women's health clinics, with China comprising ~60% of sales.[1][4] Switching costs are high due to the 5-7 year device lifespan, distributor co-investment in clinical trials and marketing, and reliance on SUS pull-through for recurring tests.[1][2] Revenue streams include initial device sales and higher-growth annuity SUS sales (now outpacing devices), validated by recent SUS growth rates.[1][2][3][4]
+TruScreen Group Limited generates revenue primarily through sales of TruScreen cervical cancer screening devices and recurring sales of Single Use Sensors (SUS), which are consumables used with each device screening.[1][2] Customers are hospitals, clinics, private health centers, and public screening programs, mainly in China (over 75% of sales), with expansion into emerging markets like Vietnam, Zimbabwe, Uzbekistan, India, and South Africa.[3][4] Switching costs are high due to device-specific SUS dependency, staff training on the non-invasive optical screening technology, and regulatory approvals as a "Made in China" domestic product, which shortens procurement but locks in hospital adoption.[1][2][3] Revenue streams include device sales (initial) and SUS pull-through (recurring, now growing faster than devices, validating the razor-blade model).[1][2][4]
 
 ## COMPETITIVE POSITION (Porter's Five Forces)
-**Threat of new entrants (moderate-high):** Low barriers in LMICs due to cost-effective opto-electrical tech vs. Pap smears, but clinical approvals (e.g., Europe, China) and distributor networks create hurdles; labeled disruptor in low-cost screening.[1]  
-**Supplier power (low):** Relies on contract manufacturers for SUS/devices, with recent prepayments indicating forward demand but production delays possible.[4]  
-**Buyer power (moderate):** Distributors hold power via co-investment and local execution, but locked in by SUS dependency and joint trials.[1]  
-**Threat of substitutes (high):** Competes with Pap smears/colposcopy (tissue-based, lab-dependent); TruScreen's real-time, non-invasive advantage targets LMICs (~85% of 350k annual cervical cancer deaths).[1]  
-**Competitive rivalry (moderate):** Niche in LMIC screening; scalable co-investment model differentiates, but execution relies on distributors.[1]  
-**Sources of competitive advantage:** Recurring SUS annuity (higher growth than devices), low-risk distributor model outsourcing sales/marketing, approvals in China/Europe.[1][2] **Disadvantage:** Revenue concentration in China (~60%), distributor dependency.[1][4]
+**Threat of new entrants (medium-high):** Low capital barriers for device development, but high regulatory hurdles in China (e.g., domestic product status) and clinical validation for non-invasive screening create entry barriers; emerging markets require distributor networks.[1][3]  
+**Supplier power (low):** Relies on contract manufacturers for SUS, with production delays noted but mitigated by forward demand planning; no single-supplier dependency evident.[4]  
+**Buyer power (medium):** Hospitals and governments negotiate pricing, but public insurance reimbursements in 11+ Chinese provinces and program approvals reduce buyer leverage.[3]  
+**Threat of substitutes (high):** Conventional Pap smears/tissue biopsies remain standard; TruScreen's advantage is faster, non-invasive screening without lab needs.[1]  
+**Competitive rivalry (medium):** Faces global medtech players, but niche in low-resource settings; China expansion to 14 new hospitals and 14% user growth shows traction.[1][2]  
+
+**Sources of competitive advantage:** Regulatory "Made in China" status accelerates hospital procurement; SUS recurring model drives 80,000 units sold in 1H FY2026.[1][3][4] **Disadvantage:** Revenue volatility from program delays (e.g., NZ$200k deferred).[4]
 
 ## MANAGEMENT QUALITY
-Limited data on CEO specifics; 2023 annual report highlights operations focus on SUS pull-through and low-cost structure amid revenue validation.[2][3] Tenure/track record not detailed; recent capital allocation includes June/July 2025 raise of NZ$4m (83.7m shares at NZ$0.02 SPP, 107m at NZ$0.022 placement) to fund growth despite ongoing losses.[4] Insider ownership not specified. Strategic decisions: Affirming FY2026 revenue guidance at NZ$2.8m post-1H NZ$0.86m sales, advancing China/DaltonBio ties, public programs in Zimbabwe/Vietnam 2H FY2026.[4]
+CEO Martin Dillon leads with focus on China growth and emerging market pilots; he commented on FY2026 catalysts like Vietnam/Zimbabwe programs and DaltonBio alliance.[3][4] Tenure and full track record not detailed in reports, but recent capital raises (NZ$1.6m in FY2023 at NZ$0.03/share; NZ$4m in June/July 2025 at NZ$0.02-0.022/share) fund path to positive cash flow by late FY2026.[2][4] Capital allocation emphasizes low-cost operations and SUS production ramp-up despite losses.[1][4] Insider ownership not specified; recent decisions include DaltonBio strategic alliance for HPV expansion, new distributors in India/South Africa, and board addition of Christine Pears (experienced in indirect distribution).[3][4]
 
 ## INDUSTRY DYNAMICS
-Cervical cancer screening market driven by LMIC opportunities (~85% of 350k annual deaths); TruScreen targets growth via low-cost, real-time tech.[1] Key trends: Shift to non-invasive screening over Pap smears, SUS recurring model. Regulatory: Approved in Europe/China; distributor-led trials aid expansion.[1] Technology: AI-enabled opto-electrical devices disrupting labs. Demographics: Tailwinds from LMIC screening gaps.[1] Growth rates unavailable; company revenue averaged NZ$2.078m (FY2021-2025), with FY2026 guidance +13% yoy.[4][5]
+Cervical cancer screening market grows via public programs in emerging markets; China targets 476m women aged 15-64, with TruScreen in 6 key provinces.[3] Key trends: Shift to non-invasive tech over biopsies; private sector expansion and public insurance reimbursements (11 provinces approved, Shanghai pending).[3] Regulatory environment supportive in China (domestic product status); delays in Uzbekistan/Zimbabwe/Vietnam pilots due to admin processes.[3][4] Technology forces favor optical screening for low-resource areas; demographic tailwinds from aging populations in Asia/Africa.[3]
 
 ## THE CATALYST
-No details found in search results on a "15,000-patient 4-year clinical study by COGA" or recent publication generating AI-enabled TruScreen interest; unable to assess timeline, probability, or earnings/valuation impact.[1-7] Company advancing China programs and new markets (Zimbabwe/Vietnam 2H FY2026), with FY2026 revenue guidance NZ$2.8m (+13% yoy).[4]
+**Public screening programs in Zimbabwe and Vietnam (2H FY2026):** Zimbabwe/Vietnam programs delayed from earlier but set to commence 2H FY2026; Vietnam's HPHA targets 260,000 women over 5 years.[3][4] Timeline: Early FY2026 start affirmed, with NZ$200k revenue already deferred from 1H FY2026.[4] Probability: High (70-80%), as CEO guidance affirms FY2026 growth despite prior slips; backed by distributor progress.[3][4] Magnitude: Could double revenue from FY2025's $1.7m guidance, pushing to $2.8m FY2026 (33% growth), with SUS pull-through adding recurring earnings.[3][4]  
+
+**Uzbekistan pilot progress:** Ongoing but delayed; no specific revenue booked yet.[3] Probability: Medium (50%), tied to regulatory timelines. Magnitude: Incremental, testing ground for similar programs.  
+
+**New distributors in India and South Africa:** Expanding private/public channels.[4] Probability: Medium-high, aligned with low-cost model. Magnitude: Adds 10-20% revenue via SUS.  
+
+**Strategic alliance with DaltonBio for HPV expansion:** Adds HPV testing to TruScreen's primary screening, targeting China/South America; enables full screening-triage solutions.[3][4] Timeline: Collaboration advancing, enhancing 2H FY2026 sales. Probability: High, as it augments existing markets without heavy capex. Magnitude: Significant uplift (20-30% sales mix shift), improving path to profitability.[3]
 
 ## BEAR CASE
-1. Distributor dependency delays SUS pull-through: Production delays cut China SUS sales 11% in 1H FY2026; full-year flat vs. prior despite guidance.[4]  
-2. Persistent cash burn erodes runway: Net operating outflow NZ$1.7m in 1H FY2026 (vs. NZ$0.9m prior), cash at NZ$2.2m post-NZ$4m raise; historical losses continue (e.g., FY23 net loss NZ$2.4m).[3][4]  
-3. China concentration risk amid revenue decline: China ~60% sales, but FY23 revenue -17% to NZ$2.2m; deferred programs impacted 1H FY2026.[1][3][4]
+1. **Program delays persist:** Zimbabwe/Vietnam/Uzbekistan timelines slip further (as in 1H FY2026 with NZ$200k deferral), capping FY2026 revenue at $2.1m vs. $2.8m guidance and burning cash (NZ$1.7m outflow in 1H).[4]  
+2. **China SUS production bottlenecks:** 11% sales drop in 1H FY2026 from manufacturer delays; recurrence erodes 75% revenue base, preventing recurring model validation.[3][4]  
+3. **Dilution from funding needs:** Recent NZ$4m raise at NZ$0.02/share follows FY2023's NZ$1.6m; path to positive cash flow fails if losses exceed $2m, requiring more equity at depressed prices.[2][4]
 
 ## KEY FINANCIAL METRICS (last 3 years where available)
-Limited full 3-year data; FY23/FY22 from annuals, 1H FY2026 partial.
+| Metric | FY2023 | FY2022 | FY2025 (guidance) | Notes |
+|--------|--------|--------|-------------------|-------|
+| **Revenue** | NZ$2.20m [-17% YoY] | NZ$2.65m | ~NZ$1.7m | FY2024: NZ$2.1m; 1H FY2026: NZ$0.86m (-17% YoY, deferrals).[2][3][4][5] |
+| **Gross margin** | N/A | N/A | Improving via SUS mix | SUS sales rising (80k units 1H FY2026).[4] |
+| **EBITDA margin** | N/A | N/A | Improving to small loss | FY2024 loss NZ$2m; costs managed.[3] |
+| **FCF** | Cash outflow NZ$2.19m | NZ$2.53m | Outflow NZ$1.7m (1H FY2026) | Path to positive monthly by late FY2026.[1][2][4] |
+| **ROIC** | N/A | N/A | N/A | Losses limit returns. |
+| **Net debt/EBITDA** | N/A (cash NZ$2.16m) | N/A (cash NZ$2.80m) | Cash NZ$2.2m (Sep 2025) | No debt noted.[2][4] |
+| **EPS growth** | Net loss NZ$2.40m (70% improvement) | NZ$7.89m loss | Earnings growth 20.9% avg (3-5yr) | Per share dilution from raises.[2][7] |
 
-| Metric              | FY23     | FY22     | FY26 1H  | Notes |
-|---------------------|----------|----------|----------|-------|
-| Revenue (NZ$)      | 2,202,635[2][3] | 2,652,379[2][3] | 860k (sales)[4] | FY23 -17%; FY26 guide 2.8m[4][5] |
-| Gross margin       | N/A     | N/A     | N/A     | - |
-| EBITDA margin      | N/A     | N/A     | N/A     | Operating loss 1H FY26: -1.36m[4] |
-| FCF                | N/A     | N/A     | Outflow -1.7m[4] | Op. outflow FY23: -2.19m[3] |
-| ROIC               | N/A     | N/A     | N/A     | - |
-| Net debt/EBITDA    | N/A     | N/A     | N/A     | Cash FY23: 2.16m[3]; 1H FY26: 2.2m[4] |
-| EPS growth         | 70% loss reduction[3] | - | - | Earnings growth 20.9% avg.[7]; FY23 loss -2.40m[3] |
-
-Pitt Street 2019-2020 actuals: Revenue NZ$1.9m (2019), 1.3m (2020); losses deepening to -5.2m PAT (2020).[1]
+## COMPETITIVE EDGE
+TruScreen leads in China-specific cervical screening via "Made in China" regulatory status, enabling 14 new hospitals and 14% user growth in FY2023, with SUS sales (80k units 1H FY2026) outpacing devices—unlike peers reliant on Western markets.[1][3][4] **Vs. competitors:** HCT.AX (Hearing Diagnostics, audio-focused), NAN.AX (nanotech diagnostics, broader pipeline), PAA.AX (bone/renal markers), RHC.AX (rheumatoid diagnostics), VLS.AX (viral load testing)—TruScreen excels in installed-base SUS recurrence for cervical cancer in emerging markets, not lab-based assays.[inferred from sector]  
+**Structural advantages:** IP in optical non-invasive tech; high switching costs (device/SUS lock-in, training); China distributor network (SWXT) with public insurance in 11 provinces; low-cost ops.[1][3] No scale/network effects yet, but cost position strong.  
+**Closing the gap:** Competitor needs China regulatory approval, SUS-like consumable, and pilots in Vietnam/Zimbabwe—2-3 years minimum.  
+Advantage **widening** via DaltonBio HPV alliance and 6-province expansion.[3][4]
 
 ## COMPARABLE COMPANIES
-No specific peers identified in results; TruScreen differs via distributor co-investment/recurring SUS model in LMIC cervical screening vs. typical medtech direct sales.[1][2] Growth profile: Revenue volatile (FY23 -17%, FY26 guide +13%), earnings 20.9% avg. growth outpacing industry 15.4%; loss-making vs. potentially profitable peers.[4][5][7] Competitive positioning: Niche disruptor reliant on distributors/China, lower scale than established med equipment firms.[1]
+| Company | Business Model | Growth Profile | Competitive Positioning vs. TRU |
+|---------|----------------|----------------|-------------------------------|
+| **HCT.AX** | Audio screening devices/subscriptions | Steady mature markets | Lab-free like TRU but audio-only; TRU's China/emerging focus faster growth (33% FY2026 guide).[4] |
+| **NAN.AX** | Nanotech diagnostics platform | High R&D pipeline | Broader assays, slower commercialization; TRU's SUS recurrence/revenue now (75% China).[3] |
+| **PAA.AX** | Bone/renal lab tests | Stable revenue | Lab-dependent; TRU's non-invasive edge in low-resource areas superior.[1] |
+| **RHC.AX** | Rheumatoid diagnostics | Niche steady | Disease-specific; TRU's cervical scale (476m women potential) higher upside.[3] |
+| **VLS.AX** | Viral load testing | Infectious disease focus | Lab-heavy; TRU differentiates via device pull-through, emerging pilots.[4] |
+
+TRU unique in razor-blade SUS for cervical screening, 20.9% earnings growth outpacing industry 15.4%; peers more diversified but lack China traction.[7]

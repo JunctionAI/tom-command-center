@@ -1911,6 +1911,332 @@ Customers: {snapshot['new_customers']} new, {snapshot['returning_customers']} re
             logger.error(f"Walker Capital task {task_name} failed: {walker_err}", exc_info=True)
         return
 
+    # --- WALKER CAPITAL command handler (for interactive Telegram messages) ---
+    # Note: scheduled tasks (discovery_scan, weekly_valuation_report) are handled
+    # above. This block handles live message commands like "Value BHP".
+    # (Inserted here so it's available from handle_incoming_message below)
+
+
+def _handle_walker_command(message_text: str, chat_id: str, telegram_config: dict) -> bool:
+    """
+    Handle Walker Capital command messages from Telegram.
+    Returns True if command was handled (caller should return early).
+    Returns False if conversational — let normal chat flow handle it.
+
+    Commands:
+      /pipeline | status      → show pipeline summary
+      value BHP               → run full Stage 4+5+7 analysis
+      /screen BHP ASX         → manually add + screen a company
+      buy BHP | watch BHP | avoid BHP  → log Trent's decision
+    """
+    msg = message_text.strip()
+    msg_lower = msg.lower()
+
+    bot_token = telegram_config.get("bot_token", os.environ.get("TELEGRAM_BOT_TOKEN", ""))
+    chat_id_tom = telegram_config.get("chat_ids", {}).get("walker-capital-tom", "")
+    chat_id_trent = telegram_config.get("chat_ids", {}).get("walker-capital-trent", "")
+
+    def send_both(text: str, severity: str = "IMPORTANT"):
+        from core.notification_router import route_notification
+        for cid in [chat_id_tom, chat_id_trent]:
+            if cid and cid != "SETUP_NEEDED":
+                try:
+                    route_notification(cid, text, bot_token, severity=severity, agent="walker-capital")
+                except Exception as e:
+                    logger.error(f"Walker send_both error: {e}")
+
+    def send_reply(text: str, severity: str = "NOTABLE"):
+        from core.notification_router import route_notification
+        route_notification(chat_id, text, bot_token, severity=severity, agent="walker-capital")
+
+    # ── /pipeline or /status ─────────────────────────────────────────────────
+    if msg_lower in ("/pipeline", "pipeline", "/status", "status"):
+        try:
+            from core.walker_pipeline_db import get_pipeline_summary
+            summary = get_pipeline_summary()
+            stage_labels = {
+                "DISCOVERED": "📍 Discovery",
+                "SCREENED":   "🔎 Screened",
+                "RESEARCHED": "📝 Research",
+                "VALUED":     "💰 Valued",
+                "RISK_ASSESSED": "⚠️ Risk Assessed",
+                "SIMULATED":  "🌊 MiroFish",
+                "DECISION_READY": "✅ Decision Ready",
+                "APPROVED":   "🟢 Portfolio",
+                "WATCHING":   "👁 Watchlist",
+                "REJECTED":   "❌ Rejected",
+            }
+            lines = [
+                "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
+                "🏦 WALKER CAPITAL — PIPELINE",
+                datetime.now(NZ_TZ).strftime("%d %b %Y, %H:%M"),
+                "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
+            ]
+            total = 0
+            for stage, label in stage_labels.items():
+                count = summary.get(stage, 0)
+                if count > 0:
+                    lines.append(f"{label}: {count}")
+                    total += count
+            if total == 0:
+                lines.append("Pipeline empty — next scan at 7am")
+            lines.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+            lines.append("Reply: Value [TICKER] to run full analysis")
+            send_reply("\n".join(lines))
+        except Exception as e:
+            send_reply(f"Pipeline error: {e}")
+        return True
+
+    # ── value [TICKER] / analyse [TICKER] ────────────────────────────────────
+    value_match = re.match(
+        r'^(?:value|analyse|analyze|run|full)\s+([A-Z0-9.]+)',
+        msg, re.IGNORECASE
+    )
+    if value_match:
+        ticker = value_match.group(1).upper()
+        try:
+            from core.walker_pipeline_db import get_companies_at_stage
+            all_stages = [
+                "RESEARCHED", "SCREENED", "DISCOVERED",
+                "VALUED", "RISK_ASSESSED", "SIMULATED",
+                "DECISION_READY", "APPROVED", "WATCHING"
+            ]
+            company = None
+            for stage in all_stages:
+                for c in get_companies_at_stage(stage):
+                    if c["ticker"].upper() == ticker:
+                        company = c
+                        break
+                if company:
+                    break
+
+            if not company:
+                send_reply(
+                    f"⚠️ {ticker} not in pipeline.\n"
+                    f"Use /screen {ticker} [EXCHANGE] to add it, or wait for tomorrow's 7am discovery scan."
+                )
+                return True
+
+            # Run full analysis in background thread
+            import threading
+
+            def _run():
+                try:
+                    _run_walker_full_analysis(company, send_both)
+                except Exception as e:
+                    logger.error(f"Walker full analysis thread failed for {ticker}: {e}", exc_info=True)
+                    send_both(f"❌ Analysis failed for {ticker}: {e}")
+
+            send_both(
+                f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                f"🏦 WALKER CAPITAL\n"
+                f"Full analysis starting: {company['name']} ({ticker})\n"
+                f"Stage 4 → 5 → Memo — approx 4-6 minutes\n"
+                f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            )
+            threading.Thread(target=_run, daemon=True).start()
+
+        except Exception as e:
+            send_reply(f"❌ Error starting analysis for {ticker}: {e}")
+        return True
+
+    # ── /screen [TICKER] [EXCHANGE] ──────────────────────────────────────────
+    screen_match = re.match(
+        r'^/screen\s+([A-Z0-9.]+)(?:\s+([A-Z]+))?',
+        msg, re.IGNORECASE
+    )
+    if screen_match:
+        ticker = screen_match.group(1).upper()
+        exchange = (screen_match.group(2) or "ASX").upper()
+        try:
+            from core.walker_screener import run_quantitative_screen
+            from core.walker_pipeline_db import add_company, advance_stage, update_catalyst
+            send_reply(f"🔎 Screening {ticker} on {exchange}...")
+            screen = run_quantitative_screen(ticker, exchange, ticker)
+            if screen.get("screen_passed"):
+                company_id = add_company(
+                    ticker=ticker, name=ticker, exchange=exchange,
+                    sector="", discovery_thesis="Manually added via Telegram"
+                )
+                if company_id:
+                    advance_stage(company_id, "SCREENED", notes=screen.get("screen_reason"))
+                    update_catalyst(company_id, screen.get("catalyst_score", 0), screen.get("catalyst_description", ""))
+                    send_reply(
+                        f"✅ {ticker} added to pipeline\n"
+                        f"{screen.get('screen_reason', '')}\n\n"
+                        f"Reply: Value {ticker} to run full analysis"
+                    )
+                else:
+                    send_reply(f"ℹ️ {ticker} already in pipeline. Reply: Value {ticker}")
+            else:
+                send_reply(f"❌ {ticker} failed screening\n{screen.get('screen_reason', '')}")
+        except Exception as e:
+            send_reply(f"Screen error for {ticker}: {e}")
+        return True
+
+    # ── BUY / WATCH / AVOID [TICKER] ────────────────────────────────────────
+    decision_match = re.match(
+        r'^(buy|watch|avoid)\s+([A-Z0-9.]+)',
+        msg, re.IGNORECASE
+    )
+    if decision_match:
+        decision = decision_match.group(1).upper()
+        ticker = decision_match.group(2).upper()
+        try:
+            from core.walker_pipeline_db import get_companies_at_stage, log_decision
+            company = None
+            for stage in ["DECISION_READY", "RISK_ASSESSED", "VALUED", "RESEARCHED"]:
+                for c in get_companies_at_stage(stage):
+                    if c["ticker"].upper() == ticker:
+                        company = c
+                        break
+                if company:
+                    break
+            if company:
+                log_decision(company["id"], decision, "Trent Walker", "Decision via Telegram")
+                emoji = {"BUY": "🟢", "WATCH": "👁", "AVOID": "🔴"}[decision]
+                send_both(
+                    f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                    f"{emoji} DECISION LOGGED\n"
+                    f"{company['name']} ({ticker}): {decision}\n"
+                    f"By: Trent Walker | {datetime.now(NZ_TZ).strftime('%d %b %Y, %H:%M')}\n"
+                    f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+                )
+            else:
+                send_reply(f"⚠️ {ticker} not found in pipeline at a decision-ready stage.")
+        except Exception as e:
+            send_reply(f"Decision log error: {e}")
+        return True
+
+    # Not a recognised command — let normal Vesper chat flow handle it
+    return False
+
+
+def _run_walker_full_analysis(company: dict, send_both_fn):
+    """
+    Run Stages 4 + 5 + 7 for a company. Called in a background thread.
+    Sends progress updates and final memo to both channels.
+    """
+    ticker = company["ticker"]
+    exchange = company["exchange"]
+    name = company["name"]
+    company_id = company["id"]
+    segment = company.get("segment") or "A"
+
+    # Load research brief from DB
+    research_brief = ""
+    try:
+        from core.walker_pipeline_db import get_company_full_profile
+        profile = get_company_full_profile(company_id)
+        research_brief = profile.get("research", {}).get("brief_text", "")
+    except Exception:
+        pass
+
+    # ── Stage 4: Valuation ───────────────────────────────────────────────────
+    logger.info(f"Walker Stage 4 running for {ticker}")
+    from core.walker_stage4_valuation import run_stage4
+    val = run_stage4(ticker, exchange, name, company_id, segment, research_brief)
+
+    if not val.get("success"):
+        send_both_fn(f"❌ Stage 4 failed for {ticker}: {val.get('error', 'Unknown error')}")
+        return
+
+    currency = val.get("currency", "")
+    mos = val["margin_of_safety"]
+    mos_pct = mos * 100
+
+    s4_lines = [
+        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
+        f"💰 STAGE 4 COMPLETE — {name} ({ticker})",
+        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
+        f"Current price: {currency}{val['current_price']:.2f}",
+        f"DCF Bull: {currency}{val['dcf_bull']:.2f}",
+        f"DCF Base: {currency}{val['dcf_base']:.2f}",
+        f"DCF Bear: {currency}{val['dcf_bear']:.2f}",
+        f"Weighted value: {currency}{val['weighted_value']:.2f}",
+        f"Upside: {val['upside_pct']:.1f}%",
+        f"Margin of safety: {mos_pct:.1f}% {'✅' if mos >= 0.20 else '❌ BELOW 20%'}",
+        f"Confidence: {val['confidence']}",
+    ]
+    if val.get("ms_fair_value"):
+        s4_lines.append(
+            f"Morningstar FV: {currency}{val['ms_fair_value']:.2f} | "
+            f"Moat: {val.get('ms_moat', 'N/A')} | "
+            f"{val.get('ms_stars', '?')}⭐ | "
+            f"Stewardship: {val.get('ms_stewardship', 'N/A')}"
+        )
+    if val.get("comps_implied"):
+        s4_lines.append(f"Comps implied: {currency}{val['comps_implied']:.2f}")
+
+    if mos < 0.20:
+        s4_lines.append("")
+        s4_lines.append(f"⛔ Margin of safety {mos_pct:.1f}% is below 20% threshold.")
+        s4_lines.append(f"{name} moved to WATCHING. Monitor for a better entry point.")
+        s4_lines.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+        send_both_fn("\n".join(s4_lines))
+        return
+
+    s4_lines.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+    s4_lines.append("✅ Passes threshold — running Stage 5: Risk Assessment...")
+    send_both_fn("\n".join(s4_lines))
+
+    # ── Stage 5: Risk Assessment ─────────────────────────────────────────────
+    logger.info(f"Walker Stage 5 running for {ticker}")
+    from core.walker_stage5_risk import run_stage5
+    risk = run_stage5(ticker, exchange, name, company_id, segment, research_brief, val)
+
+    if not risk.get("success"):
+        send_both_fn(f"❌ Stage 5 failed for {ticker}: {risk.get('error', 'Unknown error')}")
+        return
+
+    conviction = risk["conviction_score"]
+
+    s5_lines = [
+        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
+        f"⚠️ STAGE 5 COMPLETE — Risk Assessment",
+        f"{name} ({ticker})",
+        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
+    ]
+    if risk.get("var_99") is not None:
+        s5_lines.append(f"VaR 99% (1yr): {risk['var_99']:.1f}% | CVaR 99%: {risk.get('cvar_99', '?'):.1f}%" if risk.get('cvar_99') else f"VaR 99% (1yr): {risk['var_99']:.1f}%")
+    if risk.get("altman_z") is not None:
+        s5_lines.append(f"Altman Z: {risk['altman_z']:.2f} [{risk['altman_zone']}]")
+    if risk.get("fcf_conversion") is not None:
+        s5_lines.append(f"FCF Conversion: {risk['fcf_conversion']:.1f}% [{risk['fcf_label']}]")
+    s5_lines.append(f"Earnings quality flags: {risk['flag_count']}")
+    s5_lines.append(f"Fisher Score: {risk['fisher_score']}/75")
+    if risk["fisher_strengths"]:
+        s5_lines.append(f"Top strength: {risk['fisher_strengths'][0]}")
+    if risk["fisher_concerns"]:
+        s5_lines.append(f"Top concern: {risk['fisher_concerns'][0]}")
+    s5_lines.append(f"Conviction: {conviction}/10 — {risk['conviction_label']}")
+
+    if not risk.get("proceed"):
+        s5_lines.append("")
+        s5_lines.append(f"⛔ Conviction {conviction}/10 — returning {ticker} to watchlist.")
+        s5_lines.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+        send_both_fn("\n".join(s5_lines))
+        return
+
+    s5_lines.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+    s5_lines.append("✅ Conviction threshold met — generating investment memo...")
+    send_both_fn("\n".join(s5_lines))
+
+    # ── Stage 7: Investment Memo ─────────────────────────────────────────────
+    logger.info(f"Walker Stage 7 generating memo for {ticker}")
+    try:
+        from core.walker_pipeline_db import get_company_full_profile, advance_stage
+        from core.walker_memo_generator import generate_investment_memo
+        advance_stage(company_id, "DECISION_READY")
+        full_profile = get_company_full_profile(company_id)
+        memo = generate_investment_memo(full_profile)
+        send_both_fn(memo)
+        logger.info(f"Walker full pipeline complete for {ticker}")
+    except Exception as e:
+        logger.error(f"Memo generation failed for {ticker}: {e}", exc_info=True)
+        send_both_fn(f"❌ Memo generation failed for {ticker}: {e}")
+
+
     # --- SCOUT daily scan (scrapes AI creators — needs Python, not Claude) ---
     if task_name == "daily_scan" and agent_name == "scout":
         try:
@@ -2904,6 +3230,12 @@ def handle_incoming_message(chat_id: str, message_text: str, telegram_config: di
     if agent_name == "command-center":
         handle_command(message_text, telegram_config)
         return
+
+    # Walker Capital command handling (value BHP, /pipeline, /screen, BUY/WATCH/AVOID)
+    if agent_name == "walker-capital":
+        if _handle_walker_command(message_text, chat_id, telegram_config):
+            return
+        # Falls through to normal Vesper chat if not a recognised command
 
     # /memory command works in ANY agent chat — shows what that agent knows
     msg_lower = message_text.strip().lower()
