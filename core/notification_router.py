@@ -291,22 +291,71 @@ def next_dnd_end() -> datetime:
 # --- Core Telegram Sender (wraps existing pattern) ---
 
 def _sanitize_telegram_markdown(text: str) -> str:
-    """Sanitize text for Telegram Markdown v1 to prevent parse failures."""
+    """
+    Sanitize text for Telegram Markdown (v1) to prevent parse failures.
+
+    Telegram Markdown v1 supports: *bold*, _italic_, `inline code`, [link](url)
+    It does NOT support: **double bold**, # headers, ``` code blocks, ---, > blockquotes
+    """
     import re
-    text = re.sub(r'```[\w]*\n?', '', text)
-    underscore_count = text.count('_')
-    if underscore_count % 2 != 0:
-        idx = text.rfind('_')
-        text = text[:idx] + '\\_' + text[idx+1:]
-    asterisk_count = text.count('*')
-    if asterisk_count % 2 != 0:
+
+    # 1. Convert **double asterisk bold** → *single*
+    text = re.sub(r'\*\*(.+?)\*\*', r'*\1*', text, flags=re.DOTALL)
+
+    # 2. Convert __double underscore italic__ → _single_
+    text = re.sub(r'__(.+?)__', r'_\1_', text, flags=re.DOTALL)
+
+    # 3. Replace ``` code blocks
+    def handle_code_block(m):
+        content = m.group(1).strip()
+        if len(content) < 200:
+            return '`' + content.replace('`', "'") + '`'
+        return content
+    text = re.sub(r'```[\w]*\n?(.*?)```', handle_code_block, text, flags=re.DOTALL)
+    text = re.sub(r'```[\w]*', '', text)
+
+    # 4. Strip # headers — remove leading # chars, keep the text
+    text = re.sub(r'^#{1,6}\s+', '', text, flags=re.MULTILINE)
+
+    # 5. Strip horizontal rules
+    text = re.sub(r'^\s*[-=_]{3,}\s*$', '', text, flags=re.MULTILINE)
+
+    # 6. Strip > blockquote markers
+    text = re.sub(r'^>\s*', '', text, flags=re.MULTILINE)
+
+    # 7. Fix unmatched asterisks
+    if text.count('*') % 2 != 0:
         idx = text.rfind('*')
         text = text[:idx] + text[idx+1:]
-    open_brackets = text.count('[')
-    close_brackets = text.count(']')
-    if open_brackets != close_brackets:
+
+    # 8. Fix unmatched underscores
+    if text.count('_') % 2 != 0:
+        idx = text.rfind('_')
+        text = text[:idx] + '\\_' + text[idx+1:]
+
+    # 9. Fix unmatched square brackets
+    if text.count('[') != text.count(']'):
         text = text.replace('[', '(').replace(']', ')')
+
     return text
+
+
+def _split_telegram_message(text: str, limit: int = 4000) -> list:
+    """Split long messages on paragraph boundaries to avoid cutting Markdown spans."""
+    if len(text) <= limit:
+        return [text]
+    chunks = []
+    while len(text) > limit:
+        split_at = text.rfind('\n\n', 0, limit)
+        if split_at == -1:
+            split_at = text.rfind('\n', 0, limit)
+        if split_at == -1:
+            split_at = limit
+        chunks.append(text[:split_at].strip())
+        text = text[split_at:].strip()
+    if text:
+        chunks.append(text)
+    return chunks
 
 
 def _send_telegram_raw(chat_id: str, text: str, bot_token: str,
@@ -322,7 +371,7 @@ def _send_telegram_raw(chat_id: str, text: str, bot_token: str,
     text = _sanitize_telegram_markdown(text)
     url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
 
-    def _post(chunk: str):
+    def _post(chunk: str) -> bool:
         payload = {
             "chat_id": chat_id,
             "text": chunk,
@@ -331,24 +380,27 @@ def _send_telegram_raw(chat_id: str, text: str, bot_token: str,
         if disable_notification:
             payload["disable_notification"] = True
         try:
-            resp = requests.post(url, json=payload, timeout=30)
+            resp = requests.post(url, json=payload, timeout=60)
             data = resp.json() if resp.status_code == 200 else {}
-            if not data.get("ok"):
-                # Markdown can fail with unmatched formatting -- retry as plain text
+            if data.get("ok"):
+                return True
+            # Markdown can fail with unmatched formatting -- retry as plain text
+            desc = str(data.get("description", "")).lower()
+            if "can't parse" in desc or "bad request" in desc:
                 logger.warning(f"Telegram Markdown send failed, retrying as plain text")
                 payload.pop("parse_mode")
-                resp = requests.post(url, json=payload, timeout=30)
-            return resp
+                resp2 = requests.post(url, json=payload, timeout=60)
+                data2 = resp2.json() if resp2.status_code == 200 else {}
+                if data2.get("ok"):
+                    return True
+            logger.error(f"Telegram send failed for {chat_id}: {data.get('description', 'unknown')}")
+            return False
         except requests.RequestException as e:
             logger.error(f"Telegram send failed: {e}")
-            return None
+            return False
 
-    if len(text) > 4000:
-        chunks = [text[i:i + 4000] for i in range(0, len(text), 4000)]
-        for chunk in chunks:
-            _post(chunk)
-    else:
-        _post(text)
+    chunks = _split_telegram_message(text)
+    return all(_post(chunk) for chunk in chunks)
 
 
 # --- Notification Router ---
@@ -417,11 +469,11 @@ class NotificationRouter:
 
         # CRITICAL: Always send immediately, with sound
         if sev == Severity.CRITICAL or force:
-            self._send_now(target_chat, text, disable_notification=False)
+            ok = self._send_now(target_chat, text, disable_notification=False)
             self.queue.log_sent(target_chat, sev.name, text,
                                 was_dnd_held=False)
-            result["action"] = "sent"
-            logger.info(f"[CRITICAL] Sent immediately to {target_chat} "
+            result["action"] = "sent" if ok else "failed"
+            logger.info(f"[CRITICAL] {'Sent' if ok else 'FAILED'} to {target_chat} "
                         f"(DND={'active' if dnd else 'inactive'})")
             return result
 
@@ -444,17 +496,17 @@ class NotificationRouter:
 
         if sev == Severity.NOTABLE:
             # Send immediately but silently
-            self._send_now(target_chat, text, disable_notification=True)
+            ok = self._send_now(target_chat, text, disable_notification=True)
             self.queue.log_sent(target_chat, sev.name, text)
-            result["action"] = "sent"
-            logger.info(f"[NOTABLE] Sent silently to {target_chat}")
+            result["action"] = "sent" if ok else "failed"
+            logger.info(f"[NOTABLE] {'Sent silently' if ok else 'FAILED'} to {target_chat}")
             return result
 
         # IMPORTANT: normal notification
-        self._send_now(target_chat, text, disable_notification=False)
+        ok = self._send_now(target_chat, text, disable_notification=False)
         self.queue.log_sent(target_chat, sev.name, text)
-        result["action"] = "sent"
-        logger.info(f"[IMPORTANT] Sent to {target_chat}")
+        result["action"] = "sent" if ok else "failed"
+        logger.info(f"[IMPORTANT] {'Sent' if ok else 'FAILED'} to {target_chat}")
         return result
 
     def flush_digest(self, chat_id: str = None) -> dict:
@@ -557,17 +609,17 @@ class NotificationRouter:
     # --- Internal ---
 
     def _send_now(self, chat_id: str, text: str,
-                  disable_notification: bool = False):
-        """Send a message via Telegram immediately."""
+                  disable_notification: bool = False) -> bool:
+        """Send a message via Telegram immediately. Returns True if delivered."""
         if not self.bot_token:
             logger.error("Cannot send: no bot_token configured")
-            return
-        _send_telegram_raw(
+            return False
+        return _send_telegram_raw(
             chat_id=chat_id,
             text=text,
             bot_token=self.bot_token,
             disable_notification=disable_notification
-        )
+        ) or False
 
     @staticmethod
     def _format_digest(messages: list[dict]) -> str:

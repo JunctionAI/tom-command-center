@@ -1104,29 +1104,74 @@ def _convert_tables_to_text(text: str) -> str:
 def _sanitize_telegram_markdown(text: str) -> str:
     """
     Sanitize text for Telegram Markdown (v1) to prevent parse failures.
-    Strips problematic patterns that cause Telegram's parser to reject messages.
+
+    Telegram Markdown v1 supports: *bold*, _italic_, `inline code`, [link](url)
+    It does NOT support: **double bold**, # headers, ``` code blocks, ---, > blockquotes
     """
     import re
-    # Remove triple backtick code blocks (Telegram Markdown v1 only supports single backtick)
-    text = re.sub(r'```[\w]*\n?', '', text)
-    # Fix unmatched single underscores (used for italics in Markdown)
-    # Count underscores — if odd, escape the last one
-    underscore_count = text.count('_')
-    if underscore_count % 2 != 0:
-        # Find the last underscore and escape it
-        idx = text.rfind('_')
-        text = text[:idx] + '\\_' + text[idx+1:]
-    # Fix unmatched asterisks
+
+    # 1. Convert **double asterisk bold** → *single* (Claude default, Telegram fails on it)
+    text = re.sub(r'\*\*(.+?)\*\*', r'*\1*', text, flags=re.DOTALL)
+
+    # 2. Convert __double underscore italic__ → _single_
+    text = re.sub(r'__(.+?)__', r'_\1_', text, flags=re.DOTALL)
+
+    # 3. Replace ``` code blocks — extract content, wrap in single backtick if short, else strip markers
+    def handle_code_block(m):
+        content = m.group(1).strip()
+        if len(content) < 200:
+            return '`' + content.replace('`', "'") + '`'
+        return content
+    text = re.sub(r'```[\w]*\n?(.*?)```', handle_code_block, text, flags=re.DOTALL)
+    # Strip any remaining ``` (unclosed blocks)
+    text = re.sub(r'```[\w]*', '', text)
+
+    # 4. Strip # headers — remove leading # chars, keep the text
+    text = re.sub(r'^#{1,6}\s+', '', text, flags=re.MULTILINE)
+
+    # 5. Strip horizontal rules
+    text = re.sub(r'^\s*[-=_]{3,}\s*$', '', text, flags=re.MULTILINE)
+
+    # 6. Strip > blockquote markers
+    text = re.sub(r'^>\s*', '', text, flags=re.MULTILINE)
+
+    # 7. Fix unmatched single asterisks (odd count means parse failure)
     asterisk_count = text.count('*')
     if asterisk_count % 2 != 0:
         idx = text.rfind('*')
         text = text[:idx] + text[idx+1:]
-    # Fix unmatched square brackets (broken links)
-    open_brackets = text.count('[')
-    close_brackets = text.count(']')
-    if open_brackets != close_brackets:
+
+    # 8. Fix unmatched single underscores
+    underscore_count = text.count('_')
+    if underscore_count % 2 != 0:
+        idx = text.rfind('_')
+        text = text[:idx] + '\\_' + text[idx+1:]
+
+    # 9. Fix unmatched square brackets (broken link syntax)
+    if text.count('[') != text.count(']'):
         text = text.replace('[', '(').replace(']', ')')
+
     return text
+
+
+def _split_telegram_message(text: str, limit: int = 4000) -> list:
+    """Split long messages on paragraph boundaries to avoid cutting Markdown spans."""
+    if len(text) <= limit:
+        return [text]
+    chunks = []
+    while len(text) > limit:
+        # Find last double-newline before limit
+        split_at = text.rfind('\n\n', 0, limit)
+        if split_at == -1:
+            # No paragraph boundary — fall back to last newline
+            split_at = text.rfind('\n', 0, limit)
+        if split_at == -1:
+            split_at = limit
+        chunks.append(text[:split_at].strip())
+        text = text[split_at:].strip()
+    if text:
+        chunks.append(text)
+    return chunks
 
 
 def send_telegram(chat_id: str, text: str, bot_token: str):
@@ -1155,7 +1200,7 @@ def send_telegram(chat_id: str, text: str, bot_token: str):
                 "chat_id": chat_id,
                 "text": chunk,
                 "parse_mode": "Markdown"
-            }, timeout=30)
+            }, timeout=60)
             data = resp.json()
             if data.get("ok"):
                 return True
@@ -1166,7 +1211,7 @@ def send_telegram(chat_id: str, text: str, bot_token: str):
                 resp2 = requests.post(url, json={
                     "chat_id": chat_id,
                     "text": chunk,
-                }, timeout=30)
+                }, timeout=60)
                 data2 = resp2.json()
                 if data2.get("ok"):
                     return True
@@ -1179,12 +1224,9 @@ def send_telegram(chat_id: str, text: str, bot_token: str):
             logger.error(f"Telegram send exception for {chat_id}: {e}")
             return False
 
-    # Telegram has a 4096 char limit per message
-    if len(text) > 4000:
-        chunks = [text[i:i+4000] for i in range(0, len(text), 4000)]
-        success = all(_post(chunk) for chunk in chunks)
-    else:
-        success = _post(text)
+    # Split on paragraph boundaries to avoid cutting Markdown spans mid-span
+    chunks = _split_telegram_message(text)
+    success = all(_post(chunk) for chunk in chunks)
 
     if success:
         logger.info(f"Message sent to {chat_id} ({len(text)} chars)")
