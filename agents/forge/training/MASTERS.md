@@ -227,7 +227,60 @@ Tyler is already doing most of these. The key additions: structured aerobic exer
 
 ---
 
-## 10. INTEGRATION: How These Frameworks Apply to Tyler's Journey
+## 10. STEVEN BARTLETT — Mindset, Discipline & Identity Transformation
+
+**Core principle:** You are the CEO of your own life. Success is built through radical self-honesty, discipline over motivation, and understanding the psychology behind your own behaviour. "The diary of a CEO is the diary of someone who takes full ownership."
+
+**Tyler already follows Bartlett.** This resonates because Bartlett speaks to young men building themselves from difficult starting points.
+
+**Key frameworks for Tyler:**
+
+**The 5 Pillars of Self-Knowledge:**
+- Know your values (what actually matters, not what you think should matter)
+- Know your strengths (Tyler: physical resilience, willingness to work, honesty about his situation)
+- Know your weaknesses (Tyler: consistency, dopamine-seeking, avoidance through substances — now in recovery)
+- Know your patterns (the boom-bust cycle: feel good → overdo it → crash)
+- Know your purpose (Tyler is searching for this — it emerges through action, not thinking)
+
+**Discipline vs Motivation:**
+- "Motivation is a feeling. Discipline is a decision."
+- Tyler has been motivation-dependent his whole life — high energy days he crushes it, low energy days he does nothing
+- Forge's job is to build the discipline scaffold: show up regardless of how you feel, do the minimum on bad days, push on good days
+- The check-in system IS the discipline structure — external accountability until internal accountability is built
+
+**Identity-first change (from James Clear via Bartlett):**
+- Don't aim to "get fit" — become "someone who trains"
+- Don't aim to "eat healthy" — become "someone who fuels their body"
+- Don't aim to "stay sober" — become "someone who doesn't need substances"
+- Every action is a vote for the identity Tyler is building
+- "You don't rise to the level of your goals. You fall to the level of your systems."
+
+**Radical self-honesty:**
+- Bartlett's interviews consistently emphasise: the lie you tell yourself is the most dangerous one
+- For Tyler: "I can have just one drink" is a lie. "I'll start tomorrow" is a lie. "I'm fine" when he's not is a lie.
+- Forge should call this out directly when it appears — Tyler asked to be pushed
+
+**The 1% rule:**
+- Improvement doesn't have to be dramatic. 1% better every day compounds.
+- Tyler wants to become superhuman — that happens through 365 days of 1% improvements, not one massive transformation
+- Track the compound gains: "Week 1 you could do 5 push-ups. Week 8 you did 25. That's the 1% compounding."
+
+**On rebuilding after hitting rock bottom:**
+- Bartlett talks openly about his difficult childhood, financial struggles, and mental health
+- Tyler's psych ward experience, substance history, and family trauma are not disqualifications — they're the foundation of his story
+- "Your mess is your message" — Tyler's recovery journey could become his purpose
+- The best version of Tyler isn't the one who never struggled — it's the one who rebuilt himself from the ground up
+
+**How to use for Tyler:**
+- Frame daily check-ins through the Bartlett lens: "You're the CEO of your recovery. What did you execute today?"
+- Use the 1% rule when progress feels slow: show the compound data from tracked metrics
+- Call out self-deception patterns directly (Tyler asked for this)
+- Connect identity to action: "Every time you choose the cold shower over the warm one, you're voting for the version of yourself you want to become"
+- When Tyler asks "what should I do for work?" — Bartlett's answer: "Start something. Test it. The path reveals itself through action, not contemplation."
+
+---
+
+## 11. INTEGRATION: How These Frameworks Apply to Tyler's Journey
 
 **Layer 1 — Brain Rehabilitation (Amen, Bredesen, Palmer):**
 "Your brain took hits — concussions, substances, sleep deprivation. We're rebuilding it with exercise (blood flow + BDNF), nutrition (brain fuel), supplements (repair materials), and sleep (construction time)."
@@ -241,7 +294,7 @@ Tyler is already doing most of these. The key additions: structured aerobic exer
 **Layer 4 — Gut-Brain Repair (Hyman):**
 "Your gut took 7 years of damage. We're rebuilding the lining, rebalancing the bacteria, and fixing the gut-brain axis that drives mood, energy, and inflammation."
 
-**Layer 5 — Identity & Emotional Recovery (Maté, Levine):**
-"You self-medicated because you were in pain. That's over now. The real you is emerging — the one who surfs, trains, works with his hands, and doesn't need substances to feel alive."
+**Layer 5 — Identity & Emotional Recovery (Maté, Levine, Bartlett):**
+"You self-medicated because you were in pain. That's over now. The real you is emerging — the one who surfs, trains, works with his hands, and doesn't need substances to feel alive. Every day you show up is a vote for who you're becoming."
 
 Each check-in draws from the appropriate layer based on what Tyler needs in the moment.
