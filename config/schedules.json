@@ -276,6 +276,12 @@
       "task": "evening_checkin",
       "cron": "30 18 * * *",
       "description": "Aether evening recovery check-in and data collection for Jackson (6:30pm daily)"
+    },
+    {
+      "agent": "aether",
+      "task": "weekly_progress_report",
+      "cron": "0 9 * * 0",
+      "description": "Aether weekly progress summary for Tom — privacy-respecting metrics report (Sunday 9am)"
     }
   ]
 }

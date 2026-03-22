@@ -2349,12 +2349,90 @@ The system will auto-create Asana tasks from your [TASK:] markers. Tom reviews a
         "daily_research": "Execute today's first-principles opportunity analysis. CRITICAL: Read CONTEXT.md first — find the NEXT field to know which human problem to cover today. Do NOT repeat a problem already covered (check LIVE UPDATES in CONTEXT.md for past analyses). Follow the DAILY RESEARCH format in your AGENT.md exactly. Be ruthlessly honest — if the market leader IS the best solution, say so. If supplements aren't the answer for this problem, say so. After your analysis, you MUST emit: [STATE UPDATE: LAST: {problem_name} | DOMAIN: {domain_number} | POS: {position} of 122 | NEXT: {next_problem_name} | SCORE: {X}/10 | TOP_BRAND: {name or 'none'}]",
         "weekly_synthesis": "Execute this Monday's weekly opportunity synthesis. Review your CONTEXT.md for all problems analysed in the past 7 days (check LIVE UPDATES). Follow the WEEKLY SYNTHESIS format in your AGENT.md. Identify cross-cutting patterns, rank the top 3 opportunities, and update the cumulative brands watchlist. ALSO: after the synthesis, run today's daily first-principles analysis on the next problem in your rotation (check NEXT in CONTEXT.md). Emit [STATE UPDATE:] for both the synthesis and the new daily analysis position.",
         # --- Aether (Recovery Companion for Jackson) ---
+        "weekly_progress_report": "",  # Handled specially below (generates summary for Tom, not Jackson)
         "morning_checkin": "Execute your morning check-in for Jackson. Follow the exact Morning Ground format in your AGENT.md. Be warm and gentle. Ask about sleep (hours, quality, disturbances), current body state (tension level 1-10, locations, POTS symptoms), current mind state (mood 1-10, anxiety, OCD intrusion). Deliver today's micro-practice (rotate based on current phase from CONTEXT.md) and a psychoeducation snippet from one thought leader in MASTERS.md. Include a nutrition reminder. Keep it SHORT — Jackson should read this in 60 seconds and respond in 30 seconds. Check CONTEXT.md first to know which phase he's in and tailor accordingly.",
         "midday_checkin": "Execute your midday check-in for Jackson. Follow the Midday Move format in your AGENT.md. Quick touchpoint only — 3-4 questions max. Did he try this morning's practice? Has he had a shake/meal? Tension right now (1-10)? Any symptom spike? Ask for one micro-win (one thing he did today, even tiny). Keep it SHORT and encouraging. This is a touchpoint, not a deep dive.",
         "evening_checkin": "Execute your evening check-in for Jackson. This is your PRIMARY data collection session. Follow the Evening Reflect format in your AGENT.md exactly. Start with 'How was today overall?' then collect ALL structured metrics: energy (1-10), mood (1-10), tension peak (1-10 + trigger), OCD intrusion frequency, fear-of-damage (1-10), POTS severity (1-10), social interaction type, nutrition (shakes/meals + estimated calories), exercise (type + duration), practice adherence (which techniques used/skipped). After Jackson responds, point out any patterns from the 7-day diary. Name today's wins explicitly. Suggest tomorrow's focus and a wind-down technique. Emit [STATE UPDATE:] with ALL metrics, [METRIC:] for each number, any [INSIGHT:] or [PATTERN:] detected, and [PHASE_CHECK: current_phase|criteria_met_list|criteria_remaining_list].",
     }
 
     task_prompt = task_prompts.get(task_name, f"Execute task: {task_name}. Follow the instructions and format in your AGENT.md.")
+
+    # Aether weekly progress report: generates a privacy-respecting summary for Tom
+    if task_name == "weekly_progress_report" and agent_name == "aether":
+        try:
+            # Read CONTEXT.md for phase and metrics
+            context_file = AGENTS_DIR / "aether" / "state" / "CONTEXT.md"
+            context = context_file.read_text(encoding='utf-8') if context_file.exists() else "No state data yet."
+
+            # Count session logs (check-in adherence proxy)
+            state_dir = AGENTS_DIR / "aether" / "state"
+            log_count = 0
+            for days_back in range(1, 8):
+                log_date = (datetime.now(NZ_TZ).date() - timedelta(days=days_back)).isoformat()
+                if (state_dir / f"session-log-{log_date}.md").exists():
+                    log_count += 1
+
+            # Read knowledge.md for patterns
+            knowledge_file = AGENTS_DIR / "aether" / "knowledge.md"
+            knowledge = knowledge_file.read_text(encoding='utf-8') if knowledge_file.exists() else ""
+
+            # Get memory fact count for Jackson
+            try:
+                from core.user_memory import get_memory_stats
+                stats = get_memory_stats("jackson")
+                fact_count = stats.get('active_facts', 0)
+                msg_count = stats.get('total_messages', 0)
+            except Exception:
+                fact_count = 0
+                msg_count = 0
+
+            # Build the summary prompt — sent to Claude to generate, then routed to Tom's command-center
+            task_prompt = f"""You are generating a WEEKLY PROGRESS REPORT about Jackson's recovery for Tom (who set up this agent).
+
+This report goes to Tom's command-center channel. It must be:
+- Privacy-respecting: NO personal details, therapy content, or emotional disclosures
+- Data-focused: adherence %, metric trends, phase status
+- Concise: under 300 words
+
+Here is Aether's current state (CONTEXT.md):
+{context[:3000]}
+
+Session logs found for last 7 days: {log_count}/7
+
+Memory system: {fact_count} facts learned, {msg_count} messages archived
+
+Generate the report in this format:
+
+AETHER WEEKLY PROGRESS — [Phase X: Name], Day [N]
+
+ENGAGEMENT
+- Check-in days active: X/7
+- Messages exchanged: {msg_count} total
+- Facts learned: {fact_count}
+
+METRICS TREND (from CONTEXT.md data, use whatever is available)
+- List key metrics with 7-day averages and trend direction (up/down/stable)
+- If baseline not yet established, say so
+
+PHASE STATUS
+- Current phase and days in it
+- Which transition criteria are met vs remaining
+- Estimated readiness: on track / needs attention / blocked
+
+SYSTEM HEALTH
+- Memory system: working / issues
+- Agent responding: yes (confirmed by session logs)
+
+Flag anything that needs Tom's attention (e.g., low adherence, no responses for 2+ days, phase transition ready).
+
+Do NOT include any personal health details, therapy discussions, or emotional content."""
+
+            # Override: send to command-center, not aether channel
+            chat_id = telegram_config.get("chat_ids", {}).get("command-center", chat_id)
+
+        except Exception as e:
+            logger.error(f"Aether weekly report generation failed: {e}")
+            return
 
     # Evening reading: knowledge engine builds the full prompt
     if task_name == "evening_reading":
@@ -3088,6 +3166,17 @@ The daily plan should reference the 90-day execution map from Meridian's intelli
     # Send to Telegram
     # Beacon uses command-center channel (no dedicated channel)
     send_chat_id = chat_id
+
+    # Aether: notify Tom's command-center that a check-in was sent (quiet, no content)
+    if agent_name == "aether" and task_name in ("morning_checkin", "midday_checkin", "evening_checkin"):
+        cc_chat = telegram_config.get("chat_ids", {}).get("command-center", "")
+        if cc_chat:
+            checkin_labels = {"morning_checkin": "Morning Ground", "midday_checkin": "Midday Move", "evening_checkin": "Evening Reflect"}
+            from core.notification_router import route_notification
+            route_notification(cc_chat,
+                               f"Aether {checkin_labels.get(task_name, task_name)} check-in sent to Jackson.",
+                               bot_token, severity="INFO", agent="aether")
+
     if agent_name == "beacon":
         send_chat_id = telegram_config.get("chat_ids", {}).get("command-center", chat_id)
         # Beacon sends a brief notification, not the full article
