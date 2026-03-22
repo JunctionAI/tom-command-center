@@ -146,10 +146,14 @@ CHAT_USER_MAP = {
 # THIS IS THE KEY FUNCTION. Every time an agent speaks, it reads its entire
 # knowledge stack first. Same pattern as DBH AIOS CLAUDE.md session startup.
 
-def load_agent_brain(agent_name: str, user_id: str = None) -> str:
+def load_agent_brain(agent_name: str, user_id: str = None, current_context: str = "") -> str:
     """
     Load the full brain for an agent. This is the equivalent of the
     CLAUDE.md session startup -- read identity, skills, playbooks, state.
+
+    current_context: Optional — the user's current message or task prompt.
+    If provided AND agent is a companion (aether/forge), uses ASMR active
+    retrieval instead of flat memory loading.
 
     Returns a complete system prompt that makes the agent fully contextualised.
     """
@@ -322,17 +326,25 @@ def load_agent_brain(agent_name: str, user_id: str = None) -> str:
                 logger.info(f"Loaded {len(strategy_files)} shared strategy files for {agent_name}")
 
     # 9. USER MEMORY -- Persistent learned knowledge about this user
-    # This is the production memory system: facts + summaries auto-extracted
-    # from every conversation. Loaded into every prompt, like CLAUDE.md.
+    # Memory system: ASMR active retrieval for companions, legacy flat loading for others
     if user_id:
         try:
-            from core.user_memory import load_user_memory
-            user_memory = load_user_memory(user_id, agent_name)
-            if user_memory:
-                brain_parts.append(user_memory)
-                logger.info(f"Loaded user memory for {agent_name}/{user_id}: {len(user_memory)} chars")
+            if agent_name in CHAT_USER_MAP and current_context:
+                # ASMR: active retrieval with 3 parallel search agents
+                from core.asmr_memory import asmr_load
+                user_memory = asmr_load(user_id, agent_name, current_context)
+                if user_memory:
+                    brain_parts.append(user_memory)
+                    logger.info(f"ASMR memory loaded for {agent_name}/{user_id}: {len(user_memory)} chars")
+            else:
+                # Legacy: flat fact loading for Tom's agents
+                from core.user_memory import load_user_memory
+                user_memory = load_user_memory(user_id, agent_name)
+                if user_memory:
+                    brain_parts.append(user_memory)
+                    logger.info(f"Legacy memory loaded for {agent_name}/{user_id}: {len(user_memory)} chars")
         except Exception as e:
-            logger.warning(f"User memory load failed (non-fatal): {e}")
+            logger.warning(f"Memory load failed (non-fatal): {e}")
 
     brain = "\n\n".join(brain_parts)
 
@@ -2330,7 +2342,9 @@ def _run_walker_full_analysis(company: dict, send_both_fn):
 
     # Resolve user_id for agents serving non-default users (e.g., Aether → Jackson)
     sched_user_id = CHAT_USER_MAP.get(agent_name)
-    brain = load_agent_brain(agent_name, user_id=sched_user_id)
+    # For companions: pass task_name as context for ASMR retrieval
+    sched_context = f"Scheduled {task_name} check-in" if sched_user_id else ""
+    brain = load_agent_brain(agent_name, user_id=sched_user_id, current_context=sched_context)
 
     # Build task-specific prompt
     task_prompts = {
@@ -3476,7 +3490,8 @@ def handle_incoming_message(chat_id: str, message_text: str, telegram_config: di
         user_id = CHAT_USER_MAP.get(agent_name, str(telegram_config.get("owner_user_id", os.environ.get("TELEGRAM_OWNER_ID", "default"))))
 
         # Load full brain WITH user memory injected
-        brain = load_agent_brain(agent_name, user_id=user_id)
+        # For companions: pass user's message as context for ASMR active retrieval
+        brain = load_agent_brain(agent_name, user_id=user_id, current_context=message_text)
 
         if not brain:
             from core.notification_router import route_notification
@@ -3661,17 +3676,20 @@ If you identify a campaign opportunity or creative need (Meridian/PREP only), em
             logger.error(f"FAILED to deliver {agent_name} response to {chat_id}")
 
         # AUTOMATIC MEMORY EXTRACTION — runs after every conversation
-        # Uses Haiku (~$0.001) to extract facts from the exchange.
-        # This is what makes the product work: continuous, automatic learning.
+        # Companions use ASMR (3 parallel observer agents, ~$0.003)
+        # Other agents use legacy Haiku extraction (~$0.001)
         try:
-            from core.user_memory import extract_and_store_memories
             agent_display = AGENT_DISPLAY.get(agent_name, agent_name)
-            # Build conversation from the exchange (current + history)
             extraction_conv = conv_history + [
                 {"role": "user", "content": message_text},
                 {"role": "assistant", "content": clean_response}
             ]
-            extract_and_store_memories(user_id, agent_name, extraction_conv, agent_display)
+            if agent_name in CHAT_USER_MAP:
+                from core.asmr_memory import asmr_extract
+                asmr_extract(user_id, agent_name, extraction_conv, agent_display)
+            else:
+                from core.user_memory import extract_and_store_memories
+                extract_and_store_memories(user_id, agent_name, extraction_conv, agent_display)
         except Exception as mem_e:
             logger.warning(f"Memory extraction failed (non-fatal): {mem_e}")
 
