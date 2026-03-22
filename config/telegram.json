@@ -27,8 +27,11 @@
     "muse": "-5133376549",
     "walker-capital-tom": "-5194232428",
     "walker-capital-trent": "-5293852288",
-    "medici": "-5242918514"
+    "medici": "-5242918514",
+    "prospector": "-5255505982",
+    "aether": "-1005193433346"
   },
+  "authorized_users": ["8502825979"],
   "agent_names": {
     "global-events": "Atlas",
     "dbh-marketing": "Meridian",
@@ -55,6 +58,8 @@
     "muse": "Muse",
     "walker-capital-tom": "Vesper",
     "walker-capital-trent": "Vesper",
-    "medici": "Medici"
+    "medici": "Medici",
+    "prospector": "Prospector",
+    "aether": "Aether"
   }
 }

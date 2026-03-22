@@ -135,6 +135,12 @@ def get_learning_db():
     return _learning_db
 
 
+# --- Multi-User Support ---
+# Map agent names to non-default user_ids (most agents serve Tom)
+CHAT_USER_MAP = {
+    "aether": "jackson",
+}
+
 # --- Agent Brain Loader ---
 # THIS IS THE KEY FUNCTION. Every time an agent speaks, it reads its entire
 # knowledge stack first. Same pattern as DBH AIOS CLAUDE.md session startup.
@@ -179,7 +185,7 @@ def load_agent_brain(agent_name: str, user_id: str = None) -> str:
 
     # Diary-tracking agents load last 7 days of session logs for continuity.
     # Other agents load yesterday only.
-    DIARY_AGENTS = ["asclepius-brain", "marcus-stoic", "compass"]
+    DIARY_AGENTS = ["asclepius-brain", "marcus-stoic", "compass", "aether"]
     if agent_name in DIARY_AGENTS:
         recent_logs = []
         for days_back in range(1, 8):  # Last 7 days
@@ -2262,7 +2268,9 @@ def _run_walker_full_analysis(company: dict, send_both_fn):
             logger.error(f"SCOUT daily scan failed: {e}")
         return
 
-    brain = load_agent_brain(agent_name)
+    # Resolve user_id for agents serving non-default users (e.g., Aether → Jackson)
+    sched_user_id = CHAT_USER_MAP.get(agent_name)
+    brain = load_agent_brain(agent_name, user_id=sched_user_id)
 
     # Build task-specific prompt
     task_prompts = {
@@ -2340,6 +2348,10 @@ The system will auto-create Asana tasks from your [TASK:] markers. Tom reviews a
         "morning_wisdom": "Deliver today's morning Stoic wisdom. One practical micro-action for today — grounded in Marcus Aurelius, Epictetus, or Seneca but applied to Tom's actual life right now. Reference what you know about his current state from CONTEXT.md. Keep it under 150 words. Concrete, not abstract. Emit [STATE UPDATE:] with the practice assigned.",
         "daily_research": "Execute today's first-principles opportunity analysis. CRITICAL: Read CONTEXT.md first — find the NEXT field to know which human problem to cover today. Do NOT repeat a problem already covered (check LIVE UPDATES in CONTEXT.md for past analyses). Follow the DAILY RESEARCH format in your AGENT.md exactly. Be ruthlessly honest — if the market leader IS the best solution, say so. If supplements aren't the answer for this problem, say so. After your analysis, you MUST emit: [STATE UPDATE: LAST: {problem_name} | DOMAIN: {domain_number} | POS: {position} of 122 | NEXT: {next_problem_name} | SCORE: {X}/10 | TOP_BRAND: {name or 'none'}]",
         "weekly_synthesis": "Execute this Monday's weekly opportunity synthesis. Review your CONTEXT.md for all problems analysed in the past 7 days (check LIVE UPDATES). Follow the WEEKLY SYNTHESIS format in your AGENT.md. Identify cross-cutting patterns, rank the top 3 opportunities, and update the cumulative brands watchlist. ALSO: after the synthesis, run today's daily first-principles analysis on the next problem in your rotation (check NEXT in CONTEXT.md). Emit [STATE UPDATE:] for both the synthesis and the new daily analysis position.",
+        # --- Aether (Recovery Companion for Jackson) ---
+        "morning_checkin": "Execute your morning check-in for Jackson. Follow the exact Morning Ground format in your AGENT.md. Be warm and gentle. Ask about sleep (hours, quality, disturbances), current body state (tension level 1-10, locations, POTS symptoms), current mind state (mood 1-10, anxiety, OCD intrusion). Deliver today's micro-practice (rotate based on current phase from CONTEXT.md) and a psychoeducation snippet from one thought leader in MASTERS.md. Include a nutrition reminder. Keep it SHORT — Jackson should read this in 60 seconds and respond in 30 seconds. Check CONTEXT.md first to know which phase he's in and tailor accordingly.",
+        "midday_checkin": "Execute your midday check-in for Jackson. Follow the Midday Move format in your AGENT.md. Quick touchpoint only — 3-4 questions max. Did he try this morning's practice? Has he had a shake/meal? Tension right now (1-10)? Any symptom spike? Ask for one micro-win (one thing he did today, even tiny). Keep it SHORT and encouraging. This is a touchpoint, not a deep dive.",
+        "evening_checkin": "Execute your evening check-in for Jackson. This is your PRIMARY data collection session. Follow the Evening Reflect format in your AGENT.md exactly. Start with 'How was today overall?' then collect ALL structured metrics: energy (1-10), mood (1-10), tension peak (1-10 + trigger), OCD intrusion frequency, fear-of-damage (1-10), POTS severity (1-10), social interaction type, nutrition (shakes/meals + estimated calories), exercise (type + duration), practice adherence (which techniques used/skipped). After Jackson responds, point out any patterns from the 7-day diary. Name today's wins explicitly. Suggest tomorrow's focus and a wind-down technique. Emit [STATE UPDATE:] with ALL metrics, [METRIC:] for each number, any [INSIGHT:] or [PATTERN:] detected, and [PHASE_CHECK: current_phase|criteria_met_list|criteria_remaining_list].",
     }
 
     task_prompt = task_prompts.get(task_name, f"Execute task: {task_name}. Follow the instructions and format in your AGENT.md.")
@@ -3243,7 +3255,7 @@ def handle_incoming_message(chat_id: str, message_text: str, telegram_config: di
     msg_lower = message_text.strip().lower()
     if msg_lower in ("/memory", "memory", "/what do you know about me"):
         try:
-            user_id = str(telegram_config.get("owner_user_id", os.environ.get("TELEGRAM_OWNER_ID", "default")))
+            user_id = CHAT_USER_MAP.get(agent_name, str(telegram_config.get("owner_user_id", os.environ.get("TELEGRAM_OWNER_ID", "default"))))
             from core.user_memory import format_memory_for_display
             memory_text = format_memory_for_display(user_id, agent_id=agent_name)
             send_telegram(chat_id, memory_text, telegram_config["bot_token"])
@@ -3251,7 +3263,7 @@ def handle_incoming_message(chat_id: str, message_text: str, telegram_config: di
             send_telegram(chat_id, f"Memory system error: {e}", telegram_config["bot_token"])
         return
 
-    logger.info(f"Message from Tom to {agent_name}: {message_text[:50]}...")
+    logger.info(f"Message to {agent_name}: {message_text[:50]}...")
 
     # Send "typing..." indicator so Tom knows the bot received the message.
     # Especially important for PREP which can take 2+ minutes (Opus + data injection).
@@ -3266,8 +3278,8 @@ def handle_incoming_message(chat_id: str, message_text: str, telegram_config: di
         pass  # Non-fatal — just a UX hint
 
     try:
-        # Resolve user_id from telegram config (for multi-user: would come from message sender)
-        user_id = str(telegram_config.get("owner_user_id", os.environ.get("TELEGRAM_OWNER_ID", "default")))
+        # Resolve user_id: most agents serve Tom, but some serve other users (e.g., Aether → Jackson)
+        user_id = CHAT_USER_MAP.get(agent_name, str(telegram_config.get("owner_user_id", os.environ.get("TELEGRAM_OWNER_ID", "default"))))
 
         # Load full brain WITH user memory injected
         brain = load_agent_brain(agent_name, user_id=user_id)
@@ -3996,9 +4008,12 @@ def start_polling(telegram_config: dict):
 
                     logger.info(f"Update received: chat_id={chat_id}, user_id={user_id}, text={text[:60] if text else '(no text)'}")
 
-                    # Security: only respond to Tom
-                    if user_id != str(owner_id).strip():
-                        logger.warning(f"Ignoring message from unknown user: user_id='{user_id}' vs owner_id='{owner_id}'")
+                    # Security: only respond to authorised users (Tom + any configured extras like Jackson)
+                    authorized = {str(owner_id).strip()}
+                    for extra_id in telegram_config.get("authorized_users", []):
+                        authorized.add(str(extra_id).strip())
+                    if user_id not in authorized:
+                        logger.warning(f"Ignoring message from unknown user: user_id='{user_id}'")
                         continue
 
                     # Handle voice messages

@@ -258,6 +258,24 @@
       "task": "cleanup_conversation_history",
       "cron": "30 3 * * *",
       "description": "Clean up conversation history older than 7 days (3:30am daily)"
+    },
+    {
+      "agent": "aether",
+      "task": "morning_checkin",
+      "cron": "0 8 * * *",
+      "description": "Aether morning recovery check-in for Jackson (8am daily)"
+    },
+    {
+      "agent": "aether",
+      "task": "midday_checkin",
+      "cron": "0 13 * * *",
+      "description": "Aether midday recovery check-in for Jackson (1pm daily)"
+    },
+    {
+      "agent": "aether",
+      "task": "evening_checkin",
+      "cron": "30 18 * * *",
+      "description": "Aether evening recovery check-in and data collection for Jackson (6:30pm daily)"
     }
   ]
 }
