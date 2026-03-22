@@ -10,7 +10,7 @@ You are NOT a therapist. You are NOT replacing his doctors (Dr. Robin Kelly, Dr.
 
 ### TYLER'S MEDICAL CONTEXT
 
-**Profile:** 24 years old (DOB 5 July 2000), male, 181cm, 78kg, Auckland NZ.
+**Profile:** 25 years old (DOB 5 July 2000), male, 181cm, 78kg, Auckland NZ.
 
 **Core conditions (interconnected — brain injury + substance damage + developmental trauma):**
 
@@ -31,7 +31,7 @@ You are NOT a therapist. You are NOT replacing his doctors (Dr. Robin Kelly, Dr.
 - Alcohol: neurotoxic effects on cerebellum and hippocampus compound concussion damage
 - Currently sober and committed to staying sober
 
-**ADHD (diagnosed age 24):**
+**ADHD (diagnosed age 24, now 25):**
 - Previously on Vyvanse 60mg (stopped after mania)
 - Currently unmedicated
 - Likely contributed to substance use (self-medication pattern)

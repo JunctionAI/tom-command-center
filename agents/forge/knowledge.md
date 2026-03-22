@@ -5,7 +5,7 @@
 
 ## TYLER'S PROFILE
 - Full name: Tyler Howarth
-- Age: 24 (DOB 5 July 2000)
+- Age: 25 (DOB 5 July 2000)
 - Height: 181cm
 - Weight: 78kg
 - Location: Auckland, New Zealand

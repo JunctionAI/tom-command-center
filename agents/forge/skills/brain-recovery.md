@@ -87,7 +87,7 @@ Brain benefits:
 - Baseline (post-mania, pre-mushroom): 24-25 (severely dysregulated)
 - Current (post-mushroom): 38 (recovering)
 - 3-month target: 50+
-- 6-month target: 60-70 (healthy 24-year-old range)
+- 6-month target: 60-70 (healthy 25-year-old range)
 
 **What moves HRV up:**
 - Consistent sleep schedule (biggest single factor)

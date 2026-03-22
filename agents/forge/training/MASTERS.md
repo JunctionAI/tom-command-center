@@ -124,7 +124,7 @@
 **Tyler's HRV story:**
 - HRV 24-25 = severely dysregulated (dorsal vagal dominant — shutdown, fatigue, dissociation)
 - HRV 38 (post-mushroom) = sympathetic/ventral vagal rebalancing beginning
-- Target: HRV 50-70 = healthy autonomic function for 24-year-old male
+- Target: HRV 50-70 = healthy autonomic function for 25-year-old male
 
 **HRV optimization protocols:**
 - Morning sunlight (circadian vagal toning)
