@@ -14,6 +14,18 @@
       "description": "Atlas morning world briefing (6:15am daily, one comprehensive scan)"
     },
     {
+      "agent": "beacon",
+      "task": "dbh_keyword_daily_check",
+      "cron": "30 6 * * *",
+      "description": "DBH keyword ranking tracker — pull GSC data for all 37 keywords across NZ/AUS/USA (6:30am daily)"
+    },
+    {
+      "agent": "beacon",
+      "task": "ai_visibility_weekly_check",
+      "cron": "0 3 * * 0",
+      "description": "AI visibility check — query ChatGPT/Claude/Perplexity/Gemini for DBH citations (Sunday 3am)"
+    },
+    {
       "agent": "strategic-advisor",
       "task": "tony_report",
       "cron": "0 7 * * 1",
@@ -194,10 +206,28 @@
       "description": "Vesper daily company discovery scan + pipeline status brief (7am)"
     },
     {
+      "agent": "odysseus-money",
+      "task": "daily_lesson",
+      "cron": "30 6 * * *",
+      "description": "Odysseus daily financial reality + wealth builder lesson (6:30am)"
+    },
+    {
+      "agent": "marcus-stoic",
+      "task": "morning_wisdom",
+      "cron": "45 6 * * *",
+      "description": "Marcus daily stoic morning wisdom — small practice for today (6:45am)"
+    },
+    {
       "agent": "marcus-stoic",
       "task": "weekly_lesson",
       "cron": "0 20 * * 0",
       "description": "Aurelius Sunday weekly lesson — one thing to improve in cooking + one in personal life for the coming week (8pm)"
+    },
+    {
+      "agent": "strategos-pg",
+      "task": "daily_lesson",
+      "cron": "30 19 * * *",
+      "description": "Strategos daily PG/wealth management industry lesson (7:30pm)"
     },
     {
       "agent": "strategic-advisor",
@@ -208,7 +238,7 @@
     {
       "agent": "prospector",
       "task": "daily_research",
-      "cron": "0 11 * * 2-7",
+      "cron": "0 11 * * 1-6",
       "description": "Prospector daily first-principles opportunity analysis (11am, Tue-Sun)"
     },
     {
