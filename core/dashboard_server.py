@@ -89,7 +89,7 @@ def get_sync_status():
 BASE_DIR = Path(__file__).parent.parent
 DATA_DIR = BASE_DIR / "data"
 LOG_FILE = BASE_DIR / "orchestrator.log"
-DASHBOARD_FILE = BASE_DIR / "SYSTEM-PIPELINE-DASHBOARD.html"
+DASHBOARD_FILE = BASE_DIR / "DASHBOARD.html"
 
 
 def get_db(name):
@@ -2737,6 +2737,151 @@ def get_ltv_data():
             "josh_claim_debunked": "Josh's 3.1% = % of total customers in reorder window, NOT retention rate. Real repeat rate = 31.7%",
         },
     }
+
+
+@app.get("/api/dbh/keyword-tracker")
+def get_keyword_tracker(market: str = "NZ", product: str = ""):
+    """SEMRush-style keyword ranking data. market=NZ|AUS|USA, product=filter by product."""
+    try:
+        from core.dbh_keyword_tracker import (
+            get_latest_rankings, get_market_summary, get_top_movers,
+            get_quick_wins, get_all_market_summary, get_product_summary,
+            get_keywords_for_product
+        )
+
+        if product:
+            rankings = get_keywords_for_product(product, market)
+        else:
+            rankings = get_latest_rankings(market)
+
+        summary = get_market_summary(market)
+        movers = get_top_movers(market, limit=5)
+        quick_wins = get_quick_wins(market)
+        all_markets = get_all_market_summary()
+        product_summary = get_product_summary(market)
+
+        return {
+            "market": market,
+            "product_filter": product,
+            "summary": summary,
+            "all_markets": all_markets,
+            "product_summary": product_summary,
+            "rankings": rankings,
+            "top_movers": movers,
+            "quick_wins": quick_wins,
+        }
+    except Exception as e:
+        logger.error(f"keyword-tracker endpoint error: {e}")
+        return {
+            "market": market, "product_filter": product,
+            "summary": {"total_tracked": 0, "ranking": 0, "not_ranking": 0,
+                        "top_3": 0, "top_10": 0, "top_20": 0, "top_50": 0,
+                        "avg_position": None, "total_clicks": 0,
+                        "total_impressions": 0, "trend": "stable"},
+            "all_markets": {}, "product_summary": [], "rankings": [],
+            "top_movers": {"gainers": [], "losers": []}, "quick_wins": [],
+            "error": str(e),
+        }
+
+
+@app.get("/api/dbh/ai-visibility/products")
+def get_ai_visibility_by_product():
+    """Per-product AI citation rates across all platforms."""
+    try:
+        from core.ai_visibility_tracker import get_product_citation_summary
+        return {"products": get_product_citation_summary(days=30)}
+    except Exception as e:
+        logger.error(f"ai-visibility products endpoint error: {e}")
+        return {"products": [], "error": str(e)}
+
+
+@app.get("/api/dbh/keyword-tracker/history")
+def get_keyword_history(keyword: str = "", market: str = "NZ", days: int = 90):
+    """Position history for a single keyword + market (sparkline data)."""
+    try:
+        from core.dbh_keyword_tracker import get_ranking_history
+        if not keyword:
+            return {"error": "keyword parameter required"}
+        history = get_ranking_history(keyword, market, days)
+        return {"keyword": keyword, "market": market, "history": history}
+    except Exception as e:
+        logger.error(f"keyword history endpoint error: {e}")
+        return {"keyword": keyword, "history": [], "error": str(e)}
+
+
+@app.get("/api/dbh/ai-visibility")
+def get_ai_visibility():
+    """AI citation tracking across ChatGPT, Claude, Perplexity, Gemini."""
+    try:
+        from core.ai_visibility_tracker import get_platform_summary, get_citation_trend, get_gap_analysis
+        platforms = get_platform_summary(days=30)
+        gap_analysis = get_gap_analysis()
+        trend = get_citation_trend("perplexity", days=90)
+        # Overall mention rate (across all active platforms)
+        active = [p for p in platforms if p["status"] == "active" and p["total_queries"] > 0]
+        overall_rate = 0.0
+        if active:
+            total_q = sum(p["total_queries"] for p in active)
+            total_m = sum(p["dbh_mentions"] for p in active)
+            overall_rate = round(total_m / total_q * 100, 1) if total_q else 0.0
+        last_checked = max(
+            (p["checked_date"] for p in platforms if p.get("checked_date")),
+            default=None
+        )
+        return {
+            "platforms": platforms,
+            "overall_citation_rate": overall_rate,
+            "last_checked": last_checked,
+            "gap_analysis": gap_analysis,
+            "perplexity_trend": trend,
+        }
+    except Exception as e:
+        logger.error(f"ai-visibility endpoint error: {e}")
+        return {
+            "platforms": [
+                {"platform": p, "citation_rate": 0, "status": "no_data",
+                 "dbh_mentions": 0, "total_queries": 0, "top_competitors": [],
+                 "checked_date": None}
+                for p in ["perplexity", "claude", "chatgpt", "gemini"]
+            ],
+            "overall_citation_rate": 0,
+            "last_checked": None,
+            "gap_analysis": [],
+            "perplexity_trend": [],
+            "error": str(e),
+        }
+
+
+@app.get("/api/global/partners")
+def get_global_partners():
+    """HubSpot wholesale partner intelligence for Global Distribution tab."""
+    try:
+        from core.hubspot_client import get_partner_summary_for_dashboard
+        return get_partner_summary_for_dashboard()
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+
+@app.get("/api/delivery")
+def get_delivery_log(hours: int = 24, bot: str = None):
+    """Cross-bot delivery log for monitoring all bots and recipients."""
+    try:
+        from core.delivery_monitor import get_recent_deliveries
+        deliveries = get_recent_deliveries(hours=hours, bot_name=bot)
+        return {"status": "ok", "count": len(deliveries), "deliveries": deliveries}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+
+@app.get("/api/delivery/summary")
+def get_delivery_summary():
+    """Per-bot, per-recipient delivery summary with success rates."""
+    try:
+        from core.delivery_monitor import get_delivery_summary
+        summary = get_delivery_summary()
+        return {"status": "ok", "summary": summary}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
 
 
 @app.get("/", response_class=HTMLResponse)

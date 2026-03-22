@@ -145,7 +145,8 @@ class NotificationQueue:
                 message_preview TEXT,
                 sent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 was_batched BOOLEAN DEFAULT 0,
-                was_dnd_held BOOLEAN DEFAULT 0
+                was_dnd_held BOOLEAN DEFAULT 0,
+                delivery_status TEXT DEFAULT 'unknown'
             );
 
             CREATE INDEX IF NOT EXISTS idx_pending_chat
@@ -155,6 +156,11 @@ class NotificationQueue:
             CREATE INDEX IF NOT EXISTS idx_log_sent
                 ON notification_log(sent_at);
         """)
+        # Migration: add delivery_status column if missing (existing tables)
+        try:
+            conn.execute("SELECT delivery_status FROM notification_log LIMIT 1")
+        except sqlite3.OperationalError:
+            conn.execute("ALTER TABLE notification_log ADD COLUMN delivery_status TEXT DEFAULT 'unknown'")
         conn.commit()
 
     def enqueue(self, chat_id: str, message: str, severity: str, agent: str = None):
@@ -201,14 +207,15 @@ class NotificationQueue:
         conn.commit()
 
     def log_sent(self, chat_id: str, severity: str, message_preview: str,
-                 was_batched: bool = False, was_dnd_held: bool = False):
+                 was_batched: bool = False, was_dnd_held: bool = False,
+                 delivery_status: str = "delivered"):
         """Record a sent notification for audit trail."""
         conn = self._get_conn()
         conn.execute(
             """INSERT INTO notification_log
-               (chat_id, severity, message_preview, was_batched, was_dnd_held)
-               VALUES (?, ?, ?, ?, ?)""",
-            (str(chat_id), severity, message_preview[:200], was_batched, was_dnd_held)
+               (chat_id, severity, message_preview, was_batched, was_dnd_held, delivery_status)
+               VALUES (?, ?, ?, ?, ?, ?)""",
+            (str(chat_id), severity, message_preview[:200], was_batched, was_dnd_held, delivery_status)
         )
         conn.commit()
 
@@ -471,7 +478,8 @@ class NotificationRouter:
         if sev == Severity.CRITICAL or force:
             ok = self._send_now(target_chat, text, disable_notification=False)
             self.queue.log_sent(target_chat, sev.name, text,
-                                was_dnd_held=False)
+                                was_dnd_held=False,
+                                delivery_status="delivered" if ok else "failed")
             result["action"] = "sent" if ok else "failed"
             logger.info(f"[CRITICAL] {'Sent' if ok else 'FAILED'} to {target_chat} "
                         f"(DND={'active' if dnd else 'inactive'})")
@@ -497,14 +505,16 @@ class NotificationRouter:
         if sev == Severity.NOTABLE:
             # Send immediately but silently
             ok = self._send_now(target_chat, text, disable_notification=True)
-            self.queue.log_sent(target_chat, sev.name, text)
+            self.queue.log_sent(target_chat, sev.name, text,
+                                delivery_status="delivered" if ok else "failed")
             result["action"] = "sent" if ok else "failed"
             logger.info(f"[NOTABLE] {'Sent silently' if ok else 'FAILED'} to {target_chat}")
             return result
 
         # IMPORTANT: normal notification
         ok = self._send_now(target_chat, text, disable_notification=False)
-        self.queue.log_sent(target_chat, sev.name, text)
+        self.queue.log_sent(target_chat, sev.name, text,
+                            delivery_status="delivered" if ok else "failed")
         result["action"] = "sent" if ok else "failed"
         logger.info(f"[IMPORTANT] {'Sent' if ok else 'FAILED'} to {target_chat}")
         return result

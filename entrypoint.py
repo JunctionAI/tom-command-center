@@ -124,16 +124,32 @@ def run_scheduler(telegram_config, schedule_config):
     from core.orchestrator import run_scheduled_task
 
     def _tracked_task(agent, task_name, telegram_config):
-        """Wrap run_scheduled_task with execution logging."""
+        """Wrap run_scheduled_task with execution + delivery logging."""
         import time
         start = time.time()
         try:
             run_scheduled_task(agent, task_name, telegram_config)
             elapsed = round(time.time() - start, 1)
             _log_task_execution(agent, task_name, "success", elapsed)
+            # Log delivery for monitoring
+            try:
+                from core.delivery_monitor import log_delivery, AGENT_RECIPIENTS
+                recipient = AGENT_RECIPIENTS.get(agent, "Tom")
+                log_delivery("command-center", recipient, agent, task_name,
+                             "delivered", elapsed)
+            except Exception:
+                pass  # Non-fatal
         except Exception as e:
             elapsed = round(time.time() - start, 1)
             _log_task_execution(agent, task_name, "error", elapsed, error_msg=str(e))
+            # Log failed delivery
+            try:
+                from core.delivery_monitor import log_delivery, AGENT_RECIPIENTS
+                recipient = AGENT_RECIPIENTS.get(agent, "Tom")
+                log_delivery("command-center", recipient, agent, task_name,
+                             "failed", elapsed, error_msg=str(e))
+            except Exception:
+                pass  # Non-fatal
             raise
 
     timezone = schedule_config.get("timezone", "Pacific/Auckland")
