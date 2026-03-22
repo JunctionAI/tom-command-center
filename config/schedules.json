@@ -282,6 +282,30 @@
       "task": "weekly_progress_report",
       "cron": "0 9 * * 0",
       "description": "Aether weekly progress summary for Tom — privacy-respecting metrics report (Sunday 9am)"
+    },
+    {
+      "agent": "forge",
+      "task": "morning_checkin",
+      "cron": "0 7 * * *",
+      "description": "Forge morning brain + body check-in for Tyler (7am daily)"
+    },
+    {
+      "agent": "forge",
+      "task": "midday_checkin",
+      "cron": "30 12 * * *",
+      "description": "Forge midday accountability check for Tyler (12:30pm daily)"
+    },
+    {
+      "agent": "forge",
+      "task": "evening_checkin",
+      "cron": "30 18 * * *",
+      "description": "Forge evening debrief and data collection for Tyler (6:30pm daily)"
+    },
+    {
+      "agent": "forge",
+      "task": "weekly_progress_report",
+      "cron": "0 9 * * 0",
+      "description": "Forge weekly progress summary for Tom — privacy-respecting metrics report (Sunday 9am)"
     }
   ]
 }

@@ -139,6 +139,7 @@ def get_learning_db():
 # Map agent names to non-default user_ids (most agents serve Tom)
 CHAT_USER_MAP = {
     "aether": "jackson",
+    "forge": "tyler",
 }
 
 # --- Agent Brain Loader ---
@@ -185,7 +186,7 @@ def load_agent_brain(agent_name: str, user_id: str = None) -> str:
 
     # Diary-tracking agents load last 7 days of session logs for continuity.
     # Other agents load yesterday only.
-    DIARY_AGENTS = ["asclepius-brain", "marcus-stoic", "compass", "aether"]
+    DIARY_AGENTS = ["asclepius-brain", "marcus-stoic", "compass", "aether", "forge"]
     if agent_name in DIARY_AGENTS:
         recent_logs = []
         for days_back in range(1, 8):  # Last 7 days
@@ -2357,15 +2358,15 @@ The system will auto-create Asana tasks from your [TASK:] markers. Tom reviews a
 
     task_prompt = task_prompts.get(task_name, f"Execute task: {task_name}. Follow the instructions and format in your AGENT.md.")
 
-    # Aether weekly progress report: generates a privacy-respecting summary for Tom
-    if task_name == "weekly_progress_report" and agent_name == "aether":
+    # Recovery companion weekly progress report: generates a privacy-respecting summary for Tom
+    if task_name == "weekly_progress_report" and agent_name in ("aether", "forge"):
         try:
             # Read CONTEXT.md for phase and metrics
-            context_file = AGENTS_DIR / "aether" / "state" / "CONTEXT.md"
+            context_file = AGENTS_DIR / agent_name / "state" / "CONTEXT.md"
             context = context_file.read_text(encoding='utf-8') if context_file.exists() else "No state data yet."
 
             # Count session logs (check-in adherence proxy)
-            state_dir = AGENTS_DIR / "aether" / "state"
+            state_dir = AGENTS_DIR / agent_name / "state"
             log_count = 0
             for days_back in range(1, 8):
                 log_date = (datetime.now(NZ_TZ).date() - timedelta(days=days_back)).isoformat()
@@ -2373,13 +2374,16 @@ The system will auto-create Asana tasks from your [TASK:] markers. Tom reviews a
                     log_count += 1
 
             # Read knowledge.md for patterns
-            knowledge_file = AGENTS_DIR / "aether" / "knowledge.md"
+            knowledge_file = AGENTS_DIR / agent_name / "knowledge.md"
             knowledge = knowledge_file.read_text(encoding='utf-8') if knowledge_file.exists() else ""
 
-            # Get memory fact count for Jackson
+            # Get memory fact count for the user
+            report_user_id = CHAT_USER_MAP.get(agent_name, "unknown")
+            report_user_name = {"aether": "Jackson", "forge": "Tyler"}.get(agent_name, "user")
+            report_agent_display = AGENT_DISPLAY.get(agent_name, agent_name)
             try:
                 from core.user_memory import get_memory_stats
-                stats = get_memory_stats("jackson")
+                stats = get_memory_stats(report_user_id)
                 fact_count = stats.get('active_facts', 0)
                 msg_count = stats.get('total_messages', 0)
             except Exception:
@@ -2387,14 +2391,14 @@ The system will auto-create Asana tasks from your [TASK:] markers. Tom reviews a
                 msg_count = 0
 
             # Build the summary prompt — sent to Claude to generate, then routed to Tom's command-center
-            task_prompt = f"""You are generating a WEEKLY PROGRESS REPORT about Jackson's recovery for Tom (who set up this agent).
+            task_prompt = f"""You are generating a WEEKLY PROGRESS REPORT about {report_user_name}'s recovery for Tom (who set up this agent).
 
 This report goes to Tom's command-center channel. It must be:
 - Privacy-respecting: NO personal details, therapy content, or emotional disclosures
 - Data-focused: adherence %, metric trends, phase status
 - Concise: under 300 words
 
-Here is Aether's current state (CONTEXT.md):
+Here is {report_agent_display}'s current state (CONTEXT.md):
 {context[:3000]}
 
 Session logs found for last 7 days: {log_count}/7
@@ -3167,15 +3171,17 @@ The daily plan should reference the 90-day execution map from Meridian's intelli
     # Beacon uses command-center channel (no dedicated channel)
     send_chat_id = chat_id
 
-    # Aether: notify Tom's command-center that a check-in was sent (quiet, no content)
-    if agent_name == "aether" and task_name in ("morning_checkin", "midday_checkin", "evening_checkin"):
+    # Recovery companions: notify Tom's command-center that check-ins were sent (quiet, no content)
+    if agent_name in ("aether", "forge") and task_name in ("morning_checkin", "midday_checkin", "evening_checkin"):
         cc_chat = telegram_config.get("chat_ids", {}).get("command-center", "")
         if cc_chat:
-            checkin_labels = {"morning_checkin": "Morning Ground", "midday_checkin": "Midday Move", "evening_checkin": "Evening Reflect"}
+            checkin_labels = {"morning_checkin": "Morning", "midday_checkin": "Midday", "evening_checkin": "Evening"}
+            agent_display = AGENT_DISPLAY.get(agent_name, agent_name)
+            user_display = {"aether": "Jackson", "forge": "Tyler"}.get(agent_name, "user")
             from core.notification_router import route_notification
             route_notification(cc_chat,
-                               f"Aether {checkin_labels.get(task_name, task_name)} check-in sent to Jackson.",
-                               bot_token, severity="INFO", agent="aether")
+                               f"{agent_display} {checkin_labels.get(task_name, task_name)} check-in sent to {user_display}.",
+                               bot_token, severity="INFO", agent=agent_name)
 
     if agent_name == "beacon":
         send_chat_id = telegram_config.get("chat_ids", {}).get("command-center", chat_id)

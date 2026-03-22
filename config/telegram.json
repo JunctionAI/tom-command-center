@@ -29,9 +29,10 @@
     "walker-capital-trent": "-5293852288",
     "medici": "-5242918514",
     "prospector": "-5255505982",
-    "aether": "-5193433346"
+    "aether": "-5193433346",
+    "forge": "SETUP_NEEDED"
   },
-  "authorized_users": ["8502825979"],
+  "authorized_users": ["8502825979", "TYLER_TELEGRAM_ID"],
   "agent_names": {
     "global-events": "Atlas",
     "dbh-marketing": "Meridian",
@@ -60,6 +61,7 @@
     "walker-capital-trent": "Vesper",
     "medici": "Medici",
     "prospector": "Prospector",
-    "aether": "Aether"
+    "aether": "Aether",
+    "forge": "Forge"
   }
 }
