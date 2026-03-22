@@ -3189,6 +3189,46 @@ The daily plan should reference the 90-day execution map from Meridian's intelli
         except Exception as bg_e:
             logger.warning(f"Brief generator integration failed (non-fatal): {bg_e}")
 
+    # Order manager: handle [ORDER:] markers from recovery companions
+    if agent_name in ("aether", "forge") and "[ORDER:" in response:
+        try:
+            import re as _order_re
+            order_matches = _order_re.findall(r'\[ORDER:\s*(.*?)\]', response, _order_re.DOTALL)
+            if order_matches:
+                from core.order_manager import create_order, get_stack_for_companion, format_order_for_notification, COMPANION_STACKS
+                user_id = CHAT_USER_MAP.get(agent_name, "unknown")
+
+                for order_text in order_matches:
+                    # Parse: could be "stack" (full phase stack) or "product1,product2,..."
+                    order_text = order_text.strip()
+                    if "stack" in order_text.lower() or "phase" in order_text.lower():
+                        # Order the full phase stack
+                        # Extract phase number if present
+                        phase_match = _order_re.search(r'phase[_\s]*(\d+)', order_text, _order_re.IGNORECASE)
+                        phase = int(phase_match.group(1)) if phase_match else 1
+                        stacks = COMPANION_STACKS.get(agent_name, {})
+                        stack_key = f"phase_{phase}"
+                        stack_products = stacks.get(stack_key, stacks.get("phase_1", {})).get("products", [])
+                        order = create_order(user_id, agent_name, stack_products)
+                    else:
+                        # Individual products
+                        product_ids = [p.strip() for p in order_text.split(",") if p.strip()]
+                        order = create_order(user_id, agent_name, product_ids)
+
+                    if "error" not in order:
+                        # Notify Tom in command-center
+                        cc_chat = telegram_config.get("chat_ids", {}).get("command-center", "")
+                        if cc_chat:
+                            from core.notification_router import route_notification
+                            route_notification(cc_chat, format_order_for_notification(order),
+                                               bot_token, severity="IMPORTANT", agent=agent_name)
+                        logger.info(f"Order created: {order['order_id']} for {user_id} — ${order['total']:.2f}")
+
+                # Clean markers from response
+                response = _order_re.sub(r'\[ORDER:\s*.*?\]', '', response, flags=_order_re.DOTALL).strip()
+        except Exception as order_e:
+            logger.warning(f"Order processing failed (non-fatal): {order_e}")
+
     # Beacon post-processing: save article + create Shopify draft
     if agent_name == "beacon" and task_name == "content_generation":
         try:
