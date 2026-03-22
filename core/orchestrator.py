@@ -508,10 +508,62 @@ def extract_markers_from_response(response: str) -> dict:
     return markers
 
 
+# --- API Usage Tracking ---
+
+# Global variable to track which agent is currently being served (set before call_claude)
+_current_agent_name = None
+
+def _track_api_usage(agent_name: str, model: str, input_tokens: int, output_tokens: int):
+    """Track API usage per agent per day to data/api_usage.json"""
+    import json
+    usage_file = Path(__file__).parent.parent / "data" / "api_usage.json"
+
+    # Load existing data
+    usage = {}
+    if usage_file.exists():
+        try:
+            usage = json.loads(usage_file.read_text(encoding='utf-8'))
+        except Exception:
+            usage = {}
+
+    today = datetime.now(NZ_TZ).date().isoformat()
+
+    # Ensure agent entry exists
+    if agent_name not in usage:
+        usage[agent_name] = {"_total_input_tokens": 0, "_total_output_tokens": 0, "_total_cost_usd": 0}
+
+    agent_data = usage[agent_name]
+
+    # Ensure day entry exists
+    if today not in agent_data:
+        agent_data[today] = {"input_tokens": 0, "output_tokens": 0, "calls": 0, "model": model}
+
+    # Pricing (Sonnet 4.6)
+    # Input: $3/M tokens, Output: $15/M tokens (Sonnet)
+    # Input: $15/M tokens, Output: $75/M tokens (Opus)
+    if "opus" in model:
+        cost = (input_tokens * 15.0 / 1_000_000) + (output_tokens * 75.0 / 1_000_000)
+    else:  # Sonnet
+        cost = (input_tokens * 3.0 / 1_000_000) + (output_tokens * 15.0 / 1_000_000)
+
+    # Update daily
+    agent_data[today]["input_tokens"] += input_tokens
+    agent_data[today]["output_tokens"] += output_tokens
+    agent_data[today]["calls"] += 1
+
+    # Update totals
+    agent_data["_total_input_tokens"] += input_tokens
+    agent_data["_total_output_tokens"] += output_tokens
+    agent_data["_total_cost_usd"] += cost
+
+    # Write back
+    usage_file.write_text(json.dumps(usage, indent=2), encoding='utf-8')
+
+
 # --- Claude API Caller ---
 
 def call_claude(system_prompt: str, user_message: str, task_type: str = "chat",
-                conversation_history: list = None) -> str:
+                conversation_history: list = None, agent_name: str = "unknown") -> str:
     """
     Call Claude API with the full agent brain as system prompt.
 
@@ -551,6 +603,13 @@ def call_claude(system_prompt: str, user_message: str, task_type: str = "chat",
             timeout=api_timeout,
         )
         logger.info(f"Claude API responded: {len(response.content[0].text)} chars, stop={response.stop_reason}")
+
+        # Track API usage per agent per day
+        try:
+            _track_api_usage(agent_name, model, response.usage.input_tokens, response.usage.output_tokens)
+        except Exception as track_err:
+            logger.warning(f"Usage tracking failed (non-fatal): {track_err}")
+
         return response.content[0].text
     except Exception as e:
         logger.error(f"Claude API error ({model}): {e}")
@@ -3049,7 +3108,7 @@ The daily plan should reference the 90-day execution map from Meridian's intelli
     else:
         effective_task_type = task_name
     logger.info(f"Calling Claude for {agent_name}/{task_name}: brain={len(brain)} chars, prompt={len(task_prompt)} chars")
-    response = call_claude(brain, task_prompt, task_type=effective_task_type)
+    response = call_claude(brain, task_prompt, task_type=effective_task_type, agent_name=agent_name)
 
     # Check for API errors — don't send raw errors to Telegram
     if response and response.startswith("API Error:"):
@@ -3430,7 +3489,7 @@ def handle_incoming_message(chat_id: str, message_text: str, telegram_config: di
                     user_prompt = reading["prompt"]
                     logger.info(f"ASI on-demand reading: {reading['primary_concept']} (score: {reading['primary_score']})")
                     task_type = "deep_analysis"  # Use Opus for depth
-                    response = call_claude(brain, user_prompt, task_type=task_type, conversation_history=conv_history)
+                    response = call_claude(brain, user_prompt, task_type=task_type, conversation_history=conv_history, agent_name=agent_name)
                 except Exception as e:
                     logger.error(f"Knowledge engine failed for on-demand reading: {e}")
                     is_new_reading = False
@@ -3473,7 +3532,7 @@ FORMATTING: Telegram. No tables. Bold with *single asterisks*. Short paragraphs.
 
 After your response, emit [STATE UPDATE: <what to remember from this exchange>]."""
                 task_type = "evening_reading"  # Use Opus for depth
-                response = call_claude(brain, user_prompt, task_type=task_type, conversation_history=conv_history)
+                response = call_claude(brain, user_prompt, task_type=task_type, conversation_history=conv_history, agent_name=agent_name)
         else:
             # All other agents -- standard chat flow
             # Inject any pending cross-agent events
@@ -3498,7 +3557,7 @@ If something needs to be done, emit:
 If you identify a campaign opportunity or creative need (Meridian/PREP only), emit:
 [BRIEF: description of insight]"""
 
-            response = call_claude(brain, user_prompt, task_type=task_type, conversation_history=conv_history)
+            response = call_claude(brain, user_prompt, task_type=task_type, conversation_history=conv_history, agent_name=agent_name)
 
         # Check for API errors before processing
         if response.startswith("API Error:"):
