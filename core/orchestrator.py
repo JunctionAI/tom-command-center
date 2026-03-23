@@ -1984,6 +1984,9 @@ Customers: {snapshot['new_customers']} new, {snapshot['returning_customers']} re
             logger.error(f"Walker Capital task {task_name} failed: {walker_err}", exc_info=True)
         return
 
+    # --- General task handler (loads brain, calls Claude, sends to Telegram) ---
+    _run_scheduled_task_general(agent_name, task_name, telegram_config)
+
     # --- WALKER CAPITAL command handler (for interactive Telegram messages) ---
     # Note: scheduled tasks (discovery_scan, weekly_valuation_report) are handled
     # above. This block handles live message commands like "Value BHP".
@@ -2310,6 +2313,16 @@ def _run_walker_full_analysis(company: dict, send_both_fn):
         send_both_fn(f"❌ Memo generation failed for {ticker}: {e}")
 
 
+# --- Code below was accidentally placed inside _run_walker_full_analysis ---
+# --- It belongs in _run_scheduled_task_inner. Fixed by closing walker function above. ---
+
+
+def _run_scheduled_task_general(agent_name: str, task_name: str, telegram_config: dict):
+    """
+    General scheduled task handler: loads agent brain, builds prompt, calls Claude,
+    sends to Telegram. Called by _run_scheduled_task_inner for any task that doesn't
+    have a dedicated handler (i.e., most agents).
+    """
     # --- SCOUT daily scan (scrapes AI creators — needs Python, not Claude) ---
     if task_name == "daily_scan" and agent_name == "scout":
         try:
