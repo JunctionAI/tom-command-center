@@ -115,6 +115,146 @@ def query_db(db_name, sql, params=(), one=False):
         conn.close()
 
 
+@app.get("/api/system-health")
+def get_system_health():
+    """Live system health: today's schedule vs actual executions."""
+    # Load schedule config
+    config_path = BASE_DIR / "config" / "schedules.json"
+    try:
+        schedule_config = json.loads(config_path.read_text())
+    except Exception:
+        return JSONResponse({"error": "Could not read schedules.json"}, status_code=500)
+
+    now_nz = datetime.now(NZ_TZ)
+    today_str = now_nz.strftime("%Y-%m-%d")
+    dow = now_nz.weekday()  # 0=Monday
+    cron_dow_map = {0: '1', 1: '2', 2: '3', 3: '4', 4: '5', 5: '6', 6: '0'}
+    today_cron_dow = cron_dow_map[dow]
+
+    # Get today's executions from task_execution_log
+    executions = query_db("intelligence.db",
+        "SELECT agent, task, status, elapsed_secs, output_chars, error_msg, ran_at "
+        "FROM task_execution_log WHERE ran_at >= ? ORDER BY ran_at DESC",
+        (today_str,))
+
+    # Get last 7 days of executions for trend
+    week_ago = (now_nz - timedelta(days=7)).strftime("%Y-%m-%d")
+    recent_executions = query_db("intelligence.db",
+        "SELECT agent, task, status, ran_at FROM task_execution_log WHERE ran_at >= ?",
+        (week_ago,))
+
+    # Build execution lookup for today
+    ran_today = {}
+    for ex in executions:
+        key = f"{ex['agent']}/{ex['task']}"
+        if key not in ran_today or ex['status'] == 'success':
+            ran_today[key] = ex
+
+    # Expand cron range helper
+    def expand_range(field):
+        results = []
+        for part in field.split(','):
+            if '-' in part:
+                try:
+                    s, e = part.split('-')
+                    results.extend(str(i) for i in range(int(s), int(e) + 1))
+                except ValueError:
+                    results.append(part)
+            else:
+                results.append(part)
+        return results
+
+    # Determine which tasks are scheduled for today
+    tasks = []
+    for sched in schedule_config.get("schedules", []):
+        agent = sched["agent"]
+        task_name = sched["task"]
+        cron_str = sched["cron"]
+        parts = cron_str.split()
+        cron_min, cron_hr, cron_day, cron_month, cron_dow = parts
+
+        # Check if scheduled for today
+        if cron_day != '*' and str(now_nz.day) != cron_day:
+            continue
+        if cron_month != '*' and str(now_nz.month) != cron_month:
+            continue
+        if cron_dow != '*':
+            if today_cron_dow not in cron_dow.replace(' ', '').split(',') and today_cron_dow not in expand_range(cron_dow):
+                continue
+
+        # Parse scheduled time
+        try:
+            sched_hour = int(cron_hr)
+            sched_min = int(cron_min)
+        except ValueError:
+            sched_hour = -1
+            sched_min = -1
+
+        key = f"{agent}/{task_name}"
+        execution = ran_today.get(key)
+        sched_time_min = sched_hour * 60 + sched_min if sched_hour >= 0 else -1
+        now_min = now_nz.hour * 60 + now_nz.minute
+
+        if execution:
+            status = execution["status"]
+        elif sched_time_min >= 0 and sched_time_min < now_min:
+            status = "missed"
+        elif sched_time_min >= 0:
+            status = "pending"
+        else:
+            status = "pending"
+
+        tasks.append({
+            "agent": agent,
+            "task": task_name,
+            "description": sched.get("description", f"{agent}/{task_name}"),
+            "cron": cron_str,
+            "scheduled_time": f"{sched_hour:02d}:{sched_min:02d}" if sched_hour >= 0 else cron_str,
+            "status": status,
+            "elapsed_secs": execution["elapsed_secs"] if execution else None,
+            "output_chars": execution["output_chars"] if execution else None,
+            "error_msg": execution["error_msg"] if execution and execution.get("error_msg") else None,
+            "ran_at": execution["ran_at"] if execution else None,
+        })
+
+    # Sort by scheduled time
+    tasks.sort(key=lambda t: t["scheduled_time"])
+
+    # Aggregate stats
+    total = len(tasks)
+    success = sum(1 for t in tasks if t["status"] == "success")
+    failed = sum(1 for t in tasks if t["status"] == "error")
+    missed = sum(1 for t in tasks if t["status"] == "missed")
+    pending = sum(1 for t in tasks if t["status"] == "pending")
+
+    # 7-day success rate by agent
+    agent_stats = {}
+    for ex in recent_executions:
+        a = ex["agent"]
+        if a not in agent_stats:
+            agent_stats[a] = {"total": 0, "success": 0, "errors": 0}
+        agent_stats[a]["total"] += 1
+        if ex["status"] == "success":
+            agent_stats[a]["success"] += 1
+        else:
+            agent_stats[a]["errors"] += 1
+
+    return {
+        "timestamp": now_nz.isoformat(),
+        "date": today_str,
+        "summary": {
+            "total_today": total,
+            "success": success,
+            "failed": failed,
+            "missed": missed,
+            "pending": pending,
+            "health_pct": round(success / max(success + failed + missed, 1) * 100, 1),
+        },
+        "tasks": tasks,
+        "agent_7day": agent_stats,
+    }
+
+
 def parse_log(limit=200):
     if not LOG_FILE.exists():
         return []

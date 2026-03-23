@@ -2431,6 +2431,11 @@ The system will auto-create Asana tasks from your [TASK:] markers. Tom reviews a
 
     task_prompt = task_prompts.get(task_name, f"Execute task: {task_name}. Follow the instructions and format in your AGENT.md.")
 
+    # Recovery companions: replace "Jackson" placeholder with the actual user's name
+    companion_name_map = {"aether": "Jackson", "forge": "Tyler"}
+    if agent_name in companion_name_map and task_name in ("morning_checkin", "midday_checkin", "evening_checkin"):
+        task_prompt = task_prompt.replace("Jackson", companion_name_map[agent_name])
+
     # Recovery companion weekly progress report: generates a privacy-respecting summary for Tom
     if task_name == "weekly_progress_report" and agent_name in ("aether", "forge"):
         try:
