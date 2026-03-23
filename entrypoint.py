@@ -159,7 +159,7 @@ def run_scheduler(telegram_config, schedule_config):
     job_defaults = {
         'coalesce': True,
         'max_instances': 1,
-        'misfire_grace_time': 3600,  # 1 hour grace — never silently skip
+        'misfire_grace_time': 14400,  # 4 hour grace — catch morning tasks after late restart
     }
     scheduler = BackgroundScheduler(
         timezone=timezone,
@@ -196,7 +196,121 @@ def run_scheduler(telegram_config, schedule_config):
 
     scheduler.start()
     logger.info(f"Scheduler running with {len(schedule_config['schedules'])} tasks (tz: {timezone})")
+
+    # --- CATCH-UP: run any tasks that should have fired today but were missed ---
+    _run_missed_tasks(schedule_config, telegram_config, _tracked_task, timezone)
+
     return scheduler
+
+
+def _run_missed_tasks(schedule_config, telegram_config, tracked_task_fn, timezone):
+    """Check for tasks that should have run earlier today but were missed due to restart.
+    Runs them now (staggered by 30s) so users still get their daily messages."""
+    import sqlite3
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+
+    tz = ZoneInfo(timezone)
+    now = datetime.now(tz)
+    today_str = now.strftime("%Y-%m-%d")
+    hour_now = now.hour
+    minute_now = now.minute
+    day_of_week = now.weekday()  # 0=Monday ... 6=Sunday
+    # APScheduler uses 0=Monday, cron uses 0=Sunday — convert
+    cron_dow_map = {0: '1', 1: '2', 2: '3', 3: '4', 4: '5', 5: '6', 6: '0'}
+    today_cron_dow = cron_dow_map[day_of_week]
+
+    # Check task_execution_log for what already ran today
+    db_path = os.path.join(os.path.dirname(__file__), "data", "intelligence.db")
+    ran_today = set()
+    try:
+        conn = sqlite3.connect(db_path, check_same_thread=False)
+        rows = conn.execute(
+            "SELECT agent, task FROM task_execution_log WHERE ran_at >= ? AND status = 'success'",
+            (today_str,)
+        ).fetchall()
+        conn.close()
+        ran_today = {f"{r[0]}/{r[1]}" for r in rows}
+    except Exception as e:
+        logger.warning(f"Catch-up: couldn't read execution log: {e}")
+
+    missed = []
+    for task in schedule_config["schedules"]:
+        agent = task["agent"]
+        task_name = task["task"]
+        cron_str = task["cron"]
+        task_key = f"{agent}/{task_name}"
+
+        if task_key in ran_today:
+            continue  # Already ran today
+
+        parts = cron_str.split()
+        cron_minute, cron_hour, cron_day, cron_month, cron_dow = parts
+
+        # Check if this task was scheduled for earlier today
+        # Only catch up daily tasks (day=* and month=*)
+        if cron_day != '*' or cron_month != '*':
+            # Monthly/weekly-specific — check day-of-week
+            if cron_dow != '*' and today_cron_dow not in cron_dow.split(',') and today_cron_dow not in _expand_cron_range(cron_dow):
+                continue
+            if cron_day != '*':
+                if str(now.day) != cron_day:
+                    continue
+
+        # Check day-of-week constraint
+        if cron_dow != '*':
+            if today_cron_dow not in cron_dow.replace(' ', '').split(',') and today_cron_dow not in _expand_cron_range(cron_dow):
+                continue
+
+        # Check if the scheduled time was before now
+        try:
+            sched_hour = int(cron_hour)
+            sched_minute = int(cron_minute)
+        except ValueError:
+            continue  # Skip complex cron expressions like */6
+
+        sched_total = sched_hour * 60 + sched_minute
+        now_total = hour_now * 60 + minute_now
+
+        if sched_total < now_total:
+            missed.append((agent, task_name, sched_hour, sched_minute, task.get("description", task_key)))
+
+    if not missed:
+        logger.info("Catch-up: no missed tasks found — all up to date")
+        return
+
+    logger.info(f"Catch-up: found {len(missed)} missed tasks, running now...")
+
+    # Run missed tasks with 30-second stagger to avoid overwhelming the API
+    import time
+    for i, (agent, task_name, sh, sm, desc) in enumerate(missed):
+        logger.info(f"Catch-up [{i+1}/{len(missed)}]: {agent}/{task_name} (was due {sh:02d}:{sm:02d})")
+        try:
+            threading.Thread(
+                target=tracked_task_fn,
+                args=(agent, task_name, telegram_config),
+                name=f"catchup-{agent}-{task_name}",
+                daemon=True
+            ).start()
+            if i < len(missed) - 1:
+                time.sleep(30)  # Stagger to avoid API rate limits
+        except Exception as e:
+            logger.error(f"Catch-up failed for {agent}/{task_name}: {e}")
+
+
+def _expand_cron_range(field):
+    """Expand cron range like '1-5' into ['1','2','3','4','5']."""
+    results = []
+    for part in field.split(','):
+        if '-' in part:
+            try:
+                start, end = part.split('-')
+                results.extend(str(i) for i in range(int(start), int(end) + 1))
+            except ValueError:
+                results.append(part)
+        else:
+            results.append(part)
+    return results
 
 
 def main():
