@@ -168,7 +168,7 @@ Reply: BUY | WATCH | AVOID — Trent Walker
     try:
         client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
         response = client.messages.create(
-            model="claude-opus-4-6",
+            model="claude-sonnet-4-6",
             max_tokens=1500,
             system=system_prompt,
             messages=[{"role": "user", "content": user_prompt}]

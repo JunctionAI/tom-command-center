@@ -165,7 +165,7 @@ Be honest and specific. Score 1-5 per point. Return ONLY the JSON."""
 
     try:
         response = claude_client.messages.create(
-            model="claude-opus-4-6",
+            model="claude-sonnet-4-6",
             max_tokens=2000,
             messages=[{"role": "user", "content": prompt}]
         )

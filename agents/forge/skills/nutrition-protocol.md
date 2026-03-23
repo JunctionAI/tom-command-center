@@ -103,6 +103,8 @@ This is already solid. We're optimizing, not overhauling.
 
 **Total: ~2550 kcal, ~155g protein**
 
+**IMPORTANT: When generating meal plans, ALWAYS use these meals as the template. Verify calorie totals add up to the phase target BEFORE sending. Never generate meals from scratch — adapt these.**
+
 ---
 
 ## SUPPLEMENT STACK (optimized from blood work)

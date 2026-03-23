@@ -3024,6 +3024,74 @@ def get_delivery_summary():
         return {"status": "error", "message": str(e)}
 
 
+@app.get("/api/api-usage")
+def get_api_usage(agent: str = None):
+    """Per-agent API cost tracking. Filter by agent name with ?agent=forge"""
+    usage_file = BASE_DIR / "data" / "api_usage.json"
+    if not usage_file.exists():
+        return {"status": "ok", "message": "No usage data yet — tracking starts on next API call", "agents": {}}
+
+    try:
+        usage = json.loads(usage_file.read_text(encoding="utf-8"))
+    except Exception:
+        return {"status": "error", "message": "Could not parse api_usage.json"}
+
+    if agent:
+        if agent in usage:
+            return {"status": "ok", "agents": {agent: usage[agent]}}
+        return {"status": "ok", "message": f"No usage data for agent '{agent}'", "agents": {}}
+
+    # Build summary
+    summary = {}
+    for name, data in usage.items():
+        summary[name] = {
+            "total_cost_usd": round(data.get("_total_cost_usd", 0), 4),
+            "total_input_tokens": data.get("_total_input_tokens", 0),
+            "total_output_tokens": data.get("_total_output_tokens", 0),
+            "total_calls": sum(v.get("calls", 0) for k, v in data.items() if not k.startswith("_") and isinstance(v, dict)),
+        }
+
+    total_cost = sum(s["total_cost_usd"] for s in summary.values())
+    total_calls = sum(s["total_calls"] for s in summary.values())
+
+    return {
+        "status": "ok",
+        "total_cost_usd": round(total_cost, 4),
+        "total_calls": total_calls,
+        "agents": summary,
+        "full_data": usage,
+    }
+
+
+@app.get("/api/api-usage/{agent_name}")
+def get_agent_usage(agent_name: str):
+    """Detailed daily breakdown for a specific agent. Use for reimbursement tracking."""
+    usage_file = BASE_DIR / "data" / "api_usage.json"
+    if not usage_file.exists():
+        return {"status": "ok", "message": "No usage data yet", "agent": agent_name, "days": {}}
+
+    try:
+        usage = json.loads(usage_file.read_text(encoding="utf-8"))
+    except Exception:
+        return {"status": "error", "message": "Could not parse api_usage.json"}
+
+    if agent_name not in usage:
+        return {"status": "ok", "agent": agent_name, "message": "No usage recorded", "days": {}}
+
+    data = usage[agent_name]
+    days = {k: v for k, v in data.items() if not k.startswith("_") and isinstance(v, dict)}
+
+    return {
+        "status": "ok",
+        "agent": agent_name,
+        "total_cost_usd": round(data.get("_total_cost_usd", 0), 4),
+        "total_input_tokens": data.get("_total_input_tokens", 0),
+        "total_output_tokens": data.get("_total_output_tokens", 0),
+        "total_calls": sum(v.get("calls", 0) for v in days.values()),
+        "days": days,
+    }
+
+
 @app.get("/", response_class=HTMLResponse)
 def serve_dashboard():
     if DASHBOARD_FILE.exists():

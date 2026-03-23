@@ -530,6 +530,7 @@ def _track_api_usage(agent_name: str, model: str, input_tokens: int, output_toke
     """Track API usage per agent per day to data/api_usage.json"""
     import json
     usage_file = Path(__file__).parent.parent / "data" / "api_usage.json"
+    usage_file.parent.mkdir(parents=True, exist_ok=True)
 
     # Load existing data
     usage = {}
@@ -581,7 +582,7 @@ def call_claude(system_prompt: str, user_message: str, task_type: str = "chat",
     Call Claude API with the full agent brain as system prompt.
 
     For scheduled tasks, user_message is the task instruction.
-    For chat responses, user_message is Tom's message.
+    For chat responses, user_message is the user's message.
 
     conversation_history: Optional list of prior messages [{"role": "user"|"assistant", "content": "..."}]
                           to give the agent multi-turn conversational memory.
@@ -590,15 +591,9 @@ def call_claude(system_prompt: str, user_message: str, task_type: str = "chat",
 
     client = anthropic.Anthropic()  # Uses ANTHROPIC_API_KEY env var
 
-    # Choose model based on task complexity
-    # Use Sonnet for routine tasks, Opus for deep analysis
+    # All agents use Sonnet to control costs
     model = "claude-sonnet-4-6"
-    if task_type in ("weekly_review", "weekly_deep_dive", "deep_analysis", "evening_reading", "google_ads_review"):
-        model = "claude-opus-4-6"
-
-    # Opus with large system prompts (PREP ~60K chars) can take 2-3 minutes.
-    # Sonnet is much faster. Set timeout accordingly.
-    api_timeout = 300.0 if model == "claude-opus-4-6" else 120.0
+    api_timeout = 120.0
 
     # Build messages array: conversation history + current message
     if conversation_history:
@@ -638,7 +633,7 @@ def call_claude_code(agent_name: str, task: str) -> str:
     """
     brain = load_agent_brain(agent_name)
 
-    prompt = f"""You are operating as agent '{agent_name}' in Tom's Command Center.
+    prompt = f"""You are operating as agent '{agent_name}' in the Command Center system.
 
 {brain}
 
@@ -987,9 +982,8 @@ def call_claude_vision(system_prompt: str, image_b64: str, media_type: str,
 
     client = anthropic.Anthropic()
 
+    # All agents use Sonnet to control costs
     model = "claude-sonnet-4-6"
-    if task_type in ("weekly_review", "weekly_deep_dive", "deep_analysis", "evening_reading", "google_ads_review"):
-        model = "claude-opus-4-6"
 
     # Build content blocks: image first, then caption text if present
     content = [
@@ -2491,10 +2485,48 @@ Emit [STATE UPDATE:] with ALL metrics, [METRIC:] for each number, [INSIGHT:] or 
 
     task_prompt = task_prompts.get(task_name, f"Execute task: {task_name}. Follow the instructions and format in your AGENT.md.")
 
-    # Recovery companions: replace "Jackson" placeholder with the actual user's name
-    companion_name_map = {"aether": "Jackson", "forge": "Tyler"}
-    if agent_name in companion_name_map and task_name in ("morning_checkin", "midday_checkin", "evening_checkin"):
-        task_prompt = task_prompt.replace("Jackson", companion_name_map[agent_name])
+    # Forge has its own task prompts — override the generic ones
+    forge_prompts = {
+        "morning_checkin": """Execute your morning check-in for Tyler. Follow the Morning Forge format in your AGENT.md exactly.
+
+Greet Tyler directly — no fluff. Cover:
+- Sleep: how many hours, quality 1-10, REM from Fitbit if available
+- HRV check (from wearable)
+- Today's training plan: specific exercises, sets, reps from training protocol
+- Today's meal plan: reference the EXACT meals from nutrition-protocol.md. VERIFY the calorie totals add up to the phase target before sending.
+- One brain recovery action (cognitive exercise, breathwork, cold exposure — rotate)
+- One brain teaching from MASTERS.md (rotate through thought leaders)
+- End with: "What's the one thing you're committing to today?"
+
+Keep it punchy — Tyler reads in 60 seconds, responds in 30. No tables.""",
+
+        "midday_checkin": """Execute your midday check for Tyler. Quick accountability pulse — 3-4 questions max:
+- Did you train? What did you do?
+- Have you eaten? Hit protein target?
+- Energy level (1-10), brain fog (1-10)
+- Any symptoms (gut, headaches, dizziness, mood)?
+In and out. Keep it SHORT.""",
+
+        "evening_checkin": """Execute your evening debrief for Tyler. This is your PRIMARY data collection session.
+
+Start with 'How was today?' then collect ALL metrics:
+- Energy (1-10), Mood (1-10), Brain fog (1-10), Memory/focus (1-10), Anxiety (1-10), Gut symptoms (1-10)
+- HRV reading, Sleep last night (hours + REM)
+- Exercise (type, duration, intensity)
+- Nutrition (meals eaten, estimated protein, any junk) — cross-check against the meal plan from nutrition-protocol.md
+- Supplements taken (Y/N)
+- Social interaction, Cravings (none/mild/moderate/strong), Screen time
+
+After Tyler responds: reflect on 7-day patterns, name wins explicitly, preview tomorrow, suggest evening wind-down.
+Emit [STATE UPDATE:], [METRIC:], [BRAIN_METRIC:], [INSIGHT:], [PATTERN:], [PHASE_CHECK:].""",
+    }
+
+    if agent_name == "forge" and task_name in forge_prompts:
+        task_prompt = forge_prompts[task_name]
+
+    # Aether: replace "Jackson" placeholder (Aether's prompts are Jackson-specific)
+    if agent_name == "aether" and task_name in ("morning_checkin", "midday_checkin", "evening_checkin"):
+        pass  # Aether's prompts already use "Jackson" — no replacement needed
 
     # Recovery companion weekly progress report: generates a privacy-respecting summary for Tom
     if task_name == "weekly_progress_report" and agent_name in ("aether", "forge"):
@@ -3515,7 +3547,7 @@ def _inject_prep_context(brain: str) -> str:
 
 def handle_incoming_message(chat_id: str, message_text: str, telegram_config: dict):
     """
-    Handle an incoming message from Tom.
+    Handle an incoming message from a user.
     1. Identify which agent based on chat ID
     2. Load that agent's full brain
     3. Call Claude with brain + Tom's message
@@ -3585,7 +3617,7 @@ def handle_incoming_message(chat_id: str, message_text: str, telegram_config: di
         # Load conversation history for multi-turn context (permanent storage)
         from core.user_memory import get_recent_messages as get_memory_messages, save_message as save_memory_message
         conv_history = get_memory_messages(user_id, agent_name, chat_id, max_messages=20, max_age_hours=72)
-        # Save Tom's incoming message permanently
+        # Save incoming message permanently
         save_memory_message(user_id, agent_name, chat_id, "user", message_text)
 
         # PREP (strategic-advisor) gets all agent states + data injected

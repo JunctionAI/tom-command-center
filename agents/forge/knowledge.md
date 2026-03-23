@@ -13,7 +13,7 @@
 - Working: handyman for grandparents (4-6 hours/day, recent)
 - On benefit currently, wants to sort finances/career
 - Recently broke up with girlfriend of ~7 years (on/off), about 1 month ago
-- Set up by his close friend Tom Hall-Taylor
+- Set up by a close friend
 
 ## MEDICAL TEAM
 - Dr. Chad Gordon — Concussion Care Auckland (concussion specialist, has helped a lot)
