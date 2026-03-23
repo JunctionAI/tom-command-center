@@ -3342,6 +3342,24 @@ The daily plan should reference the 90-day execution map from Meridian's intelli
         except Exception as e:
             logger.warning(f"THIS-WEEK.md write failed (non-fatal): {e}")
 
+    # --- Memory extraction for scheduled tasks (companions + all agents) ---
+    # Without this, scheduled check-in content (insights, patterns) is lost
+    try:
+        sched_user_id_mem = CHAT_USER_MAP.get(agent_name, str(telegram_config.get("owner_user_id", os.environ.get("TELEGRAM_OWNER_ID", "default"))))
+        extraction_conv = [
+            {"role": "user", "content": task_prompt},
+            {"role": "assistant", "content": response}
+        ]
+        if agent_name in CHAT_USER_MAP:
+            from core.asmr_memory import asmr_extract
+            asmr_extract(sched_user_id_mem, agent_name, extraction_conv, AGENT_DISPLAY.get(agent_name, agent_name))
+            logger.info(f"ASMR memory extracted for {agent_name}/{task_name}")
+        else:
+            from core.user_memory import extract_and_store_memories
+            extract_and_store_memories(sched_user_id_mem, agent_name, extraction_conv, AGENT_DISPLAY.get(agent_name, agent_name))
+    except Exception as mem_e:
+        logger.warning(f"Scheduled task memory extraction failed (non-fatal): {mem_e}")
+
     logger.info(f"Completed: {agent_name}/{task_name}")
 
 
