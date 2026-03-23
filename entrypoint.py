@@ -373,6 +373,20 @@ def main():
     # Start scheduler in background thread
     scheduler = run_scheduler(telegram_config, schedule_config)
 
+    # Start dashboard API server in background thread (serves /api/system-health etc.)
+    def _run_dashboard_api():
+        try:
+            import uvicorn
+            from core.dashboard_server import app as dashboard_app
+            port = int(os.environ.get("PORT", 8050))
+            logger.info(f"Dashboard API starting on port {port}...")
+            uvicorn.run(dashboard_app, host="0.0.0.0", port=port, log_level="warning")
+        except Exception as e:
+            logger.error(f"Dashboard API failed to start (non-fatal): {e}")
+
+    api_thread = threading.Thread(target=_run_dashboard_api, name="dashboard-api", daemon=True)
+    api_thread.start()
+
     # Start Telegram poller in main thread (blocking)
     logger.info("Starting Telegram polling...")
     try:
