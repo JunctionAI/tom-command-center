@@ -30,7 +30,8 @@
     "medici": "-5242918514",
     "prospector": "-5255505982",
     "aether": "-5193433346",
-    "forge": "-5101300533"
+    "forge": "-5101300533",
+    "apex": "-5202146984"
   },
   "authorized_users": ["8502825979", "8380468775"],
   "agent_names": {
@@ -62,6 +63,7 @@
     "medici": "Medici",
     "prospector": "Prospector",
     "aether": "Aether",
-    "forge": "Forge"
+    "forge": "Forge",
+    "apex": "Apex"
   }
 }

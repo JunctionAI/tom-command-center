@@ -2,10 +2,16 @@
   "timezone": "Pacific/Auckland",
   "schedules": [
     {
-      "agent": "health-fitness",
+      "agent": "apex",
       "task": "morning_protocol",
-      "cron": "0 6 * * *",
-      "description": "Titan morning protocol (training + meals)"
+      "cron": "0 8 * * *",
+      "description": "Apex morning protocol — brain + body integrated daily plan (8am)"
+    },
+    {
+      "agent": "apex",
+      "task": "midday_pulse",
+      "cron": "0 13 * * *",
+      "description": "Apex midday pulse — quick accountability touchpoint (1pm)"
     },
     {
       "agent": "global-events",
@@ -38,10 +44,10 @@
       "description": "PREP CEO morning strategic briefing (7:30am)"
     },
     {
-      "agent": "asclepius-brain",
-      "task": "daily_protocol",
-      "cron": "0 7 * * *",
-      "description": "Asclepius (Mind) daily brain health protocol (7am)"
+      "agent": "apex",
+      "task": "evening_debrief",
+      "cron": "0 19 * * *",
+      "description": "Apex evening debrief — primary data collection, pattern analysis (7pm)"
     },
     {
       "agent": "dbh-marketing",
@@ -90,12 +96,6 @@
       "task": "evening_reading",
       "cron": "30 20 * * *",
       "description": "ASI evening reading — life mentor lesson (8:30pm)"
-    },
-    {
-      "agent": "asclepius-brain",
-      "task": "evening_checkin",
-      "cron": "30 21 * * *",
-      "description": "Asclepius (Mind) evening cognitive log check-in (9:30pm)"
     },
     {
       "agent": "dbh-marketing",

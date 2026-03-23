@@ -70,6 +70,7 @@ AGENT_DISPLAY = {
     "walker-capital-tom":   "Vesper",
     "walker-capital-trent": "Vesper",
     "prospector":           "Prospector",
+    "apex":                 "Apex",
 }
 
 # Logging configured by entrypoint.py — just get the logger here
@@ -190,7 +191,7 @@ def load_agent_brain(agent_name: str, user_id: str = None, current_context: str 
 
     # Diary-tracking agents load last 7 days of session logs for continuity.
     # Other agents load yesterday only.
-    DIARY_AGENTS = ["asclepius-brain", "marcus-stoic", "compass", "aether", "forge"]
+    DIARY_AGENTS = ["apex", "marcus-stoic", "compass", "aether", "forge"]
     if agent_name in DIARY_AGENTS:
         recent_logs = []
         for days_back in range(1, 8):  # Last 7 days
@@ -2397,7 +2398,7 @@ The system will auto-create Asana tasks from your [TASK:] markers. Tom reviews a
         "evening_reading": "",  # Placeholder -- replaced below with knowledge engine output
         "content_generation": "Generate tonight's SEO/AEO article following your nightly workflow. Check your CONTEXT.md for the current keyword priority, select the next topic, and generate a full article using one of your proven content formulas. Include the complete article HTML, meta description, FAQ section, and JSON-LD schema. Save instructions and Shopify draft details should be in your output. After your article, emit a [STATE UPDATE:] with the article title and next priority keyword.",
         # --- Newer agents (previously hitting generic fallback) ---
-        "daily_protocol": "Execute your daily protocol. Follow the exact format and instructions in your AGENT.md. Generate today's output based on Tom's current context and your domain expertise. Remember: Titan's state is injected below — interpret his physical data through your brain health lens.",
+        "daily_protocol": "Execute your daily protocol. Follow the exact format and instructions in your AGENT.md. Generate today's output based on the current context and your domain expertise.",
         "evening_checkin": "Execute your evening cognitive check-in. Ask Tom to log today's brain health metrics: focus quality (1-10), mood (1-10), energy (1-10), social ease, any memory lapses, substance use (Y/N), and anything notable about his mental state today. Keep it warm, quick, and easy to respond to. Reference what today's morning protocol recommended and ask how it went. This data is CRITICAL for tracking recovery over time — without it, you cannot spot trends or adjust protocols. After Tom responds, emit [STATE UPDATE:] with ALL the data points, [METRIC:] for each trackable number, and [EVENT: brain.daily_log|INFO|summary] so Titan sees it.",
         "daily_briefing": "Generate your daily briefing. Follow the format in your AGENT.md. Use any live data injected below. Include analysis, recommendations, and actionable items.",
         "daily_micro_action": "Generate today's micro-action. One specific, actionable thing Tom should do today based on your domain. Make it concrete, not abstract. Follow your AGENT.md format.",
@@ -2422,6 +2423,65 @@ The system will auto-create Asana tasks from your [TASK:] markers. Tom reviews a
         "morning_wisdom": "Deliver today's morning Stoic wisdom. One practical micro-action for today — grounded in Marcus Aurelius, Epictetus, or Seneca but applied to Tom's actual life right now. Reference what you know about his current state from CONTEXT.md. Keep it under 150 words. Concrete, not abstract. Emit [STATE UPDATE:] with the practice assigned.",
         "daily_research": "Execute today's first-principles opportunity analysis. CRITICAL: Read CONTEXT.md first — find the NEXT field to know which human problem to cover today. Do NOT repeat a problem already covered (check LIVE UPDATES in CONTEXT.md for past analyses). Follow the DAILY RESEARCH format in your AGENT.md exactly. Be ruthlessly honest — if the market leader IS the best solution, say so. If supplements aren't the answer for this problem, say so. After your analysis, you MUST emit: [STATE UPDATE: LAST: {problem_name} | DOMAIN: {domain_number} | POS: {position} of 122 | NEXT: {next_problem_name} | SCORE: {X}/10 | TOP_BRAND: {name or 'none'}]",
         "weekly_synthesis": "Execute this Monday's weekly opportunity synthesis. Review your CONTEXT.md for all problems analysed in the past 7 days (check LIVE UPDATES). Follow the WEEKLY SYNTHESIS format in your AGENT.md. Identify cross-cutting patterns, rank the top 3 opportunities, and update the cumulative brands watchlist. ALSO: after the synthesis, run today's daily first-principles analysis on the next problem in your rotation (check NEXT in CONTEXT.md). Emit [STATE UPDATE:] for both the synthesis and the new daily analysis position.",
+        # --- Apex (Tom's unified brain + body + life agent) ---
+        "morning_protocol": """Execute your morning protocol. Follow the format in your AGENT.md but keep it CONVERSATIONAL — you're a coach checking in, not a system generating a report.
+
+Open warm. Use Tom's name. Reference yesterday if you have diary data (what he trained, how he felt, what he ate).
+
+Then deliver today's plan:
+- Phase + day count (one line)
+- Ask about sleep (hours, quality, how he feels right now)
+- Substance check (quick, no pressure — 'All clean?' is fine after the first few days)
+- Today's training plan from training-protocol.md (specific: exercises, sets, reps, weights from knowledge.md)
+- Today's nutrition priorities (keep it practical — what to eat, not a lecture)
+- Supplement reminders (which ones, when — be specific)
+- One brain science insight (rotate from MASTERS.md — mechanism, not motivation. 2-3 sentences max. Teach him something he can think about all day)
+- One focus priority for the day
+
+Keep it SHORT. Tom reads this on his phone in 90 seconds. Use line breaks generously. No tables. No walls of text. End with energy — set the tone for a good day.
+
+If it's been 5+ days and bloodwork hasn't been discussed yet, weave in a natural mention based on whatever symptom or metric Tom has been reporting. Don't dump info — just plant the seed.
+
+After delivering, emit [STATE UPDATE:] with the day count and any data collected.""",
+        "midday_pulse": """Execute your midday pulse. This is a 30-second touchpoint, not a deep dive.
+
+Tone: Casual, quick, like a mate checking in.
+
+Ask 3-4 things max:
+- Have you eaten well? (protein specifically)
+- Energy right now? (1-10)
+- Any cravings or triggers today?
+- Quick reminder of tonight's training
+
+Drop ONE micro-insight — 1-2 sentences of brain science. Something that connects to what he's experiencing right now.
+
+If Tom mentioned something specific in his morning response, reference it. Show you're listening. That's what makes this feel like a relationship, not a system.
+
+Keep the whole message under 100 words.""",
+        "evening_debrief": """Execute your evening debrief. This is your PRIMARY data collection session.
+
+Start open: 'How was today, Tom?' or reference something specific from the day.
+
+Then collect (make it feel like a conversation, not a form):
+- Focus quality (1-10)
+- Mood (1-10)
+- Energy (1-10)
+- Social ease (1-10)
+- Memory lapses (any?)
+- Substance use (weed, alcohol, porn — Y/N, zero target)
+- Training: what did you do, duration, any PBs, any pain (hip?)
+- Nutrition: what did you eat, estimated protein, any skipped meals
+- Protocol: cardio done? Supplements taken? Meditation? Cold exposure?
+- Anything notable about your thinking or cognitive state today?
+
+After Tom responds, THIS is where you earn your value:
+- Connect today's data to the 7-day trend. Name patterns.
+- Name wins Tom might not see himself.
+- If crash-state mood: flag it as a depleted-day assessment, not a reliable signal.
+- Preview tomorrow's training plan.
+- Sleep protocol reminder (target bedtime, wind-down, magnesium).
+
+Emit [STATE UPDATE:] with ALL metrics, [METRIC:] for each number, [INSIGHT:] or [PATTERN:] for any trends detected. This data feeds tomorrow's morning protocol.""",
         # --- Aether (Recovery Companion for Jackson) ---
         "weekly_progress_report": "",  # Handled specially below (generates summary for Tom, not Jackson)
         "morning_checkin": "Execute your morning check-in for Jackson. Follow the exact Morning Ground format in your AGENT.md. Be warm and gentle. Ask about sleep (hours, quality, disturbances), current body state (tension level 1-10, locations, POTS symptoms), current mind state (mood 1-10, anxiety, OCD intrusion). Deliver today's micro-practice (rotate based on current phase from CONTEXT.md) and a psychoeducation snippet from one thought leader in MASTERS.md. Include a nutrition reminder. Keep it SHORT — Jackson should read this in 60 seconds and respond in 30 seconds. Check CONTEXT.md first to know which phase he's in and tailor accordingly.",
