@@ -1,6 +1,6 @@
 # DBH 90-Day Execution Strategy
 ## Shared Context — All Strategic Agents
-**Approved:** March 3, 2026 | **Last updated:** March 10, 2026 | **Owner:** Tom + Tony
+**Approved:** March 3, 2026 | **Last updated:** March 24, 2026 | **Owner:** Tom + Tony
 
 ---
 
@@ -13,7 +13,7 @@ Meta Ads fuels new customer acquisition. Retention (email, loyalty, flows) makes
 ## CAMPAIGN LAUNCH ORDER (7 campaigns, fortnightly cadence)
 
 1. Pure Pets Bi-Active (mid-March) — $20/day, pet-specific creative
-2. Marine Collagen (late March) — $20/day, skin health testimonials
+2. Marine Collagen (LIVE March 24) — $20/day, 4 hypotheses testing (trust/joint/skin/offer), $5/day per ad set, kill at $50 spend if <2x ROAS
 3. Colostrum (mid-April) — $20/day, trending ingredient + NZ provenance
 4. Deer Velvet (late April) — $20/day, recovery + vitality
 5. Pure Pets Round 2 (May) — refined from C1 learnings
