@@ -4408,11 +4408,22 @@ def start_polling(telegram_config: dict):
 
                     logger.info(f"Update received: chat_id={chat_id}, user_id={user_id}, text={text[:60] if text else '(no text)'}")
 
-                    # Security: only respond to authorised users (Tom + any configured extras like Jackson)
+                    # Security: only respond to authorised users
+                    # 1. Owner (Tom) can message any agent
+                    # 2. authorized_users list (explicit extras)
+                    # 3. Companion agent chats allow any member (Jackson in Aether, Tyler in Forge)
+                    #    — these are private group chats, so only invited members can message
                     authorized = {str(owner_id).strip()}
                     for extra_id in telegram_config.get("authorized_users", []):
                         authorized.add(str(extra_id).strip())
-                    if user_id not in authorized:
+
+                    # Companion agents: allow any user in their dedicated group chat
+                    # The Telegram group itself is the security boundary (invite-only)
+                    agent_for_chat = identify_agent_from_chat(chat_id, telegram_config)
+                    companion_agents = set(CHAT_USER_MAP.keys())  # aether, forge, etc.
+                    is_companion_chat = agent_for_chat in companion_agents
+
+                    if user_id not in authorized and not is_companion_chat:
                         logger.warning(f"Ignoring message from unknown user: user_id='{user_id}'")
                         continue
 
