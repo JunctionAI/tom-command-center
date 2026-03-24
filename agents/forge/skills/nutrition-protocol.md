@@ -91,7 +91,7 @@ This is already solid. We're optimizing, not overhauling.
 
 **Dinner (6-7pm):**
 - Salmon fillet or chicken thigh (200g)
-- Roasted vegetables (broccoli, sweet potato, capsicum)
+- Roasted vegetables (broccoli, sweet potato, zucchini — check CURRENT_PLAN.md for active eliminations)
 - Rice or quinoa
 - Bone broth on the side or as cooking base
 - ~600 kcal, 45g protein
@@ -103,7 +103,7 @@ This is already solid. We're optimizing, not overhauling.
 
 **Total: ~2550 kcal, ~155g protein**
 
-**IMPORTANT: When generating meal plans, ALWAYS use these meals as the template. Verify calorie totals add up to the phase target BEFORE sending. Never generate meals from scratch — adapt these.**
+**NOTE: These meals are a TEMPLATE for reference. Tyler's ACTUAL current meal plan is in state/CURRENT_PLAN.md — always use that instead. If Tyler changes his plan in conversation, the system updates CURRENT_PLAN.md automatically. Never revert to this template without Tyler explicitly asking.**
 
 ---
 

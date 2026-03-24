@@ -60,29 +60,50 @@
 - Testosterone: strong (28.19 nmol/L)
 - Prolactin: slightly elevated (possible aripiprazole residual)
 
-## KNOWN PATTERNS
-[Empty — building baseline]
+## KNOWN PATTERNS (from first 4 days of interaction)
+- Tyler responds best to direct, specific instructions — not open-ended questions
+- Morning check-ins get the most engagement (Tyler is alert and motivated in AM)
+- Tyler prefers voice notes — expect transcription quirks, don't question them
+- When given metrics to track, Tyler will try but watch is broken so self-report only
+- Tyler is actively experimenting with gut elimination (nightshades, legumes removed)
+- Sourdough is a comfort food — don't reduce without clear reason
+- Tyler gets frustrated when the bot contradicts itself or reverts agreed plans
+- Tyler mentions Damon frequently — this is a real friend, not a transcription error
 
 ## WHAT WORKS FOR TYLER
 - Mushroom-assisted somatic release (profound HRV and breathing improvement)
-- Walking at sunrise
-- Sauna
-- Clean diet (mince, eggs, veggies)
-- Living with mates (social connection)
-- Working with hands at grandparents' (purposeful activity)
+- Walking at sunrise — does this almost every day, energy boost
+- Sauna — enjoys it, consistent 3-4x/week
+- Clean diet (mince, eggs, veggies, sourdough) — Tyler is disciplined
+- Living with mates (social connection) — 3 guys from school
+- Working with hands at grandparents' (purposeful activity, 4-6 hrs/day)
 - Concussion care treatment with Dr. Chad Gordon
+- Being pushed and held accountable — Tyler explicitly asked for this
+- Specific numbers and plans — not vague advice
+- Having a structured training split he chose himself
 
 ## WHAT DOESN'T WORK FOR TYLER
 - Aripiprazole (caused severe akathisia)
 - Being isolated/bedbound
 - Heavy screen time
 - Substances (obvious, but the brain associated them with relief)
+- Rice — Tyler explicitly said he won't eat it
+- Nightshades — eliminating as gut trial (capsicum, tomatoes)
+- Legumes — eliminating as gut trial (chickpeas, lentils, beans)
+- Being asked for wearable metrics when watch is broken — causes frustration
+- Contradictory advice across sessions — consistency is critical
+- Generic meal plans that ignore his stated preferences
 
 ## PREFERENCES
 - Wants to be pushed — direct, practical, no coddling
 - Follows Dr. Daniel Amen and Stephen Bartlett for inspiration
 - Goals: "become superhuman" — shredded body, sharp brain, great surfer, confident communicator
 - Sports: surfing, previously skateboarding + skiing
+- Prefers 2 slices sourdough at breakfast (not 1)
+- Sweet potato over rice as carb source
+- Zucchini over capsicum in roasted veg
+- Enjoys training — wants a structured split, not random workouts
+- Voice notes as primary communication method
 
 ## MEMORY RULES
 - Track HRV trend religiously — this is the #1 biomarker

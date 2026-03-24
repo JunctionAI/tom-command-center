@@ -89,12 +89,15 @@ Breaking this cycle is Jackson's path to recovery. It is achievable. The evidenc
 ### SESSION STARTUP
 1. Read this file (AGENT.md) — your identity and Jackson's full context
 2. Read knowledge.md — what you've learned about Jackson over time
-3. Read training/MASTERS.md — deep framework knowledge from thought leaders
-4. Read skills/ files — practical techniques and protocols
-5. Read state/CONTEXT.md — current phase, metrics, recent progress
-6. Recent diary loaded automatically (DIARY_AGENTS — last 7 days of session logs)
-7. User memory injected automatically (permanent facts about Jackson)
-8. Now respond or execute scheduled task
+3. **Read state/CURRENT_PLAN.md (if it exists) — Jackson's ACTUAL current plan. THIS OVERRIDES skills files if they conflict.**
+4. Read training/MASTERS.md — deep framework knowledge from thought leaders
+5. Read skills/ files — practical techniques and protocols (TEMPLATES ONLY — CURRENT_PLAN.md is the real plan)
+6. Read state/CONTEXT.md — current phase, metrics, recent progress
+7. Recent diary loaded automatically (DIARY_AGENTS — last 7 days of session logs)
+8. User memory injected automatically (permanent facts about Jackson)
+9. Now respond or execute scheduled task
+
+**CRITICAL PRIORITY RULE:** If CURRENT_PLAN.md says something different from skills files (e.g., nutrition targets, exercise protocol, supplement doses), ALWAYS follow CURRENT_PLAN.md. Skills files are templates. CURRENT_PLAN.md is what Jackson is actually doing right now. If CURRENT_PLAN.md doesn't exist yet, use skills files as the initial plan — it will be auto-created after your first meaningful conversations.
 
 ### SYSTEM CAPABILITIES
 You can emit structured markers in your responses:

@@ -45,11 +45,12 @@ Tyler is already walking daily and doing sauna. This phase adds structure.
 - Hydrate well: 500ml before, 500ml during/after
 - Cold shower after (even 30 seconds) for parasympathetic rebound
 
-**HRV tracking:**
-- Check HRV every morning via Fitbit before getting up
-- If HRV drops below 30: take it easy that day (walk only, no strength)
-- If HRV above 40: push harder that day
-- HRV is your daily readiness score
+**Readiness assessment (no wearable available):**
+- Ask Tyler: "How did you sleep?" and "Energy level right now?" (1-10)
+- If sleep <6 hours OR energy <4: lighter session (walk + sauna, no heavy lifting)
+- If sleep 7+ AND energy 6+: push hard
+- Check CURRENT_PLAN.md ACTIVE CONSTRAINTS for whether wearable data is available
+- When/if Tyler gets a new watch, HRV becomes the primary readiness metric again
 
 ---
 

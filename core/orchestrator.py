@@ -185,6 +185,18 @@ def load_agent_brain(agent_name: str, user_id: str = None, current_context: str 
     if knowledge_file.exists():
         brain_parts.append(f"=== PERSISTENT KNOWLEDGE (Learned Patterns) ===\n{knowledge_file.read_text(encoding='utf-8')}")
 
+    # 1.6 CURRENT PLAN -- The user's ACTUAL current plan (overrides skills file templates)
+    # This is the single source of truth for what the user is doing right now.
+    # Loaded ABOVE skills files so it takes priority.
+    current_plan_file = agent_dir / "state" / "CURRENT_PLAN.md"
+    if current_plan_file.exists():
+        brain_parts.append(
+            f"=== CURRENT PLAN (ACTIVE — OVERRIDES SKILLS TEMPLATES) ===\n"
+            f"This is the user's ACTUAL current plan. If it conflicts with skills files below, "
+            f"ALWAYS follow this document. Skills files are templates only.\n\n"
+            f"{current_plan_file.read_text(encoding='utf-8')}"
+        )
+
     # 1.7 YESTERDAY'S SUMMARY -- If first message of day, load yesterday's session log
     today = datetime.now(NZ_TZ).date().isoformat()
     yesterday = (datetime.now(NZ_TZ).date() - timedelta(days=1)).isoformat()
@@ -2357,8 +2369,25 @@ def _run_scheduled_task_general(agent_name: str, task_name: str, telegram_config
 
     # Resolve user_id for agents serving non-default users (e.g., Aether → Jackson)
     sched_user_id = CHAT_USER_MAP.get(agent_name)
-    # For companions: pass task_name as context for ASMR retrieval
-    sched_context = f"Scheduled {task_name} check-in" if sched_user_id else ""
+    # For companions: build richer ASMR context from CURRENT_PLAN.md active constraints + recent state
+    sched_context = ""
+    if sched_user_id:
+        _plan_file = AGENTS_DIR / agent_name / "state" / "CURRENT_PLAN.md"
+        if _plan_file.exists():
+            try:
+                _plan = _plan_file.read_text(encoding='utf-8')
+                # Extract ACTIVE CONSTRAINTS section for ASMR context
+                if "ACTIVE CONSTRAINTS" in _plan:
+                    _constraints_start = _plan.index("ACTIVE CONSTRAINTS")
+                    _constraints_end = _plan.index("---", _constraints_start + 20) if "---" in _plan[_constraints_start + 20:] else _constraints_start + 500
+                    _constraints = _plan[_constraints_start:_constraints_start + (_constraints_end - _constraints_start)]
+                    sched_context = f"Scheduled {task_name} check-in. {_constraints[:500]}"
+                else:
+                    sched_context = f"Scheduled {task_name} check-in"
+            except Exception:
+                sched_context = f"Scheduled {task_name} check-in"
+        else:
+            sched_context = f"Scheduled {task_name} check-in"
     brain = load_agent_brain(agent_name, user_id=sched_user_id, current_context=sched_context)
 
     # Build task-specific prompt
@@ -2509,11 +2538,13 @@ Emit [STATE UPDATE:] with ALL metrics, [METRIC:] for each number, [INSIGHT:] or 
     forge_prompts = {
         "morning_checkin": """Execute your morning check-in for Tyler. Follow the Morning Forge format in your AGENT.md exactly.
 
+CRITICAL: Read CURRENT_PLAN.md first. It contains Tyler's ACTUAL meal plan, training split, supplements, and active constraints. Use THAT, not the skills file templates.
+
 Greet Tyler directly — no fluff. Cover:
-- Sleep: how many hours, quality 1-10, REM from Fitbit if available
-- HRV check (from wearable)
-- Today's training plan: specific exercises, sets, reps from training protocol
-- Today's meal plan: reference the EXACT meals from nutrition-protocol.md. VERIFY the calorie totals add up to the phase target before sending.
+- Sleep: how many hours, quality 1-10 (self-report — check ACTIVE CONSTRAINTS for whether wearable is available)
+- Today's training plan from CURRENT_PLAN.md: what day is it in his split? Give specific exercises, sets, reps
+- Today's meals from CURRENT_PLAN.md: reference his ACTUAL agreed meals, not the template
+- Check ACTIVE CONSTRAINTS: respect all eliminations (no rice, no nightshades, no legumes, etc.)
 - One brain recovery action (cognitive exercise, breathwork, cold exposure — rotate)
 - One brain teaching from MASTERS.md (rotate through thought leaders)
 - End with: "What's the one thing you're committing to today?"
@@ -2525,19 +2556,21 @@ Keep it punchy — Tyler reads in 60 seconds, responds in 30. No tables.""",
 - Have you eaten? Hit protein target?
 - Energy level (1-10), brain fog (1-10)
 - Any symptoms (gut, headaches, dizziness, mood)?
-In and out. Keep it SHORT.""",
+In and out. Keep it SHORT. Check CURRENT_PLAN.md ACTIVE CONSTRAINTS before asking for any wearable data.""",
 
         "evening_checkin": """Execute your evening debrief for Tyler. This is your PRIMARY data collection session.
 
-Start with 'How was today?' then collect ALL metrics:
+CRITICAL: Read CURRENT_PLAN.md first for active constraints and today's actual plan.
+
+Start with 'How was today?' then collect metrics (self-report — check ACTIVE CONSTRAINTS for wearable availability):
 - Energy (1-10), Mood (1-10), Brain fog (1-10), Memory/focus (1-10), Anxiety (1-10), Gut symptoms (1-10)
-- HRV reading, Sleep last night (hours + REM)
-- Exercise (type, duration, intensity)
-- Nutrition (meals eaten, estimated protein, any junk) — cross-check against the meal plan from nutrition-protocol.md
+- Sleep last night (hours, quality 1-10)
+- Exercise (type, duration, intensity) — cross-check against CURRENT_PLAN.md training split
+- Nutrition (meals eaten, estimated protein, any junk) — cross-check against CURRENT_PLAN.md meal plan
 - Supplements taken (Y/N)
 - Social interaction, Cravings (none/mild/moderate/strong), Screen time
 
-After Tyler responds: reflect on 7-day patterns, name wins explicitly, preview tomorrow, suggest evening wind-down.
+After Tyler responds: reflect on 7-day patterns, name wins explicitly, preview tomorrow from CURRENT_PLAN.md training split, suggest evening wind-down.
 Emit [STATE UPDATE:], [METRIC:], [BRAIN_METRIC:], [INSIGHT:], [PATTERN:], [PHASE_CHECK:].""",
     }
 
@@ -3490,6 +3523,115 @@ The daily plan should reference the 90-day execution map from Meridian's intelli
 
 # --- Message Handler (for two-way chat) ---
 
+def _auto_evolve_plan(agent_name: str, user_message: str, agent_response: str):
+    """
+    Auto-evolution for companion agents (Forge, Aether, etc.).
+    After every conversation, uses Haiku to detect if the user's plan changed.
+    If plan-changing conversation detected, rewrites CURRENT_PLAN.md automatically.
+
+    Cost: ~$0.002 per conversation (Haiku detection), ~$0.01 if rewrite triggered.
+    """
+    plan_file = AGENTS_DIR / agent_name / "state" / "CURRENT_PLAN.md"
+    if not plan_file.exists():
+        return  # No CURRENT_PLAN.md = nothing to evolve
+
+    current_plan = plan_file.read_text(encoding='utf-8')
+
+    # Step 1: Haiku detects if the conversation changed the plan
+    detect_prompt = f"""Analyse this conversation between a companion agent and its user.
+Determine if the user's active plan has changed in any way.
+
+Plan changes include:
+- Meal plan modifications (new foods, removed foods, different portions)
+- Training schedule changes (different split, rest days, exercises)
+- Supplement changes (added, removed, dosage changed)
+- New constraints (food elimination, equipment broken, injury, schedule change)
+- Removed constraints (got new equipment, reintroduced a food, healed)
+- Phase transition (moving to next recovery phase)
+- Goal changes (new targets, shifted priorities)
+
+CONVERSATION:
+User: {user_message[:1500]}
+Agent: {agent_response[:2000]}
+
+CURRENT PLAN (abbreviated):
+{current_plan[:3000]}
+
+Respond with EXACTLY one of:
+- NO_CHANGE — if the conversation is a normal check-in with no plan modifications
+- PLAN_CHANGED: <brief description of what changed> — if any aspect of the plan should be updated
+
+Be conservative. Routine check-ins (how did you sleep, what did you eat) are NOT plan changes.
+Only flag actual modifications to what the user is doing going forward."""
+
+    try:
+        detect_response = call_claude(
+            system_prompt="You are a plan change detector. Respond only with NO_CHANGE or PLAN_CHANGED: <description>.",
+            user_prompt=detect_prompt,
+            task_type="memory_extraction",  # Uses Haiku
+            agent_name=f"{agent_name}-plan-detect"
+        )
+
+        if not detect_response or "PLAN_CHANGED" not in detect_response:
+            logger.info(f"Auto-evolve {agent_name}: no plan change detected")
+            return
+
+        change_description = detect_response.replace("PLAN_CHANGED:", "").strip()
+        logger.info(f"Auto-evolve {agent_name}: PLAN CHANGE DETECTED — {change_description[:100]}")
+
+        # Step 2: Rewrite CURRENT_PLAN.md with the change applied
+        rewrite_prompt = f"""You are maintaining a user's CURRENT_PLAN.md file. A plan change was detected:
+
+CHANGE: {change_description}
+
+CONVERSATION THAT TRIGGERED THE CHANGE:
+User: {user_message[:2000]}
+Agent: {agent_response[:2000]}
+
+CURRENT PLAN (full):
+{current_plan}
+
+YOUR TASK: Output the COMPLETE updated CURRENT_PLAN.md file with the change applied.
+Rules:
+- Keep the exact same structure and sections
+- Update the "Last Updated" date to today
+- Apply the specific change to the relevant section(s)
+- Keep all other sections unchanged
+- If a constraint was added, add it to ACTIVE CONSTRAINTS
+- If a constraint was removed, remove it from ACTIVE CONSTRAINTS
+- If meals changed, update the CURRENT MEAL PLAN section
+- If training changed, update the CURRENT TRAINING SPLIT section
+- If supplements changed, update the CURRENT SUPPLEMENT STACK section
+- Add a new entry at the top of "WHAT'S NOT WORKING / NEEDS ADJUSTMENT" if relevant
+
+Output ONLY the complete file content, no explanation."""
+
+        rewrite_response = call_claude(
+            system_prompt="You maintain a user's plan file. Output only the complete updated file.",
+            user_prompt=rewrite_prompt,
+            task_type="memory_extraction",  # Uses Haiku — cheap and fast
+            agent_name=f"{agent_name}-plan-rewrite"
+        )
+
+        if rewrite_response and len(rewrite_response) > 200 and "CURRENT_PLAN" in rewrite_response:
+            # Sanity check: new plan should have key sections
+            required_sections = ["ACTIVE CONSTRAINTS", "CURRENT MEAL PLAN", "CURRENT TRAINING SPLIT"]
+            if all(section in rewrite_response for section in required_sections):
+                plan_file.write_text(rewrite_response, encoding='utf-8')
+                logger.info(f"Auto-evolve {agent_name}: CURRENT_PLAN.md rewritten ({len(rewrite_response)} chars)")
+
+                # Also update CONTEXT.md LIVE UPDATES with the change
+                timestamp = datetime.now(NZ_TZ).strftime("%B %d")
+                update_agent_state(agent_name, f"CURRENT_PLAN.md auto-updated: {change_description[:100]}")
+            else:
+                logger.warning(f"Auto-evolve {agent_name}: rewrite missing required sections, skipping")
+        else:
+            logger.warning(f"Auto-evolve {agent_name}: rewrite response too short or invalid, skipping")
+
+    except Exception as e:
+        logger.warning(f"Auto-evolve {agent_name}: failed (non-fatal): {e}")
+
+
 def _extract_state_updates(response: str) -> tuple:
     """
     Extract all [STATE UPDATE: ...] markers from a response.
@@ -3843,6 +3985,14 @@ If you identify a campaign opportunity or creative need (Meridian/PREP only), em
                 extract_and_store_memories(user_id, agent_name, extraction_conv, agent_display)
         except Exception as mem_e:
             logger.warning(f"Memory extraction failed (non-fatal): {mem_e}")
+
+        # AUTO-EVOLUTION — Detect plan changes and auto-rewrite CURRENT_PLAN.md
+        # Only runs for companion agents that have a CURRENT_PLAN.md
+        try:
+            if agent_name in CHAT_USER_MAP:
+                _auto_evolve_plan(agent_name, message_text, clean_response)
+        except Exception as ae_e:
+            logger.warning(f"Auto-evolution failed (non-fatal): {ae_e}")
 
     except Exception as e:
         # CRITICAL: Never silently fail. Tom must ALWAYS get a response.
