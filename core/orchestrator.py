@@ -4322,14 +4322,21 @@ def handle_command(command: str, telegram_config: dict):
 
                 export_text = "\n".join(lines)
 
-                # Split into chunks for Telegram (4096 char limit)
-                chunk_size = 4000
-                chunks = [export_text[i:i+chunk_size] for i in range(0, len(export_text), chunk_size)]
-                for i, chunk in enumerate(chunks):
-                    header = f"[{i+1}/{len(chunks)}] " if len(chunks) > 1 else ""
-                    send_telegram(chat_id, header + chunk, bot_token)
+                # Write to file and send as Telegram document (avoids message flooding)
+                export_path = os.path.join(BASE_DIR, "data", f"export_{target}_{datetime.now(NZ_TZ).strftime('%Y%m%d_%H%M')}.txt")
+                with open(export_path, "w", encoding="utf-8") as ef:
+                    ef.write(export_text)
 
-                logger.info(f"Exported {len(msgs)} messages, {len(facts)} facts, {len(asmr_findings)} ASMR findings for {target}")
+                import requests as _exp_req
+                with open(export_path, "rb") as ef:
+                    _exp_req.post(
+                        f"https://api.telegram.org/bot{bot_token}/sendDocument",
+                        data={"chat_id": chat_id, "caption": f"Export: {target} -- {len(msgs)} messages, {len(facts)} facts, {len(asmr_findings)} ASMR findings"},
+                        files={"document": (f"export_{target}.txt", ef, "text/plain")},
+                        timeout=30
+                    )
+
+                logger.info(f"Exported {len(msgs)} messages, {len(facts)} facts, {len(asmr_findings)} ASMR findings for {target} -> {export_path}")
         except Exception as e:
             from core.notification_router import route_notification
             route_notification(chat_id, f"Export failed: {e}", bot_token, severity="INFO", agent="command-center")
