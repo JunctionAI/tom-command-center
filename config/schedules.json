@@ -14,238 +14,22 @@
       "description": "Apex midday pulse — quick accountability touchpoint (1pm)"
     },
     {
-      "agent": "global-events",
-      "task": "scan",
-      "cron": "15 6 * * *",
-      "description": "Atlas morning world briefing (6:15am daily, one comprehensive scan)"
-    },
-    {
-      "agent": "beacon",
-      "task": "dbh_keyword_daily_check",
-      "cron": "30 6 * * *",
-      "description": "DBH keyword ranking tracker — pull GSC data for all 37 keywords across NZ/AUS/USA (6:30am daily)"
-    },
-    {
-      "agent": "beacon",
-      "task": "ai_visibility_weekly_check",
-      "cron": "0 3 * * 0",
-      "description": "AI visibility check — query ChatGPT/Claude/Perplexity/Gemini for DBH citations (Sunday 3am)"
-    },
-    {
-      "agent": "strategic-advisor",
-      "task": "tony_report",
-      "cron": "0 7 * * 1",
-      "description": "Weekly Tony CEO report generation (Monday 7am)"
-    },
-    {
-      "agent": "strategic-advisor",
-      "task": "morning_briefing",
-      "cron": "30 7 * * *",
-      "description": "PREP CEO morning strategic briefing (7:30am)"
-    },
-    {
       "agent": "apex",
       "task": "evening_debrief",
       "cron": "0 19 * * *",
       "description": "Apex evening debrief — primary data collection, pattern analysis (7pm)"
     },
     {
-      "agent": "dbh-marketing",
-      "task": "morning_brief",
-      "cron": "0 9 * * *",
-      "description": "Meridian DBH morning ops brief"
-    },
-    {
-      "agent": "dbh-marketing",
-      "task": "weekly_review",
-      "cron": "0 9 * * 1",
-      "description": "Meridian weekly performance review (Monday 9am)"
-    },
-    {
-      "agent": "dbh-marketing",
-      "task": "google_ads_review",
-      "cron": "0 8 * * 3",
-      "description": "Meridian Google Ads autonomous weekly review (Wednesday 8am)"
-    },
-    {
-      "agent": "muse",
-      "task": "daily_drop",
-      "cron": "0 16 * * *",
-      "description": "Muse daily cultural drop — music/fashion/art/film/concept (4pm, rotating domain)"
-    },
-    {
-      "agent": "social",
-      "task": "reflection_session",
-      "cron": "0 18 * * 4",
-      "description": "Compass life reflection session (Thursday 6pm)"
-    },
-    {
-      "agent": "medici",
-      "task": "daily_intelligence",
-      "cron": "0 18 * * *",
-      "description": "Medici daily power intelligence lesson — elite/org deep dive + live news (6pm)"
-    },
-    {
-      "agent": "walker-capital",
-      "task": "weekly_valuation_report",
-      "cron": "0 18 * * 5",
-      "description": "Vesper weekly deep-dive — full valuation memos on Stage 4+ companies (Friday 6pm)"
-    },
-    {
-      "agent": "evening-reading",
-      "task": "evening_reading",
-      "cron": "30 20 * * *",
-      "description": "ASI evening reading — life mentor lesson (8:30pm)"
-    },
-    {
-      "agent": "dbh-marketing",
-      "task": "replenishment_scan",
-      "cron": "0 22 * * *",
-      "description": "Daily replenishment scan — fire Klaviyo reorder events (10pm, background)"
-    },
-    {
-      "agent": "beacon",
-      "task": "content_generation",
-      "cron": "0 22 * * *",
-      "description": "Beacon SEO article generation (10pm daily, background)"
-    },
-    {
-      "agent": "dbh-marketing",
-      "task": "intelligence_sync",
-      "cron": "0 23 * * *",
-      "description": "Nightly customer intelligence DB sync (11pm, background)"
-    },
-    {
-      "agent": "dbh-marketing",
-      "task": "roas_check",
-      "cron": "15 23 * * *",
-      "description": "Meta ROAS verification against Shopify (11:15pm, background)"
-    },
-    {
-      "agent": "dbh-marketing",
-      "task": "rule_check",
-      "cron": "30 23 * * *",
-      "description": "Rule-based Asana task creation (11:30pm, background)"
-    },
-    {
-      "agent": "dbh-marketing",
-      "task": "auto_optimize",
-      "cron": "45 23 * * *",
-      "description": "Auto-optimizer: budget adjustments, A/B winners, campaign drafts (11:45pm, background)"
-    },
-    {
-      "agent": "command-center",
-      "task": "daily_snapshot",
-      "cron": "59 23 * * *",
-      "description": "Daily snapshot — locks calendar day figures at 11:59pm NZST (background)"
-    },
-    {
-      "agent": "command-center",
-      "task": "vault_sync",
-      "cron": "0 2 * * *",
-      "description": "Obsidian vault re-index (2am daily, background)"
-    },
-    {
-      "agent": "beacon",
-      "task": "citation_check",
-      "cron": "0 3 * * 0",
-      "description": "AI citation monitoring — check Perplexity for DBH mentions (Sunday 3am, background)"
-    },
-    {
-      "agent": "beacon",
-      "task": "llms_txt_update",
-      "cron": "0 3 1 * *",
-      "description": "Regenerate llms.txt for AEO (1st of month, 3am, background)"
-    },
-    {
-      "agent": "beacon",
-      "task": "gsc_feedback",
-      "cron": "0 4 * * 1",
-      "description": "GSC ranking feedback injected into Beacon context (Monday 4am, background)"
-    },
-    {
-      "agent": "beacon",
-      "task": "pure_pets_ranking_check",
-      "cron": "0 6 * * *",
-      "description": "Pure Pets daily ranking tracker — GSC position monitoring (6am, background)"
+      "agent": "global-events",
+      "task": "scan",
+      "cron": "15 6 * * *",
+      "description": "Atlas morning world briefing (6:15am daily, one comprehensive scan)"
     },
     {
       "agent": "global-events",
       "task": "weekly_deep_dive",
       "cron": "0 8 * * 0",
       "description": "Atlas weekly deep analysis (Sunday 8am)"
-    },
-    {
-      "agent": "strategic-advisor",
-      "task": "weekly_review",
-      "cron": "0 8 * * 1",
-      "description": "PREP weekly strategic review (Monday 8am)"
-    },
-    {
-      "agent": "social",
-      "task": "weekly_plan",
-      "cron": "0 10 * * 0",
-      "description": "Compass weekly social check-in (Sunday 10am)"
-    },
-    {
-      "agent": "medici",
-      "task": "weekly_deep_dive",
-      "cron": "0 11 * * 0",
-      "description": "Medici Sunday power deep dive — follow the money on major current event (11am)"
-    },
-    {
-      "agent": "muse",
-      "task": "weekly_review",
-      "cron": "0 12 * * 0",
-      "description": "Muse Sunday weekly cultural review + playlist update (12pm)"
-    },
-    {
-      "agent": "walker-capital",
-      "task": "discovery_scan",
-      "cron": "0 7 * * *",
-      "description": "Vesper daily company discovery scan + pipeline status brief (7am)"
-    },
-    {
-      "agent": "odysseus-money",
-      "task": "daily_lesson",
-      "cron": "30 6 * * *",
-      "description": "Odysseus daily financial reality + wealth builder lesson (6:30am)"
-    },
-    {
-      "agent": "marcus-stoic",
-      "task": "morning_wisdom",
-      "cron": "45 6 * * *",
-      "description": "Marcus daily stoic morning wisdom — small practice for today (6:45am)"
-    },
-    {
-      "agent": "marcus-stoic",
-      "task": "weekly_lesson",
-      "cron": "0 20 * * 0",
-      "description": "Aurelius Sunday weekly lesson — one thing to improve in cooking + one in personal life for the coming week (8pm)"
-    },
-    {
-      "agent": "strategos-pg",
-      "task": "daily_lesson",
-      "cron": "30 19 * * *",
-      "description": "Strategos daily PG/wealth management industry lesson (7:30pm)"
-    },
-    {
-      "agent": "strategic-advisor",
-      "task": "ltv_analysis",
-      "cron": "0 6 1 * *",
-      "description": "Monthly CPA:LTV cohort analysis (1st of month, 6am, background)"
-    },
-    {
-      "agent": "prospector",
-      "task": "daily_research",
-      "cron": "0 11 * * 1-6",
-      "description": "Prospector daily first-principles opportunity analysis (11am, Tue-Sun)"
-    },
-    {
-      "agent": "prospector",
-      "task": "weekly_synthesis",
-      "cron": "0 11 * * 1",
-      "description": "Prospector weekly opportunity synthesis + daily analysis (Monday 11am)"
     },
     {
       "agent": "command-center",
@@ -258,54 +42,6 @@
       "task": "cleanup_conversation_history",
       "cron": "30 3 * * *",
       "description": "Clean up conversation history older than 7 days (3:30am daily)"
-    },
-    {
-      "agent": "aether",
-      "task": "morning_checkin",
-      "cron": "0 8 * * *",
-      "description": "Aether morning recovery check-in for Jackson (8am daily)"
-    },
-    {
-      "agent": "aether",
-      "task": "midday_checkin",
-      "cron": "0 13 * * *",
-      "description": "Aether midday recovery check-in for Jackson (1pm daily)"
-    },
-    {
-      "agent": "aether",
-      "task": "evening_checkin",
-      "cron": "30 18 * * *",
-      "description": "Aether evening recovery check-in and data collection for Jackson (6:30pm daily)"
-    },
-    {
-      "agent": "aether",
-      "task": "weekly_progress_report",
-      "cron": "0 9 * * 0",
-      "description": "Aether weekly progress summary for Tom — privacy-respecting metrics report (Sunday 9am)"
-    },
-    {
-      "agent": "forge",
-      "task": "morning_checkin",
-      "cron": "0 7 * * *",
-      "description": "Forge morning brain + body check-in for Tyler (7am daily)"
-    },
-    {
-      "agent": "forge",
-      "task": "midday_checkin",
-      "cron": "30 12 * * *",
-      "description": "Forge midday accountability check for Tyler (12:30pm daily)"
-    },
-    {
-      "agent": "forge",
-      "task": "evening_checkin",
-      "cron": "30 18 * * *",
-      "description": "Forge evening debrief and data collection for Tyler (6:30pm daily)"
-    },
-    {
-      "agent": "forge",
-      "task": "weekly_progress_report",
-      "cron": "0 9 * * 0",
-      "description": "Forge weekly progress summary for Tom — privacy-respecting metrics report (Sunday 9am)"
     }
   ]
 }
