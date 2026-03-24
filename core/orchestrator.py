@@ -200,7 +200,7 @@ def load_agent_brain(agent_name: str, user_id: str = None, current_context: str 
             if log_file.exists():
                 try:
                     log_content = log_file.read_text(encoding='utf-8')
-                    summary = log_content[:600] if len(log_content) > 600 else log_content
+                    summary = log_content[:2000] if len(log_content) > 2000 else log_content
                     recent_logs.append(f"--- {log_date} ---\n{summary}")
                 except Exception:
                     pass
@@ -1008,6 +1008,13 @@ def call_claude_vision(system_prompt: str, image_b64: str, media_type: str,
             system=system_prompt,
             messages=[{"role": "user", "content": content}]
         )
+        # Track API usage (was missing — vision calls weren't counted)
+        try:
+            _track_api_usage("vision", model,
+                             response.usage.input_tokens if hasattr(response, 'usage') else 0,
+                             response.usage.output_tokens if hasattr(response, 'usage') else 0)
+        except Exception:
+            pass
         return response.content[0].text
     except Exception as e:
         logger.error(f"Claude Vision API error: {e}")
@@ -2639,6 +2646,14 @@ Do NOT include any personal health details, therapy discussions, or emotional co
             logger.error(f"Knowledge engine failed: {e}")
             task_prompt = "Deliver a foundational knowledge lesson for Tom's evening reading. Pick a mental model or strategic concept and connect it to running a DTC health supplement business. 500-800 words, practical, Telegram-friendly."
 
+    # Inject explicit date/day so agents never confuse the day
+    _now_nz = datetime.now(NZ_TZ)
+    _today_str = _now_nz.strftime("%A, %B %d, %Y")
+    _time_str = _now_nz.strftime("%I:%M %p")
+    task_prompt += f"""
+
+TODAY IS: {_today_str} (current time: {_time_str} NZST). Always refer to today by this date and day name. Never guess what day it is."""
+
     # Add formatting rules + cross-agent event and task markers to all scheduled prompts
     task_prompt += """
 
@@ -3448,22 +3463,27 @@ The daily plan should reference the 90-day execution map from Meridian's intelli
             logger.warning(f"THIS-WEEK.md write failed (non-fatal): {e}")
 
     # --- Memory extraction for scheduled tasks (companions + all agents) ---
-    # Without this, scheduled check-in content (insights, patterns) is lost
-    try:
-        sched_user_id_mem = CHAT_USER_MAP.get(agent_name, str(telegram_config.get("owner_user_id", os.environ.get("TELEGRAM_OWNER_ID", "default"))))
-        extraction_conv = [
-            {"role": "user", "content": task_prompt},
-            {"role": "assistant", "content": response}
-        ]
-        if agent_name in CHAT_USER_MAP:
-            from core.asmr_memory import asmr_extract
-            asmr_extract(sched_user_id_mem, agent_name, extraction_conv, AGENT_DISPLAY.get(agent_name, agent_name))
-            logger.info(f"ASMR memory extracted for {agent_name}/{task_name}")
-        else:
-            from core.user_memory import extract_and_store_memories
-            extract_and_store_memories(sched_user_id_mem, agent_name, extraction_conv, AGENT_DISPLAY.get(agent_name, agent_name))
-    except Exception as mem_e:
-        logger.warning(f"Scheduled task memory extraction failed (non-fatal): {mem_e}")
+    # Without this, scheduled check-in content (insights, patterns) is lost.
+    # SKIP for weekly_progress_report — it's a Tom-facing summary, not user content.
+    # Extracting from it would store Tom-context facts under the companion user's ID.
+    if task_name == "weekly_progress_report":
+        logger.info(f"Skipping memory extraction for {agent_name}/weekly_progress_report (Tom-facing report)")
+    else:
+        try:
+            sched_user_id_mem = CHAT_USER_MAP.get(agent_name, str(telegram_config.get("owner_user_id", os.environ.get("TELEGRAM_OWNER_ID", "default"))))
+            extraction_conv = [
+                {"role": "user", "content": task_prompt},
+                {"role": "assistant", "content": response}
+            ]
+            if agent_name in CHAT_USER_MAP:
+                from core.asmr_memory import asmr_extract
+                asmr_extract(sched_user_id_mem, agent_name, extraction_conv, AGENT_DISPLAY.get(agent_name, agent_name))
+                logger.info(f"ASMR memory extracted for {agent_name}/{task_name}")
+            else:
+                from core.user_memory import extract_and_store_memories
+                extract_and_store_memories(sched_user_id_mem, agent_name, extraction_conv, AGENT_DISPLAY.get(agent_name, agent_name))
+        except Exception as mem_e:
+            logger.warning(f"Scheduled task memory extraction failed (non-fatal): {mem_e}")
 
     logger.info(f"Completed: {agent_name}/{task_name}")
 
@@ -3722,7 +3742,10 @@ After your response, emit [STATE UPDATE: <what to remember from this exchange>].
             pending_events = get_pending_events_for_agent(agent_name)
             events_section = f"\n\n{pending_events}" if pending_events else ""
 
-            user_prompt = f"""Tom says: {message_text}
+            # Resolve display name: companions use their user's name, others default to Tom
+            _user_display_names = {"aether": "Jackson", "forge": "Tyler", "apex": "Tom"}
+            _user_display = _user_display_names.get(agent_name, "Tom")
+            user_prompt = f"""{_user_display} says: {message_text}
 {events_section}
 Respond as your agent character. You have your full context loaded above.
 
@@ -3837,9 +3860,10 @@ If you identify a campaign opportunity or creative need (Meridian/PREP only), em
 def handle_photo_message(chat_id: str, photo_sizes: list, caption: str,
                          bot_token: str, telegram_config: dict):
     """
-    Handle a photo sent by Tom.
-    Downloads the image, sends it to Claude Vision with the agent's full brain.
-    Wrapped in try/except so Tom ALWAYS gets a reply.
+    Handle a photo sent to any agent.
+    Downloads the image, sends it to Claude Vision with the agent's full brain,
+    conversation history, and runs memory extraction afterward.
+    Wrapped in try/except so the user ALWAYS gets a reply.
     """
     agent_name = identify_agent_from_chat(chat_id, telegram_config)
     if not agent_name:
@@ -3854,8 +3878,12 @@ def handle_photo_message(chat_id: str, photo_sizes: list, caption: str,
             route_notification(chat_id, "[Could not download photo]", bot_token, severity="IMPORTANT", agent=agent_name)
             return
 
-        # Load agent brain
-        brain = load_agent_brain(agent_name)
+        # Resolve user_id (companions serve different users)
+        user_id = CHAT_USER_MAP.get(agent_name, str(telegram_config.get("owner_user_id", os.environ.get("TELEGRAM_OWNER_ID", "default"))))
+
+        # Load agent brain WITH user memory injected
+        caption_context = caption if caption else "photo analysis"
+        brain = load_agent_brain(agent_name, user_id=user_id, current_context=caption_context)
 
         # PREP gets full context for photos too
         task_type = "chat"
@@ -3863,11 +3891,21 @@ def handle_photo_message(chat_id: str, photo_sizes: list, caption: str,
             brain = _inject_prep_context(brain)
             task_type = "deep_analysis"
 
-        # Build caption prompt
+        # Load conversation history for multi-turn context
+        from core.user_memory import get_recent_messages as get_memory_messages, save_message as save_memory_message
+        conv_history = get_memory_messages(user_id, agent_name, chat_id, max_messages=20, max_age_hours=72)
+
+        # Save incoming photo message permanently
+        photo_msg = f"[Photo] {caption}" if caption else "[Photo sent]"
+        save_memory_message(user_id, agent_name, chat_id, "user", photo_msg)
+
+        # Build caption prompt with correct user name
+        _user_display_names = {"aether": "Jackson", "forge": "Tyler", "apex": "Tom"}
+        _user_display = _user_display_names.get(agent_name, "Tom")
         if caption:
-            user_text = f"Tom sent a photo with caption: {caption}\n\nFORMATTING: This goes to Telegram. NEVER use markdown tables. Use bullet points and Label: Value pairs."
+            user_text = f"{_user_display} sent a photo with caption: {caption}\n\nFORMATTING: This goes to Telegram. NEVER use markdown tables. Use bullet points and Label: Value pairs.\n\nIMPORTANT: After analysing, emit [STATE UPDATE: <what to remember about this photo>]."
         else:
-            user_text = "Tom sent a photo. Analyse it in the context of your role and expertise.\n\nFORMATTING: This goes to Telegram. NEVER use markdown tables."
+            user_text = f"{_user_display} sent a photo. Analyse it in the context of your role and expertise.\n\nFORMATTING: This goes to Telegram. NEVER use markdown tables.\n\nIMPORTANT: After analysing, emit [STATE UPDATE: <what to remember about this photo>]."
 
         # Call Claude with vision
         response = call_claude_vision(brain, image_b64, media_type, user_text, task_type=task_type)
@@ -3893,11 +3931,33 @@ def handle_photo_message(chat_id: str, photo_sizes: list, caption: str,
             input_summary=f"[Photo] {caption}" if caption else "[Photo]"
         )
 
+        # Save agent response to permanent memory
+        try:
+            save_memory_message(user_id, agent_name, chat_id, "assistant", clean_response)
+        except Exception as hist_e:
+            logger.warning(f"Failed to save photo response to memory: {hist_e}")
+
         sent = send_telegram(chat_id, clean_response, bot_token)
         if sent:
             logger.info(f"Photo response from {agent_name} delivered")
         else:
             logger.error(f"FAILED to deliver {agent_name} photo response")
+
+        # AUTOMATIC MEMORY EXTRACTION (same as text handler)
+        try:
+            agent_display = AGENT_DISPLAY.get(agent_name, agent_name)
+            extraction_conv = conv_history + [
+                {"role": "user", "content": photo_msg},
+                {"role": "assistant", "content": clean_response}
+            ]
+            if agent_name in CHAT_USER_MAP:
+                from core.asmr_memory import asmr_extract
+                asmr_extract(user_id, agent_name, extraction_conv, agent_display)
+            else:
+                from core.user_memory import extract_and_store_memories
+                extract_and_store_memories(user_id, agent_name, extraction_conv, agent_display)
+        except Exception as mem_e:
+            logger.warning(f"Photo memory extraction failed (non-fatal): {mem_e}")
 
     except Exception as e:
         logger.error(f"PHOTO HANDLER CRASH for {agent_name}: {e}", exc_info=True)
