@@ -4265,6 +4265,75 @@ def handle_command(command: str, telegram_config: dict):
             from core.notification_router import route_notification
             route_notification(chat_id, f"Memory system error: {e}", bot_token, severity="INFO", agent="command-center")
 
+    elif cmd.startswith("export "):
+        # Export all messages and facts for a companion user to Telegram
+        try:
+            target = cmd.split("export ", 1)[1].strip().lower()
+            user_map = {"tyler": "tyler", "jackson": "jackson", "tom": str(telegram_config.get("owner_user_id", os.environ.get("TELEGRAM_OWNER_ID", "default")))}
+            target_user_id = user_map.get(target)
+            if not target_user_id:
+                from core.notification_router import route_notification
+                route_notification(chat_id, f"Unknown user: {target}. Use: export tyler, export jackson, export tom", bot_token, severity="INFO", agent="command-center")
+            else:
+                import sqlite3 as _exp_sql
+                db_path = os.path.join(BASE_DIR, "data", "user_memory.db")
+                db = _exp_sql.connect(db_path)
+                db.row_factory = _exp_sql.Row
+
+                # Messages
+                msgs = db.execute("SELECT role, content, agent_id, created_at FROM messages WHERE user_id = ? ORDER BY created_at ASC", (target_user_id,)).fetchall()
+
+                # Facts
+                facts = db.execute("SELECT fact, category, confidence, source_agent, created_at FROM user_facts WHERE user_id = ? AND is_active = 1 ORDER BY created_at DESC", (target_user_id,)).fetchall()
+
+                # ASMR knowledge findings
+                asmr_findings = []
+                try:
+                    asmr_findings = db.execute("SELECT vector, finding, observer, source_date, is_current FROM knowledge_findings WHERE user_id = ? ORDER BY source_date DESC", (target_user_id,)).fetchall()
+                except Exception:
+                    pass  # Table may not exist
+
+                db.close()
+
+                # Build export
+                lines = [f"EXPORT: {target} (user_id: {target_user_id})\n"]
+                lines.append(f"Messages: {len(msgs)}")
+                lines.append(f"Active facts: {len(facts)}")
+                lines.append(f"ASMR findings: {len(asmr_findings)}\n")
+
+                if msgs:
+                    lines.append("=== MESSAGES (full history) ===")
+                    for m in msgs:
+                        ts = m["created_at"][:16] if m["created_at"] else "?"
+                        lines.append(f"[{ts}] {m['role'].upper()} ({m['agent_id']}): {m['content']}")
+                    lines.append("")
+
+                if facts:
+                    lines.append("=== ACTIVE FACTS ===")
+                    for f in facts:
+                        lines.append(f"[{f['category']}] {f['fact']} (confidence: {f['confidence']}, from: {f['source_agent']}, at: {f['created_at'][:16]})")
+                    lines.append("")
+
+                if asmr_findings:
+                    lines.append("=== ASMR FINDINGS ===")
+                    for af in asmr_findings:
+                        current = "CURRENT" if af["is_current"] else "OUTDATED"
+                        lines.append(f"[{current}] [{af['vector']}] {af['finding']} (observer: {af['observer']}, date: {af['source_date']})")
+
+                export_text = "\n".join(lines)
+
+                # Split into chunks for Telegram (4096 char limit)
+                chunk_size = 4000
+                chunks = [export_text[i:i+chunk_size] for i in range(0, len(export_text), chunk_size)]
+                for i, chunk in enumerate(chunks):
+                    header = f"[{i+1}/{len(chunks)}] " if len(chunks) > 1 else ""
+                    send_telegram(chat_id, header + chunk, bot_token)
+
+                logger.info(f"Exported {len(msgs)} messages, {len(facts)} facts, {len(asmr_findings)} ASMR findings for {target}")
+        except Exception as e:
+            from core.notification_router import route_notification
+            route_notification(chat_id, f"Export failed: {e}", bot_token, severity="INFO", agent="command-center")
+
     elif cmd.startswith("forget "):
         # Delete memories matching text
         try:
