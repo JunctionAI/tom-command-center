@@ -1,6 +1,11 @@
 # Recovery Techniques Library — Aether
 ## Practical exercises and protocols for Jackson's daily practice
 
+> **TEMPLATE ONLY.** Jackson's ACTUAL current recovery plan and technique rotation
+> are in `state/CURRENT_PLAN.md`. If ANYTHING in this file conflicts with
+> CURRENT_PLAN.md, ALWAYS follow CURRENT_PLAN.md. This file is reference material
+> for general technique principles only.
+
 ---
 
 ## VAGAL TONING TECHNIQUES (Phase 1+)

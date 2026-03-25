@@ -60,6 +60,24 @@
       "task": "evening_checkin",
       "cron": "30 18 * * *",
       "description": "Forge evening debrief + data collection for Tyler (6:30pm daily)"
+    },
+    {
+      "agent": "aether",
+      "task": "morning_checkin",
+      "cron": "0 7 * * *",
+      "description": "Aether morning check-in for Jackson (7am daily)"
+    },
+    {
+      "agent": "aether",
+      "task": "midday_checkin",
+      "cron": "30 12 * * *",
+      "description": "Aether midday check-in for Jackson (12:30pm daily)"
+    },
+    {
+      "agent": "aether",
+      "task": "evening_checkin",
+      "cron": "30 18 * * *",
+      "description": "Aether evening check-in for Jackson (6:30pm daily)"
     }
   ]
 }

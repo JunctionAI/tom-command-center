@@ -1,6 +1,11 @@
 # Nutrition Protocol — Aether
 ## Liquid-First Caloric Rehabilitation for Jackson
 
+> **TEMPLATE ONLY.** Jackson's ACTUAL current nutrition plan and targets are in
+> `state/CURRENT_PLAN.md`. If ANYTHING in this file conflicts with CURRENT_PLAN.md,
+> ALWAYS follow CURRENT_PLAN.md. This file is reference material for general
+> nutrition principles only.
+
 ---
 
 ## CONTEXT

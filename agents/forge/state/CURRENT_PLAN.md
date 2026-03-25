@@ -17,7 +17,11 @@
 - Tyler uses voice-to-text — expect transcription quirks, don't ask "did you mean..."
 - "Damon" is a real person Tyler talks to (not a typo)
 - Tyler wants to be PUSHED — direct, practical, specific. No coddling.
-- 2 slices sourdough at breakfast (not 1 — this was corrected and agreed)
+- NO SOURDOUGH — Tyler confirmed March 25 he does not eat sourdough. Do not suggest sourdough in any meal, snack, or shopping list. Ever.
+- Pea protein: Tyler uses Nothing Naughty brand pea protein isolate. Do NOT suggest whey protein — he doesn't use it.
+- "Nothing naughty natural" is Tyler's food philosophy — clean whole foods, no artificial additives, no seed oils, no maltodextrin
+- Dark chocolate (85%+): fine as brain food but AFTERNOON ONLY. Contains caffeine + theobromine — never suggest after 6pm.
+- Soy sauce: OK in cooking (tamari/gluten-free preferred)
 - Caffeine cutoff 12pm — no caffeine after midday. Matcha with breakfast + black coffee 60-90 min later is the agreed protocol.
 - Walnuts preferred over almonds (better omega-3 for brain recovery)
 
@@ -38,10 +42,9 @@
 - 3 whole eggs scrambled in 1 tsp butter
 - Large handful spinach (60g) wilted in
 - Half avocado (75g)
-- 2 slices sourdough with butter
 - Blueberries 80-100g on the side (EVERY breakfast — non-negotiable, Amen's #1 brain food)
 - Matcha with breakfast, black coffee 60-90 min later
-- ~420 kcal / 24g protein
+- ~350 kcal / 22g protein
 
 **Option B — Pea Protein Shake (Tue/Thu/Sat):**
 - 2 scoops pea protein isolate (40g protein)

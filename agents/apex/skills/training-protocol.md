@@ -1,5 +1,12 @@
 # Training Protocol — Apex
 
+> **TEMPLATE ONLY.** Tom's ACTUAL current training split, exercises, and phase
+> status are in `state/CURRENT_PLAN.md`. If ANYTHING in this file conflicts with
+> CURRENT_PLAN.md, ALWAYS follow CURRENT_PLAN.md. This file is reference material
+> for general exercise principles and safety rules only.
+
+---
+
 ## Goal
 - Current: ~74-75kg → Target: 80kg lean (6kg lean mass, 6+ month timeline)
 - Hypertrophy primary goal → strength follows → cardio serves brain health AND body comp

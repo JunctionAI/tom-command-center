@@ -1,16 +1,23 @@
 # Exercise Protocol — Forge
-## Post-Concussion Progressive Training for Tyler
+## Post-Concussion Progressive Training Principles
 
-> **TEMPLATE ONLY.** Tyler's ACTUAL current training split, exercises, and phase
-> status are in `state/CURRENT_PLAN.md`. If ANYTHING in this file conflicts with
-> CURRENT_PLAN.md, ALWAYS follow CURRENT_PLAN.md. This file is reference material
-> for general exercise principles and safety rules only.
+> **REFERENCE ONLY — NO SPECIFIC EXERCISES, SCHEDULES, OR PHASES.**
+> Tyler's ACTUAL training split, exercises, sets/reps, weekly schedule, and phase status
+> are in `state/CURRENT_PLAN.md`. ALWAYS use CURRENT_PLAN.md for:
+> - Current phase and what exercises are allowed
+> - Weekly training schedule (which day = which workout)
+> - Specific exercises, sets, reps
+> - Sauna frequency and timing
+> - Phase transition criteria
+>
+> This file contains ONLY the scientific principles behind training decisions.
+> If ANYTHING here conflicts with CURRENT_PLAN.md, CURRENT_PLAN.md wins. Always.
 
 ---
 
 ## POST-CONCUSSION EXERCISE SAFETY
 
-Tyler is 8 months post-concussion with clear MRI and normal brain biomarkers. He's past the acute phase but still recovering. Exercise is MEDICINE for post-concussion — it increases cerebral blood flow, BDNF, and accelerates recovery. But it must be progressed properly.
+Tyler is 8+ months post-concussion with clear MRI and normal brain biomarkers. Past the acute phase but still recovering. Exercise is MEDICINE for post-concussion — it increases cerebral blood flow, BDNF, and accelerates recovery. But it must be progressed properly.
 
 **Stop exercise immediately if:**
 - Headache develops or worsens during exercise
@@ -23,142 +30,98 @@ These are signs the brain is being pushed past its current recovery threshold. D
 
 ---
 
-## PHASE 1: FOUNDATION (current)
+## PROGRESSIVE OVERLOAD PRINCIPLES
 
-Tyler is already walking daily and doing sauna. This phase adds structure.
-
-**Weekly schedule:**
-- Mon: Walk 30-45 min (sunrise) + sauna 20 min
-- Tue: Bodyweight strength (see below) + walk
-- Wed: Walk 30-45 min + sauna 20 min
-- Thu: Bodyweight strength + walk
-- Fri: Walk 30-45 min + sauna 20 min
-- Sat: Active recovery (surf if conditions, otherwise easy walk/stretch)
-- Sun: Rest or light walk
-
-**Bodyweight strength (Phase 1 — 2x/week):**
-- Push-ups: 3 sets x max reps (track progression)
-- Bodyweight squats: 3 sets x 15
-- Lunges: 3 sets x 10 each leg
-- Plank: 3 sets x 30-60 seconds
-- Dead hang (if bar available): 3 sets x 20-30 seconds
-- Glute bridges: 3 sets x 15
-
-**Sauna protocol:**
-- 20 minutes at 80-100°C
-- Post-exercise timing for maximum growth hormone and BDNF benefit
-- Hydrate well: 500ml before, 500ml during/after
-- Cold shower after (even 30 seconds) for parasympathetic rebound
-
-**Readiness assessment (no wearable available):**
-- Ask Tyler: "How did you sleep?" and "Energy level right now?" (1-10)
-- If sleep <6 hours OR energy <4: lighter session (walk + sauna, no heavy lifting)
-- If sleep 7+ AND energy 6+: push hard
-- Check CURRENT_PLAN.md ACTIVE CONSTRAINTS for whether wearable data is available
-- When/if Tyler gets a new watch, HRV becomes the primary readiness metric again
+Progressive overload is the #1 driver of muscle growth. Principles:
+- Increase volume (reps) before increasing load (weight)
+- For bodyweight phases: increase reps, reduce rest time, add pauses/tempos, elevate feet
+- For weighted phases: add 2.5kg to compounds every 1-2 weeks
+- If a lift plateaus for 2 weeks: change rep range or exercise variation
+- Track every session — what gets measured gets improved
+- Deload every 4-6 weeks (reduce volume 40-50% for one week)
 
 ---
 
-## PHASE 2: BRAIN RECOVERY + STRENGTH (weeks 4-10)
+## ZONE 2 CARDIO (BRAIN SCIENCE)
 
-**Weekly schedule:**
-- Mon: Gym — Push day (chest, shoulders, triceps) + 15 min zone 2 cardio
-- Tue: Walk 30 min + cold exposure (1-2 min cold shower)
-- Wed: Gym — Pull day (back, biceps) + 15 min zone 2 cardio
-- Thu: Walk 30 min + sauna 20 min
-- Fri: Gym — Legs + 15 min zone 2 cardio
-- Sat: Surf or active outdoor activity
-- Sun: Rest, stretch, NSDR/yoga nidra
-
-**Gym — Push day:**
-- Bench press or dumbbell press: 3x8-10
-- Overhead press: 3x8-10
-- Incline dumbbell press: 3x10-12
-- Lateral raises: 3x12-15
-- Tricep dips or pushdowns: 3x10-12
-- Face pulls: 3x15 (shoulder health)
-
-**Gym — Pull day:**
-- Deadlifts (conventional or RDL): 3x8-10
-- Pull-ups or lat pulldown: 3x8-10
-- Barbell rows: 3x8-10
-- Dumbbell rows: 3x10-12
-- Bicep curls: 3x10-12
-- Rear delt flyes: 3x15
-
-**Gym — Legs:**
-- Squats (barbell or goblet): 4x8-10
-- Romanian deadlifts: 3x10-12
-- Leg press: 3x10-12
-- Walking lunges: 3x10 each
-- Calf raises: 4x15
-- Leg extensions: 3x12
-
-**Zone 2 cardio (post-lifting):**
-- Treadmill walk at incline, bike, rowing machine, or elliptical
-- Heart rate: 60-70% max (roughly 120-140 bpm for Tyler)
-- This is the BDNF and blood flow sweet spot
+Zone 2 cardio is the BDNF and cerebral blood flow sweet spot:
+- Heart rate: 60-70% of max HR
+- Can hold a conversation but it's not comfortable
 - 15 min is minimum effective dose, 30 min is ideal
-
-**Cold exposure protocol (add from week 4):**
-- Start: 30 seconds cold at end of shower
-- Week 2: 1 minute
-- Week 4: 2-3 minutes
-- OR: cold plunge if accessible (11°C, 2-3 min)
-- Morning cold exposure = dopamine boost for ADHD management
-- Do NOT combine with sauna in same session (do separately for max benefit)
+- Modality doesn't matter (walk at incline, bike, row, swim, surf paddle)
+- Post-concussion: Zone 2 increases cerebral blood flow without triggering symptoms
+- For ADHD/overfocused brain: Zone 2 helps regulate dopamine and serotonin
 
 ---
 
-## PHASE 3: PHYSICAL TRANSFORMATION (weeks 8-16)
+## COLD EXPOSURE PRINCIPLES
 
-**Weekly schedule:**
-- Mon: Push + 20 min zone 2
-- Tue: Pull + 20 min zone 2
-- Wed: Legs
-- Thu: Push (volume day — lighter weight, more reps)
-- Fri: Pull + surf (if conditions)
-- Sat: Surf or outdoor activity
-- Sun: Active recovery (stretch, walk, NSDR)
+Cold exposure drives norepinephrine release (2-3x baseline) and parasympathetic rebound:
+- Start short (30 sec) and build gradually over weeks
+- Morning cold exposure = dopamine boost lasting 3-5 hours
+- Do NOT combine with sauna in same session (separate by 2+ hours for max benefit)
+- Cold plunge (11°C) is more effective than cold shower, but either works
+- Post-concussion: start conservative, monitor for headache/dizziness
 
-**Progressive overload principles:**
-- Add 2.5kg to compounds every 1-2 weeks
-- Track every lift in a notes app or workout log
-- Progressive overload is the #1 driver of muscle growth
-- If a lift plateaus for 2 weeks: change rep range or variation
+---
 
-**Nutrition for body composition (see nutrition-protocol.md):**
-- Caloric surplus: 300-500 above maintenance (~2800-3000 kcal/day)
-- Protein: 2g/kg = 156g/day minimum
-- Carbs around training (pre/post workout)
-- Fats: minimum 0.8g/kg for hormone health
+## SAUNA PRINCIPLES (HEAT SHOCK PROTEINS)
 
-**Surfing reintegration:**
-- Start with smaller days (waist-chest high)
-- Paddle fitness builds naturally with pull days
-- Pop-ups are explosive power — front squats and push-ups translate directly
+Sauna drives heat shock protein production, growth hormone release, and cardiovascular adaptation:
+- 80-100°C is the effective range
+- 15-20 minutes per session
+- Post-exercise timing maximises growth hormone and BDNF benefit
+- Hydrate: 500ml before + 500ml after minimum
+- Sauna breathing protocol: settle first 5 min, then parasympathetic breathing (inhale 4 nose / exhale 6-8 mouth), final minutes box breathing
+- 3-4x/week is the sweet spot for cardiovascular benefit (Laukkanen et al.)
+
+---
+
+## READINESS ASSESSMENT PRINCIPLES
+
+When no wearable data is available, self-report readiness assessment:
+- Sleep quantity: hours slept (threshold: 6 hours minimum for training)
+- Sleep quality: 1-10 subjective
+- Energy right now: 1-10 subjective
+- Symptoms check: headache, dizziness, fog, gut pain
+
+Decision rules:
+- Sleep <6 hours OR energy <4 → lighter session (walk + sauna, no strength work)
+- Sleep 7+ AND energy 6+ → push hard
+- Any active symptoms (headache, dizziness) → walk only, reassess next day
+- Always check CURRENT_PLAN.md ACTIVE CONSTRAINTS for device/wearable status
+
+When/if Tyler gets a new watch, HRV becomes the primary readiness metric.
+
+---
+
+## PERTHES DISEASE CONSIDERATIONS (LEFT HIP)
+
+Tyler has Perthes disease history affecting the left hip:
+- Left hip is tighter than right — monitor during all lower body movements
+- Reduce range of motion if discomfort during lunges, squats, or hip-dominant movements
+- No aggressive hip stretches until cleared by medical professional
+- Safe mobility: supine knee-to-chest, figure-four piriformis stretch, cat-cow, seated hip circles
+- Unsafe until cleared: deep pigeon pose, aggressive psoas stretches, full-depth single-leg work
+
+---
+
+## SURFING REINTEGRATION PRINCIPLES
+
+Surfing is both training and recovery for Tyler:
+- Start with smaller days — conditions appropriate for current fitness
+- Paddle fitness builds naturally with pulling movements
+- Pop-ups are explosive power — pushing exercises translate directly
 - Monitor: if surfing triggers headaches or significant brain fog, reduce session length
-- Perthes disease (left hip) — monitor for hip pain. If it flares, adjust leg training (no deep squats on left side)
+- Left hip (Perthes) — monitor during pop-ups and turns
 
 ---
 
-## PHASE 4-5: PEAK PERFORMANCE
+## PHASE TRANSITION PRINCIPLES
 
-- 5-6 training days per week
-- Advanced programming: periodization (strength block → hypertrophy block → power block)
-- Surfing as primary sport
-- Running reintroduction (C25K-style if desired, post-concussion clearance from Dr. Gordon)
-- Competition-level fitness
-- Maintenance: this becomes lifestyle, not protocol
-
----
-
-## KEY METRICS TO TRACK
-
-After every session:
-- Exercise type and duration
-- Key lifts (weight x reps for compounds)
-- HRV pre-exercise (morning reading)
-- Energy 2 hours post-exercise (1-10)
-- Any symptom flare (headache, fog, dizziness — Y/N)
-- Mood post-exercise (1-10)
+Companion agents use phased progression. General principles:
+- Each phase has specific entry criteria — ALL must be met before advancing
+- Bodyweight mastery before external load (prevents compensation patterns)
+- Consistency > intensity in early phases
+- Medical clearance required before introducing heavy compound lifts
+- Phase transitions are decisions, not timelines — 4 weeks minimum but only advance when criteria are truly met

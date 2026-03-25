@@ -1,6 +1,11 @@
 # POTS Exercise Protocol — Modified Levine/Dallas
 ## Graded Exercise Rehabilitation for Jackson's Dysautonomia
 
+> **TEMPLATE ONLY.** Jackson's ACTUAL current exercise plan and phase status are in
+> `state/CURRENT_PLAN.md`. If ANYTHING in this file conflicts with CURRENT_PLAN.md,
+> ALWAYS follow CURRENT_PLAN.md. This file is reference material for general
+> exercise principles only.
+
 ---
 
 ## IMPORTANT CONTEXT

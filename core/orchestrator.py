@@ -140,6 +140,7 @@ def get_learning_db():
 # Map agent names to non-default user_ids (most agents serve Tom)
 CHAT_USER_MAP = {
     "aether": "jackson",
+    "apex": "tom",
     "forge": "tyler",
 }
 
@@ -2577,9 +2578,127 @@ Emit [STATE UPDATE:], [METRIC:], [BRAIN_METRIC:], [INSIGHT:], [PATTERN:], [PHASE
     if agent_name == "forge" and task_name in forge_prompts:
         task_prompt = forge_prompts[task_name]
 
-    # Aether: replace "Jackson" placeholder (Aether's prompts are Jackson-specific)
-    if agent_name == "aether" and task_name in ("morning_checkin", "midday_checkin", "evening_checkin"):
-        pass  # Aether's prompts already use "Jackson" — no replacement needed
+    # Apex has its own task prompts — override the generic ones
+    apex_prompts = {
+        "morning_protocol": """Execute your morning protocol. Follow the format in your AGENT.md but keep it CONVERSATIONAL — you're a coach checking in, not a system generating a report.
+
+CRITICAL: Read CURRENT_PLAN.md first. It contains Tom's ACTUAL training split, nutrition plan, supplement stack, and active constraints. Use THAT, not the skills file templates.
+
+Open warm. Use Tom's name. Reference yesterday if you have diary data (what he trained, how he felt, what he ate).
+
+Then deliver today's plan:
+- Phase + day count (one line)
+- Ask about sleep (hours, quality, how he feels right now)
+- Substance check (quick, no pressure — 'All clean?' is fine after the first few days)
+- Today's training plan from CURRENT_PLAN.md (specific: exercises, sets, reps, weights)
+- Today's nutrition from CURRENT_PLAN.md (practical — what to eat, not a lecture)
+- Supplement reminders from CURRENT_PLAN.md (which ones, when — be specific about what he ACTUALLY HAS vs what's still pending)
+- One brain science insight (rotate from MASTERS.md — mechanism, not motivation. 2-3 sentences max)
+- One focus priority for the day
+
+Check ACTIVE CONSTRAINTS in CURRENT_PLAN.md: respect training time window (after 7:30pm), hip niggle status, RDL status, sleep rules.
+Check WHAT'S NOT STARTED YET: don't ask about blood work unless it emerges naturally from symptoms. Don't ask about supplements he hasn't purchased yet as if he should already have them.
+
+Keep it SHORT. Tom reads this on his phone in 90 seconds. No tables. No walls of text. End with energy.
+
+After delivering, emit [STATE UPDATE:] with the day count and any data collected.""",
+
+        "midday_pulse": """Execute your midday pulse. This is a 30-second touchpoint, not a deep dive.
+
+CRITICAL: Read CURRENT_PLAN.md first for tonight's training plan and active constraints.
+
+Tone: Casual, quick, like a mate checking in.
+
+Ask 3-4 things max:
+- Have you eaten well? (protein specifically)
+- Energy right now? (1-10)
+- Any cravings or triggers today?
+- Quick reminder of tonight's training from CURRENT_PLAN.md
+
+Drop ONE micro-insight — 1-2 sentences of brain science.
+
+If Tom mentioned something specific in his morning response, reference it. Show you're listening.
+
+Keep the whole message under 100 words.""",
+
+        "evening_debrief": """Execute your evening debrief. This is your PRIMARY data collection session.
+
+CRITICAL: Read CURRENT_PLAN.md first for active constraints, today's actual training plan, and nutrition targets.
+
+Start open: 'How was today, Tom?' or reference something specific from the day.
+
+Then collect (make it feel like a conversation, not a form):
+- Focus quality (1-10)
+- Mood (1-10)
+- Energy (1-10)
+- Social ease (1-10)
+- Memory lapses (any?)
+- Substance use (weed, alcohol, porn — Y/N, zero target)
+- Training: what did you do, duration, any PBs, any pain (hip?) — cross-check against CURRENT_PLAN.md training split
+- Nutrition: what did you eat, estimated protein, any skipped meals — cross-check against CURRENT_PLAN.md meal plan
+- Protocol: cardio done? Supplements taken? Meditation? Cold exposure?
+
+After Tom responds:
+- Connect today's data to the 7-day trend. Name patterns.
+- Name wins Tom might not see himself.
+- If crash-state mood: flag it as a depleted-day assessment, NOT a reliable signal.
+- Preview tomorrow's training from CURRENT_PLAN.md.
+- Sleep protocol reminder (target bedtime, wind-down, magnesium).
+
+Emit [STATE UPDATE:] with ALL metrics, [METRIC:] for each number, [INSIGHT:] or [PATTERN:] for any trends detected.""",
+    }
+
+    if agent_name == "apex" and task_name in apex_prompts:
+        task_prompt = apex_prompts[task_name]
+
+    # Aether has its own task prompts — override the generic ones
+    aether_prompts = {
+        "morning_checkin": """Execute your morning check-in for Jackson. Follow the Morning Ground format in your AGENT.md.
+
+CRITICAL: Read CURRENT_PLAN.md first (if it exists). It contains Jackson's ACTUAL current plan — nutrition, techniques, constraints. Use THAT over skills file templates.
+
+Be warm and gentle. Ask about:
+- Sleep (hours, quality, disturbances)
+- Current body state (tension level 1-10, locations, POTS symptoms)
+- Current mind state (mood 1-10, anxiety, OCD intrusion)
+
+Deliver:
+- Today's micro-practice (rotate based on current phase from CONTEXT.md)
+- A psychoeducation snippet from one thought leader in MASTERS.md
+- Nutrition reminder from CURRENT_PLAN.md
+
+Keep it SHORT — Jackson should read this in 60 seconds and respond in 30 seconds. Check CONTEXT.md for current phase.""",
+
+        "midday_checkin": """Execute your midday check-in for Jackson. Quick touchpoint only.
+
+CRITICAL: Read CURRENT_PLAN.md first (if it exists) for Jackson's actual plan.
+
+3-4 questions max:
+- Did he try this morning's practice?
+- Has he had a shake/meal?
+- Tension right now (1-10)?
+- Any symptom spike?
+
+Ask for one micro-win (one thing he did today, even tiny). Keep it SHORT and encouraging.""",
+
+        "evening_checkin": """Execute your evening check-in for Jackson. This is your PRIMARY data collection session.
+
+CRITICAL: Read CURRENT_PLAN.md first (if it exists) for active constraints and today's actual plan.
+
+Start with 'How was today overall?' then collect ALL structured metrics:
+- Energy (1-10), Mood (1-10), Tension peak (1-10 + trigger)
+- OCD intrusion frequency, Fear-of-damage (1-10), POTS severity (1-10)
+- Social interaction type
+- Nutrition (shakes/meals + estimated calories) — cross-check against CURRENT_PLAN.md
+- Exercise (type + duration)
+- Practice adherence (which techniques used/skipped)
+
+After Jackson responds: point out patterns from 7-day diary. Name today's wins explicitly. Suggest tomorrow's focus and a wind-down technique.
+Emit [STATE UPDATE:] with ALL metrics, [METRIC:] for each number, [INSIGHT:] or [PATTERN:] detected, [PHASE_CHECK: current_phase|criteria_met_list|criteria_remaining_list].""",
+    }
+
+    if agent_name == "aether" and task_name in aether_prompts:
+        task_prompt = aether_prompts[task_name]
 
     # Recovery companion weekly progress report: generates a privacy-respecting summary for Tom
     if task_name == "weekly_progress_report" and agent_name in ("aether", "forge"):
@@ -3518,18 +3637,33 @@ The daily plan should reference the 90-day execution map from Meridian's intelli
         except Exception as mem_e:
             logger.warning(f"Scheduled task memory extraction failed (non-fatal): {mem_e}")
 
+    # --- Auto-evolve for companion agents after scheduled tasks ---
+    # When a scheduled check-in contains self-corrections (e.g., "sourdough is out",
+    # "actually your plan says X not Y"), those corrections must be persisted to
+    # CURRENT_PLAN.md. Without this, the next scheduled task loads the uncorrected plan
+    # and repeats the same error.
+    if agent_name in CHAT_USER_MAP and task_name != "weekly_progress_report":
+        try:
+            _auto_evolve_plan(agent_name, task_prompt, response, source="scheduled")
+        except Exception as ae_e:
+            logger.warning(f"Auto-evolution (scheduled) failed (non-fatal): {ae_e}")
+
     logger.info(f"Completed: {agent_name}/{task_name}")
 
 
 # --- Message Handler (for two-way chat) ---
 
-def _auto_evolve_plan(agent_name: str, user_message: str, agent_response: str):
+def _auto_evolve_plan(agent_name: str, user_message: str, agent_response: str, source: str = "conversation"):
     """
     Auto-evolution for companion agents (Forge, Aether, etc.).
-    After every conversation, uses Haiku to detect if the user's plan changed.
-    If plan-changing conversation detected, rewrites CURRENT_PLAN.md automatically.
+    After every conversation OR scheduled task, uses Haiku to detect if the plan changed.
+    If plan-changing content detected, rewrites CURRENT_PLAN.md automatically.
 
-    Cost: ~$0.002 per conversation (Haiku detection), ~$0.01 if rewrite triggered.
+    Sources:
+    - "conversation" (default): User message + agent response (two-way chat)
+    - "scheduled": Agent-only output from a scheduled task (no user message)
+
+    Cost: ~$0.002 per call (Haiku detection), ~$0.01 if rewrite triggered.
     """
     plan_file = AGENTS_DIR / agent_name / "state" / "CURRENT_PLAN.md"
     if not plan_file.exists():
@@ -3537,9 +3671,15 @@ def _auto_evolve_plan(agent_name: str, user_message: str, agent_response: str):
 
     current_plan = plan_file.read_text(encoding='utf-8')
 
+    # Build context based on source type
+    if source == "scheduled":
+        conversation_block = f"Agent (scheduled check-in): {agent_response[:3000]}"
+    else:
+        conversation_block = f"User: {user_message[:1500]}\nAgent: {agent_response[:2000]}"
+
     # Step 1: Haiku detects if the conversation changed the plan
-    detect_prompt = f"""Analyse this conversation between a companion agent and its user.
-Determine if the user's active plan has changed in any way.
+    detect_prompt = f"""Analyse this exchange from a companion agent system.
+Determine if the user's active plan has changed OR if the agent made a correction.
 
 Plan changes include:
 - Meal plan modifications (new foods, removed foods, different portions)
@@ -3550,19 +3690,24 @@ Plan changes include:
 - Phase transition (moving to next recovery phase)
 - Goal changes (new targets, shifted priorities)
 
-CONVERSATION:
-User: {user_message[:1500]}
-Agent: {agent_response[:2000]}
+ALSO detect AGENT SELF-CORRECTIONS — cases where the agent corrects itself mid-response:
+- "Actually, I was wrong about X — the correct thing is Y"
+- "I shouldn't have suggested X because [constraint]"
+- "Correction: X is not in your plan, Y is"
+- Any statement where the agent acknowledges a previous error and states the correct info
+These self-corrections MUST be persisted to the plan to prevent the error from recurring.
+
+{conversation_block}
 
 CURRENT PLAN:
 {current_plan[:6000]}
 
 Respond with EXACTLY one of:
-- NO_CHANGE — if the conversation is a normal check-in with no plan modifications
+- NO_CHANGE — if the exchange is a normal check-in with no plan modifications or corrections
 - PLAN_CHANGED: <brief description of what changed> — if any aspect of the plan should be updated
 
 Be conservative. Routine check-ins (how did you sleep, what did you eat) are NOT plan changes.
-Only flag actual modifications to what the user is doing going forward."""
+Only flag actual modifications to what the user is doing going forward, OR agent self-corrections that fix errors."""
 
     try:
         detect_response = call_claude(
