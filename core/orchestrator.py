@@ -3554,8 +3554,8 @@ CONVERSATION:
 User: {user_message[:1500]}
 Agent: {agent_response[:2000]}
 
-CURRENT PLAN (abbreviated):
-{current_plan[:3000]}
+CURRENT PLAN:
+{current_plan[:6000]}
 
 Respond with EXACTLY one of:
 - NO_CHANGE — if the conversation is a normal check-in with no plan modifications

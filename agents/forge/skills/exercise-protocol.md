@@ -1,6 +1,11 @@
 # Exercise Protocol — Forge
 ## Post-Concussion Progressive Training for Tyler
 
+> **TEMPLATE ONLY.** Tyler's ACTUAL current training split, exercises, and phase
+> status are in `state/CURRENT_PLAN.md`. If ANYTHING in this file conflicts with
+> CURRENT_PLAN.md, ALWAYS follow CURRENT_PLAN.md. This file is reference material
+> for general exercise principles and safety rules only.
+
 ---
 
 ## POST-CONCUSSION EXERCISE SAFETY

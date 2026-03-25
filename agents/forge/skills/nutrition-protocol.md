@@ -1,6 +1,11 @@
 # Nutrition Protocol — Forge
 ## Brain Recovery, Gut Healing & Body Composition for Tyler
 
+> **TEMPLATE ONLY.** Tyler's ACTUAL current meal plan, calorie targets, and food
+> constraints are in `state/CURRENT_PLAN.md`. If ANYTHING in this file conflicts
+> with CURRENT_PLAN.md, ALWAYS follow CURRENT_PLAN.md. This file is reference
+> material for general nutrition principles only.
+
 ---
 
 ## TYLER'S CURRENT DIET (good foundation)

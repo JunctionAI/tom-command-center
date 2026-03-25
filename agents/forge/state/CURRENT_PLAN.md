@@ -1,118 +1,227 @@
 # CURRENT_PLAN.md — Tyler's Active Plan
 ## Auto-maintained by Forge. This is THE source of truth.
-## Last Updated: March 25, 2026 (rebuilt from conversation history)
+## Last Updated: March 25, 2026 (rebuilt from full 167-message conversation history)
 
 ---
 
 ## ACTIVE CONSTRAINTS (respect these ALWAYS)
-- Fitbit/watch is BROKEN — do NOT ask for HRV, step count, or wearable data
-- No rice — Tyler explicitly said "Not gonna eat rice"
-- No nightshades (capsicum, tomatoes) — eliminating to test gut impact
-- No legumes (chickpeas, lentils, beans) — eliminating to test gut impact
-- Already has Happy Gut book — do NOT recommend it again
-- Damon is a real person Tyler talks to (not a typo or voice-to-text error)
-- Tyler sometimes uses voice-to-text — expect minor transcription errors, don't ask "did you mean..."
-- Tyler wants to be PUSHED — not coddled. Direct, practical, specific.
+
+- Fitbit/watch is BROKEN — do NOT ask for HRV, step count, sleep data, or any wearable metrics. Assess readiness via self-report ONLY.
+- No rice — Tyler explicitly said "Not gonna eat rice." Do not suggest rice cakes, white rice, or any rice product.
+- No nightshades — capsicum, tomatoes, eggplant, chili are ALL eliminated. Do not include in any meal suggestion.
+- No legumes — chickpeas, lentils, beans eliminated. Pea protein isolate IS fine (lectins removed during processing).
+- Phase 1 = BODYWEIGHT ONLY — no dumbbells, no barbells, no machines. Bodyweight exercises only until Phase 2 criteria met.
+- Hold all heavy compound lifts until Dr. Robin Kelly has examined the groin/abdomen area.
+- Left hip tighter than right (Perthes disease history) — monitor during lunges/squats, reduce range if discomfort. No aggressive hip stretches until Dr. Kelly clears.
+- Hernia concern — lower left abdominal pain radiating to groin, 5 months duration, childhood hernia repair at age 2 in same location. Dr. Kelly said likely dysautonomia-related but hernia recurrence not yet ruled out.
+- Tyler uses voice-to-text — expect transcription quirks, don't ask "did you mean..."
+- "Damon" is a real person Tyler talks to (not a typo)
+- Tyler wants to be PUSHED — direct, practical, specific. No coddling.
+- 2 slices sourdough at breakfast (not 1 — this was corrected and agreed)
+- Caffeine cutoff 12pm — no caffeine after midday. Matcha with breakfast + black coffee 60-90 min later is the agreed protocol.
+- Walnuts preferred over almonds (better omega-3 for brain recovery)
 
 ---
 
-## CURRENT MEAL PLAN (agreed March 24-25)
+## CURRENT MEAL PLAN (finalised March 24)
 
-**Breakfast (~500 kcal, 35g protein):**
-- 3 eggs scrambled in butter/olive oil
-- 1/2 avocado
-- Handful spinach
+### Goal: Body recomposition (lose fat, build muscle, visible abs by mid-year)
+
+**Daily targets:**
+- Training days (Mon/Wed/Fri/Sat): ~2290 kcal / 149g protein
+- Rest days (Tue/Thu/Sun): ~2060 kcal / 168g protein
+- Protein minimum: 140g every day
+
+### Breakfast (alternating daily)
+
+**Option A — Eggs + Spinach (Mon/Wed/Fri/Sun):**
+- 3 whole eggs scrambled in 1 tsp butter
+- Large handful spinach (60g) wilted in
+- Half avocado (75g)
 - 2 slices sourdough with butter
-- Blueberries (handful)
+- Blueberries 80-100g on the side (EVERY breakfast — non-negotiable, Amen's #1 brain food)
+- Matcha with breakfast, black coffee 60-90 min later
+- ~420 kcal / 24g protein
 
-**Snack (~350 kcal, 25g protein):**
-- Protein shake: 30g whey + banana + peanut butter + almond milk
-- OR handful almonds/walnuts + fruit
+**Option B — Pea Protein Shake (Tue/Thu/Sat):**
+- 2 scoops pea protein isolate (40g protein)
+- 300ml unsweetened almond milk
+- Half banana (60g)
+- 80g frozen blueberries
+- 1 tbsp almond butter (16g)
+- Ice
+- ~460 kcal / 44g protein
 
-**Lunch (~650 kcal, 45g protein):**
-- 200g beef mince with vegetables
-- Sweet potato (NOT rice) for carbs
-- Add turmeric, garlic, ginger to cooking
-- Sauerkraut on the side (1-2 tbsp)
+### 4-Meal Rotation (prep 2x/week)
 
-**Pre-workout (~300 kcal, 15g protein):**
-- Banana + peanut butter on sourdough
-- OR oats with protein powder
+**Sunday prep → covers Mon/Tue/Wed:**
 
-**Dinner (~650 kcal, 45g protein):**
-- 200g salmon/chicken thigh
-- Roasted vegetables (broccoli, sweet potato, zucchini — NO capsicum)
-- Quinoa or sweet potato (NOT rice)
-- Bone broth on the side
+**Meal 1 — Slow Cooker Rump Steak**
+Batch (4 serves): 1kg rump steak chunks, 500ml lamb bone broth, 300g broccoli, 4 cloves garlic, 1.5 tsp turmeric, 1 tsp ginger, 3 tbsp olive oil, salt + pepper. Low 8hrs or High 4hrs.
 
-**Evening (~200 kcal):**
-- Small handful nuts
-- Mag glycinate with warm milk or herbal tea
-- Blueberries if not had at breakfast
+Served with per meal: 150g cauliflower rice (pan fried in 1 tsp olive oil) + kumara (200g training / 100g rest)
+- Training day: ~560 kcal / 52g protein
+- Rest day: ~470 kcal / 52g protein
 
-**Daily Target: ~2650 kcal, ~165g protein**
-- Phase 1 target is maintenance + brain fuel, NOT muscle gain yet
-- If Tyler reports undereating, prioritize calorie-dense additions (nut butter, olive oil, avocado)
+**Meal 2 — Greek Lamb/Beef Mince Bowl**
+Batch (4 serves): 800g lamb or beef mince 18% fat, 2 medium zucchini (300g), 150g spinach, 3 cloves garlic, 1 tsp cumin, 1 tsp dried oregano, 3 tbsp olive oil, 1 lemon juiced, salt + pepper.
+
+Served with: 150g cauliflower rice + kumara (200g training / 100g rest)
+- Training day: ~620 kcal / 48g protein
+- Rest day: ~530 kcal / 48g protein
+
+**Wednesday prep → covers Thu/Fri/Sat:**
+
+**Meal 3 — Baked Salmon Patties + Roasted Veg**
+Batch (4 serves / 8 patties): 6x 210g canned salmon drained, 2 eggs, 1 medium zucchini grated (squeeze moisture), 3 spring onions, 1 tsp garlic powder, 1 tsp dried dill, 1 lemon zest, 3 tbsp almond flour, 2 tbsp olive oil for pan.
+
+Roasted veg: 300g broccoli, 200g zucchini, 200g green beans (asparagus substitute), olive oil + garlic powder + salt, 200°C for 20-25 min.
+
+Served with: 150g cauliflower rice + kumara (200g training / 100g rest)
+- Training day: ~560 kcal / 52g protein
+- Rest day: ~470 kcal / 52g protein
+
+**Meal 4 — Asian Beef & Broccoli Bowl**
+Batch (4 serves): 800g beef mince 18% fat, 400g broccoli, 200g bok choy or cabbage, 4 cloves garlic, 20g fresh ginger, 3 tbsp coconut aminos, 2 tbsp sesame oil, 1 tbsp olive oil, 2 tbsp sesame seeds.
+
+Served with: 150g cauliflower rice + kumara (200g training / 100g rest)
+- Training day: ~620 kcal / 48g protein
+- Rest day: ~530 kcal / 48g protein
+
+### Afternoon Snack (MANDATORY — do not skip, this closes the calorie gap)
+- 40g walnuts + 2 boiled eggs
+- ~400 kcal / 24g protein
+
+### Dinner Addition
+- Half avocado added to dinner plate every night (+120 kcal)
+
+### Evening (if needed)
+- Small handful nuts or 1 tbsp almond butter + banana
+- Mag glycinate 400mg with herbal tea
+- ~150-200 kcal
+
+### Kumara Batch Roasting
+- Sunday: 500g total (Mon 200g + Tue 100g + Wed 200g)
+- Wednesday: 500g total (Thu 100g + Fri 200g + Sat 200g)
+- Method: 200°C, cube 2-3cm, olive oil + salt + turmeric, 25-30 min flip halfway
+
+### Cauliflower Rice
+- Default carb base for ALL meals. White rice is NOT used.
+- Pre-workout exception on training days: 150g cooked white rice ONLY if Tyler specifically wants extra carb fuel before gym. Otherwise cauliflower rice always.
 
 ---
 
-## CURRENT TRAINING SPLIT (agreed March 24)
+## CURRENT TRAINING SPLIT (Phase 1 — BODYWEIGHT ONLY)
 
-**Monday:** Push (chest, shoulders, triceps) — gym
-**Tuesday:** Pull (back, biceps) — gym
-**Wednesday:** Legs — gym
-**Thursday:** Active recovery (walk + sauna + stretch)
-**Friday:** Full body or surf
-**Saturday:** Surf or outdoor activity
-**Sunday:** Rest
+**Monday — Push Focus + Sauna**
+Morning: sunrise walk 30 min, cold shower 30-60 sec
+Gym (45-50 min):
+- Push-ups: 4 sets x max reps (TRACK — this is Week 1 baseline. Set 1: 16, Set 2: 10, Set 3: 7 = 33 total as of March 23)
+- Pike push-ups: 3x10
+- Bodyweight squats: 3x15 (monitor left hip)
+- Reverse lunges: 3x10 each leg
+- Plank: 3x45-60 sec
+- Glute bridges: 3x20
+- Dead hang: 3x20-30 sec (track time)
+- Lying leg raises: 3x12
+Post-gym: sauna 20 min, hydrate 500ml before + 500ml after
 
-**Every day:** Morning walk (30-45 min, sunrise preferred)
-**Sauna:** 20 min post-exercise, 3-4x/week
-**Cold exposure:** 30-60 sec cold shower post-sauna (building up)
+**Tuesday — Active Recovery + Brain Training**
+Morning: sunrise walk 30-45 min, cold shower 30-60 sec
+No gym.
+Afternoon: read aloud 10 min, box breathing 5 min, NSDR/Yoga Nidra 20 min
 
-**Rest day rules:**
-- Only 1 scheduled rest day per week (Thursday is active recovery, Sunday is full rest)
-- If Tyler says he's tired but not injured → encourage movement (walk + sauna minimum)
-- If genuinely fatigued/ill → rest is fine, but don't stack multiple rest days without checking in
+**Wednesday — Pull Focus + Sauna**
+Morning: sunrise walk 30 min, cold shower 30-60 sec
+Gym (45-50 min):
+- Dead hang: 4x30-40 sec
+- Inverted rows: 3x max reps
+- Superman holds: 3x12
+- Bodyweight squats: 3x15
+- Single leg glute bridges: 3x12 each
+- Plank: 3x45-60 sec
+- Lying leg raises: 3x12
+Post-gym: sauna 20 min
 
-**No wearable metrics available** — assess readiness via:
-- "How did you sleep?" (hours, quality 1-10)
+**Thursday — Walk + Breathwork + Mobility**
+Morning: sunrise walk 30-45 min
+Afternoon (20-30 min): hip mobility work (safe only — supine knee-to-chest, figure-four piriformis stretch, cat-cow, seated hip circles). Box breathing 5 min after. NO deep pigeon pose, NO aggressive psoas stretches until Dr. Kelly clears.
+
+**Friday — Full Body + Sauna**
+Morning: sunrise walk 30 min, cold shower 30-60 sec
+Gym (50 min):
+- Push-ups: 4x max reps (compare to Monday)
+- Inverted rows: 3x max reps
+- Bulgarian split squats (bodyweight): 3x10 each leg
+- Pike push-ups: 3x12
+- Lying leg raises: 3x12
+- Plank: 3x60 sec
+- Dead hang: 3x30-40 sec
+- Dips between chairs: 3x max reps
+Post-gym: sauna 20 min
+
+**Saturday — Surf or Outdoor**
+Surf: waist-chest high only, 45-60 min max. Stop if headache or significant brain fog.
+No surf: long walk somewhere new + social activity.
+
+**Sunday — Rest + Prep**
+No alarm. Meal prep (Meals 1+2). Light walk if desired. No gym, no sauna. Wind down by 9:30pm, asleep by 11pm.
+
+### Rest Day Rules
+- Only 1 full rest day/week (Sunday). Thursday is active recovery, not full rest.
+- If Tyler says tired but not injured → encourage movement (walk + sauna minimum)
+- No stacking multiple rest days without checking in
+
+### Readiness Assessment (NO WEARABLE — self-report only)
+- "How did you sleep?" (hours + quality 1-10)
 - "How's your energy right now?" (1-10)
-- "Any symptoms?" (headache, dizziness, fog)
+- "Any symptoms?" (headache, dizziness, fog, gut pain)
 
 ---
 
 ## CURRENT SUPPLEMENT STACK
 
-**Taking (confirmed):**
+### Fasted Upon Waking (before food)
+- Happy Gut Powder (Two Islands) — start at 4g (half serve) for first 5-7 days, build to 8g full serve. Contains 3g L-glutamine per full serve.
+- L-glutamine 2g standalone (reduced from 5g because Happy Gut Powder provides 3g)
+- Wild oregano oil — with small sip of water
+
+Wait 15-20 min before breakfast.
+
+### With Breakfast
+- NAC 600mg
+- B12 methylcobalamin 1000mcg sublingual (dissolve under tongue)
+- Creatine monohydrate 5g (in water or shake)
 - Fish oil 3g (Blackmores)
-- Magnesium glycinate 400mg (increased from 300mg)
-- L-theanine 400mg
-- Lion's mane + turkey tail + cordyceps + chaga + reishi (Flowstate)
+- Lion's mane + mushroom complex (Flowstate)
 - Go Men's Multi
 - Go Celery 16000
-- Wild oregano oil
+- L-theanine 400mg
+- Life-Space Broad Spectrum Probiotic (chosen over Inner Health Plus for strain diversity — 2+ hours after wild oregano oil)
+
+### With Dinner
+- Magnesium glycinate 400mg (sleep support)
+- Zinc carnosine 75mg (gut mucosal healing — 8-week course)
 - Sanderson Joint FX
 
-**Added (Phase 1 additions — confirmed buying):**
-- Creatine monohydrate 5g/day
-- NAC 600mg
-- B12 methylcobalamin 1000mcg sublingual
-- L-glutamine 5g (for gut repair)
-- Probiotics multi-strain 20+ billion CFU
-
-**Dosage: L-glutamine is 5g (NOT 10g — was incorrectly stated once)**
+### Not Yet Purchased / Considering
+- Grounding sheet (moderate evidence for HRV + inflammation, low risk — buy after supplement stack complete)
+- Apple cider vinegar before meals (if bloating persists after 4 weeks)
 
 ---
 
-## GUT PROTOCOL (active)
-- Eliminating nightshades and legumes as test
-- Bone broth daily
-- Fermented foods (sauerkraut/kimchi) with meals
-- L-glutamine 5g daily
-- Tracking gut symptoms with meals
-- Left-sided abdominal pain — monitoring frequency and triggers
-- If no improvement in 4 weeks → Dr Robin Kelly investigation
+## GUT PROTOCOL (active — likely leaky gut)
+
+- Elimination trial: nightshades + legumes removed. Track gut symptoms with meals.
+- Happy Gut Powder fasted daily (slippery elm, marshmallow root, L-glutamine, ginger, chamomile, chia, cinnamon)
+- Bone broth in Meal 1 (slow cooker)
+- Fermented foods: sauerkraut/kimchi with meals
+- L-glutamine total 5g/day (3g from Happy Gut + 2g standalone)
+- Zinc carnosine 75mg for 8 weeks
+- Life-Space Broad Spectrum Probiotic
+- Cauliflower rice at 150g/meal — monitor for bloating, reduce to 100g if gut worsens
+- Left-sided abdominal pain: dull, on/off for 5 months, radiates to groin. Dr. Kelly said likely dysautonomia. Still needs physical inguinal exam to rule out hernia recurrence.
+- If no improvement in 4 weeks → escalate with Dr. Robin Kelly
 
 ---
 
@@ -120,47 +229,69 @@
 - Vagal toning (humming, cold water on face, slow exhale)
 - Body scan meditation (5-10 min)
 - Dual n-back (cognitive training app, 10-15 min)
-- Cold exposure (building gradually)
-- Breathwork (box breathing or 4-7-8)
+- Cold exposure (building gradually — currently 30-60 sec cold shower)
+- Breathwork (box breathing 4-4-4-4 or physiological sigh)
 - Reading for focus (20+ min sustained)
+- NSDR/Yoga Nidra (Huberman — 20 min, dopamine restoration)
+- Sauna breathing protocol: first 5 min settle, minutes 5-15 parasympathetic breath (inhale 4 nose / exhale 6-8 mouth), minutes 15-20 box breathing
+
+---
+
+## CAFFEINE PROTOCOL
+- Matcha with breakfast (~70mg caffeine)
+- Black coffee 60-90 min later (~95mg caffeine)
+- Total ~165mg — within safe range for recovering nervous system
+- HARD CUTOFF: 12pm. No caffeine after midday.
+- If gut pain worsens with coffee → switch to second matcha
 
 ---
 
 ## MEDICAL PRIORITIES
-1. Gut symptoms — tracking and elimination diet active
-2. HRV improvement — was 38 (up from 24), no wearable to track currently
-3. Sleep quality — targeting 7+ hours, REM improvement
-4. Brain fog reduction — daily cognitive exercises
-5. Sobriety maintenance — 8+ months clean, track cravings
-6. Weight monitoring — 78kg, maintaining not gaining in Phase 1
-7. TSH monitoring — was 0.41 (low-end), recheck in 3 months
+1. Dr. Robin Kelly appointment — physical inguinal exam needed (hernia check). Ask: "Can you physically examine my inguinal region for hernia recurrence?" + "Is imaging warranted?" + "Is the gut pain dysautonomia-driven or could it be structural?" + "My left hip is significantly tighter than my right — is the tightness connected to the hernia site?"
+2. Gut symptoms — tracking via elimination diet + gut protocol
+3. HRV improvement — was 24-25, jumped to 38 after mushroom experience, no wearable to track currently
+4. Sleep quality — targeting 7+ hours, REM improvement (suppressed from 7 years cannabis)
+5. Brain fog reduction — daily cognitive exercises
+6. Sobriety maintenance — 8+ months clean, track cravings (12-18 months of cravings expected)
+7. Weight: 78kg at 181cm, ~15-18% body fat. Goal: body recomposition to 10-12% (visible abs). Timeline: 12-16 weeks consistent execution.
+8. TSH: 0.41 (low-end), recheck in 3 months
 
 ---
 
 ## WHAT'S WORKING (from conversation evidence)
-- Clean diet is solid foundation — Tyler is consistent
-- Walking daily — energy and mood benefit
-- Sauna protocol — Tyler enjoys and is consistent
-- Mushroom experience integration — breathing improved, HRV jumped
+- Clean diet — Tyler is consistent and engaged
+- Walking daily — energy and mood benefit confirmed
+- Sauna protocol — consistent 3-4x/week, Tyler enjoys it
+- Mushroom experience integration — HRV jumped 56%, breathing shifted to diaphragmatic
 - Living with mates — social support
-- Working at grandparents' — purposeful activity
+- Working at grandparents' — purposeful activity, 4-6 hrs/day
 - Supplements — taking consistently
+- Direct pushing style — Tyler responds to accountability, not soft suggestions
+- Voice notes — primary communication, works well
+- Structured training split — Tyler chose it and is executing
 
 ## WHAT'S NOT WORKING / NEEDS ADJUSTMENT
-- Watch broken — can't track HRV/sleep objectively
-- Gut issues persist — elimination trial in progress
-- Sourdough quantity was confused (started at 1, went to 2, agent tried to revert to 1)
-- Calorie target was inconsistent (2500 → 2800 → back to 2500 in different messages)
+- Watch broken — can't track HRV/sleep objectively (self-report only)
+- Gut issues persist — elimination trial + gut protocol in progress
+- Calorie target was confusing early on (bounced between 2650/2500/2300/2200) — NOW LOCKED at 2290 training / 2060 rest
+- Left hip mobility restricted — needs Dr. Kelly clearance before aggressive stretching
+- Groin pain not yet medically examined for hernia recurrence
+- Phase 1 is bodyweight only — Tyler may want to add weights but must wait for criteria
 
 ---
 
 ## PHASE STATUS
-- **Current Phase:** 1 (Foundation)
+- **Current Phase:** 1 (Foundation) — BODYWEIGHT ONLY
 - **Started:** March 22, 2026
-- **Day:** 4
-- **Transition criteria remaining:**
-  - [ ] 21+ days consistent check-ins
-  - [ ] 7+ days baseline metrics (no wearable — using self-report)
-  - [ ] Supplement stack optimized (in progress — buying new additions)
+- **Day:** 4 (as of March 25)
+- **Push-up baseline:** Set 1: 16, Set 2: 10, Set 3: 7 = 33 total (March 23)
+- **Transition to Phase 2 criteria (ALL must be met):**
+  - [ ] 21+ days consistent check-ins (4/21)
+  - [ ] Baseline metrics established via self-report (in progress)
+  - [ ] Supplement stack optimised (in progress — zinc carnosine + Happy Gut Powder added)
   - [ ] Sleeping 7+ hours consistently
   - [ ] Gut symptoms reducing
+  - [ ] HRV consistently above 40 (cannot verify — watch broken)
+  - [ ] Dr. Kelly clearance for inguinal region (not yet done)
+
+**Phase 2 introduces:** barbell back squats, bench press, deadlifts, pull-ups, progressive overload. This is where visible body transformation begins.

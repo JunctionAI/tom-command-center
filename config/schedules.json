@@ -42,6 +42,24 @@
       "task": "cleanup_conversation_history",
       "cron": "30 3 * * *",
       "description": "Clean up conversation history older than 7 days (3:30am daily)"
+    },
+    {
+      "agent": "forge",
+      "task": "morning_checkin",
+      "cron": "0 7 * * *",
+      "description": "Forge morning check-in for Tyler (7am daily)"
+    },
+    {
+      "agent": "forge",
+      "task": "midday_checkin",
+      "cron": "30 12 * * *",
+      "description": "Forge midday accountability pulse for Tyler (12:30pm daily)"
+    },
+    {
+      "agent": "forge",
+      "task": "evening_checkin",
+      "cron": "30 18 * * *",
+      "description": "Forge evening debrief + data collection for Tyler (6:30pm daily)"
     }
   ]
 }
