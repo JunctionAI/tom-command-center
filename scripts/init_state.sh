@@ -15,8 +15,11 @@ for agent_dir in /app/agents/*/state; do
     vol_state="$STATE_VOL/$agent_name"
     mkdir -p "$vol_state"
 
-    # Copy git files to volume (don't overwrite existing persisted state)
-    cp -n "$agent_dir"/* "$vol_state/" 2>/dev/null || true
+    # Copy git files to volume — overwrite with latest from deploy
+    # Runtime-generated files (session logs, etc.) are only on the volume
+    # so they survive. Git-tracked files (CURRENT_PLAN.md, CONTEXT.md, etc.)
+    # get updated to match the latest deploy.
+    cp "$agent_dir"/* "$vol_state/" 2>/dev/null || true
 
     # Replace ephemeral dir with symlink to persistent volume
     rm -rf "$agent_dir"
