@@ -3557,6 +3557,28 @@ The daily plan should reference the 90-day execution map from Meridian's intelli
         except Exception as beacon_e:
             logger.warning(f"Beacon post-processing failed (non-fatal): {beacon_e}")
 
+    # --- Constraint check for companion agents (pre-send gate) ---
+    # Catches constraint violations (wrong food, wrong exercises, broken device questions)
+    # BEFORE they reach the user. Blocks scheduled tasks; alerts Tom for user replies.
+    if agent_name in CHAT_USER_MAP:
+        try:
+            from core.constraint_checker import check_response
+            check = check_response(agent_name, response)
+            if not check.get("passed"):
+                violation = check.get("violation", "unknown")
+                logger.warning(f"CONSTRAINT VIOLATION {agent_name}/{task_name}: {violation}")
+                # Alert Tom on command-center
+                cc_chat = telegram_config.get("chat_ids", {}).get("command-center", "")
+                if cc_chat:
+                    from core.notification_router import route_notification
+                    agent_display = AGENT_DISPLAY.get(agent_name, agent_name)
+                    route_notification(cc_chat,
+                        f"BLOCKED: {agent_display}/{task_name}\n\nViolation: {violation}\n\nResponse was not sent to user. Will retry next schedule.",
+                        bot_token, severity="IMPORTANT", agent="command-center")
+                return  # Do NOT send the response
+        except Exception as cc_e:
+            logger.warning(f"Constraint check failed (non-fatal, sending anyway): {cc_e}")
+
     # Send to Telegram
     # Beacon uses command-center channel (no dedicated channel)
     send_chat_id = chat_id
@@ -3710,12 +3732,19 @@ Be conservative. Routine check-ins (how did you sleep, what did you eat) are NOT
 Only flag actual modifications to what the user is doing going forward, OR agent self-corrections that fix errors."""
 
     try:
-        detect_response = call_claude(
-            system_prompt="You are a plan change detector. Respond only with NO_CHANGE or PLAN_CHANGED: <description>.",
-            user_prompt=detect_prompt,
-            task_type="memory_extraction",  # Uses Haiku
-            agent_name=f"{agent_name}-plan-detect"
+        import anthropic
+        _evolve_client = anthropic.Anthropic()
+        _HAIKU = "claude-haiku-4-5-20251001"
+
+        # Step 1: Haiku detection (~$0.001)
+        detect_result = _evolve_client.messages.create(
+            model=_HAIKU,
+            max_tokens=200,
+            messages=[{"role": "user", "content": detect_prompt}],
+            system="You are a plan change detector. Respond only with NO_CHANGE or PLAN_CHANGED: <description>.",
+            timeout=30.0,
         )
+        detect_response = detect_result.content[0].text.strip()
 
         if not detect_response or "PLAN_CHANGED" not in detect_response:
             logger.info(f"Auto-evolve {agent_name}: no plan change detected")
@@ -3724,7 +3753,7 @@ Only flag actual modifications to what the user is doing going forward, OR agent
         change_description = detect_response.replace("PLAN_CHANGED:", "").strip()
         logger.info(f"Auto-evolve {agent_name}: PLAN CHANGE DETECTED — {change_description[:100]}")
 
-        # Step 2: Rewrite CURRENT_PLAN.md with the change applied
+        # Step 2: Haiku rewrite (~$0.003)
         rewrite_prompt = f"""You are maintaining a user's CURRENT_PLAN.md file. A plan change was detected:
 
 CHANGE: {change_description}
@@ -3751,12 +3780,14 @@ Rules:
 
 Output ONLY the complete file content, no explanation."""
 
-        rewrite_response = call_claude(
-            system_prompt="You maintain a user's plan file. Output only the complete updated file.",
-            user_prompt=rewrite_prompt,
-            task_type="memory_extraction",  # Uses Haiku — cheap and fast
-            agent_name=f"{agent_name}-plan-rewrite"
+        rewrite_result = _evolve_client.messages.create(
+            model=_HAIKU,
+            max_tokens=8000,
+            messages=[{"role": "user", "content": rewrite_prompt}],
+            system="You maintain a user's plan file. Output only the complete updated file.",
+            timeout=60.0,
         )
+        rewrite_response = rewrite_result.content[0].text.strip()
 
         if rewrite_response and len(rewrite_response) > 200 and "CURRENT_PLAN" in rewrite_response:
             # Sanity check: new plan should have key sections
@@ -4105,6 +4136,23 @@ If you identify a campaign opportunity or creative need (Meridian/PREP only), em
             save_memory_message(user_id, agent_name, chat_id, "assistant", clean_response)
         except Exception as hist_e:
             logger.warning(f"Failed to save message to memory: {hist_e}")
+
+        # --- Constraint check for companion agent replies (alert only, don't block) ---
+        if agent_name in CHAT_USER_MAP:
+            try:
+                from core.constraint_checker import check_response as _check_reply
+                _reply_check = _check_reply(agent_name, clean_response)
+                if not _reply_check.get("passed"):
+                    _violation = _reply_check.get("violation", "unknown")
+                    logger.warning(f"CONSTRAINT VIOLATION {agent_name} (reply): {_violation}")
+                    cc_chat = telegram_config.get("chat_ids", {}).get("command-center", "")
+                    if cc_chat:
+                        from core.notification_router import route_notification
+                        route_notification(cc_chat,
+                            f"CONSTRAINT VIOLATION in {agent_display} reply:\n\n{_violation}\n\nResponse was sent but may contain errors.",
+                            telegram_config["bot_token"], severity="IMPORTANT", agent="command-center")
+            except Exception as _cc_e:
+                logger.warning(f"Constraint check failed (non-fatal): {_cc_e}")
 
         # Send response
         sent = send_telegram(chat_id, clean_response, telegram_config["bot_token"])
