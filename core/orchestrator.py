@@ -4063,8 +4063,15 @@ After your response, emit [STATE UPDATE: <what to remember from this exchange>].
             # Resolve display name: companions use their user's name, others default to Tom
             _user_display_names = {"aether": "Jackson", "forge": "Tyler", "apex": "Tom"}
             _user_display = _user_display_names.get(agent_name, "Tom")
+
+            # Inject current date/time so agents never get the time wrong
+            _reply_now = datetime.now(NZ_TZ)
+            _reply_date = _reply_now.strftime("%A, %B %d, %Y")
+            _reply_time = _reply_now.strftime("%I:%M %p")
+            _time_context = f"\nCURRENT DATE/TIME: {_reply_date}, {_reply_time} NZST. Always use this as the actual time — never guess."
+
             user_prompt = f"""{_user_display} says: {message_text}
-{events_section}
+{events_section}{_time_context}
 Respond as your agent character. You have your full context loaded above.
 
 FORMATTING: This goes to Telegram. NEVER use markdown tables. Use bullet points,
