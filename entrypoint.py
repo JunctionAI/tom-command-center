@@ -273,6 +273,13 @@ def _run_missed_tasks(schedule_config, telegram_config, tracked_task_fn, timezon
         now_total = hour_now * 60 + minute_now
 
         if sched_total < now_total:
+            # Skip companion agent tasks that are more than 2 hours late
+            # A Thursday midday check-in replayed Friday morning is confusing, not helpful
+            from core.orchestrator import CHAT_USER_MAP
+            minutes_late = now_total - sched_total
+            if agent in CHAT_USER_MAP and minutes_late > 120:
+                logger.info(f"Catch-up: SKIPPING {agent}/{task_name} — {minutes_late} min late (companion agent, >2hr threshold)")
+                continue
             missed.append((agent, task_name, sched_hour, sched_minute, task.get("description", task_key)))
 
     if not missed:

@@ -24,6 +24,10 @@
 - Soy sauce: OK in cooking (tamari/gluten-free preferred)
 - Caffeine cutoff 12pm — no caffeine after midday. Matcha with breakfast + black coffee 60-90 min later is the agreed protocol.
 - Walnuts preferred over almonds (better omega-3 for brain recovery)
+- Cauliflower rice REMOVED from rotation — Tyler reported excessive gas/bloating. Replace with extra kumara (250g training day, 150g rest day). Do NOT suggest cauliflower rice.
+- Manuka honey (10+ UMF): 1 tsp fasted with Happy Gut Powder or straight off spoon. Morning only. Never heat it. Not every day initially (5 days/week, assess gut response).
+- Medical team: Dr. Robin Kelly (GP/hernia), Dr. Chad Gordon (concussion specialist, Concussion Care Auckland). Do NOT reference any other doctor by name unless Tyler explicitly names them.
+- HEAD KNOCK March 27: Tyler took a hit surfing, headache persisted all day (2/10 → "hangover feeling" by evening). Monitor closely. No training until symptom-free for 24 hours. If symptoms persist March 28 → urge Dr. Gordon contact.
 
 ---
 
@@ -62,14 +66,14 @@
 **Meal 1 — Slow Cooker Rump Steak**
 Batch (4 serves): 1kg rump steak chunks, 500ml lamb bone broth, 300g broccoli, 4 cloves garlic, 1.5 tsp turmeric, 1 tsp ginger, 3 tbsp olive oil, salt + pepper. Low 8hrs or High 4hrs.
 
-Served with per meal: 150g cauliflower rice (pan fried in 1 tsp olive oil) + kumara (200g training / 100g rest)
+Served with per meal: kumara (250g training / 150g rest)
 - Training day: ~560 kcal / 52g protein
 - Rest day: ~470 kcal / 52g protein
 
 **Meal 2 — Greek Lamb/Beef Mince Bowl**
 Batch (4 serves): 800g lamb or beef mince 18% fat, 2 medium zucchini (300g), 150g spinach, 3 cloves garlic, 1 tsp cumin, 1 tsp dried oregano, 3 tbsp olive oil, 1 lemon juiced, salt + pepper.
 
-Served with: 150g cauliflower rice + kumara (200g training / 100g rest)
+Served with: kumara (250g training / 150g rest)
 - Training day: ~620 kcal / 48g protein
 - Rest day: ~530 kcal / 48g protein
 
@@ -80,14 +84,14 @@ Batch (4 serves / 8 patties): 6x 210g canned salmon drained, 2 eggs, 1 medium zu
 
 Roasted veg: 300g broccoli, 200g zucchini, 200g green beans (asparagus substitute), olive oil + garlic powder + salt, 200°C for 20-25 min.
 
-Served with: 150g cauliflower rice + kumara (200g training / 100g rest)
+Served with: kumara (250g training / 150g rest)
 - Training day: ~560 kcal / 52g protein
 - Rest day: ~470 kcal / 52g protein
 
 **Meal 4 — Asian Beef & Broccoli Bowl**
 Batch (4 serves): 800g beef mince 18% fat, 400g broccoli, 200g bok choy or cabbage, 4 cloves garlic, 20g fresh ginger, 3 tbsp coconut aminos, 2 tbsp sesame oil, 1 tbsp olive oil, 2 tbsp sesame seeds.
 
-Served with: 150g cauliflower rice + kumara (200g training / 100g rest)
+Served with: kumara (250g training / 150g rest)
 - Training day: ~620 kcal / 48g protein
 - Rest day: ~530 kcal / 48g protein
 
@@ -108,9 +112,10 @@ Served with: 150g cauliflower rice + kumara (200g training / 100g rest)
 - Wednesday: 500g total (Thu 100g + Fri 200g + Sat 200g)
 - Method: 200°C, cube 2-3cm, olive oil + salt + turmeric, 25-30 min flip halfway
 
-### Cauliflower Rice
-- Default carb base for ALL meals. White rice is NOT used.
-- Pre-workout exception on training days: 150g cooked white rice ONLY if Tyler specifically wants extra carb fuel before gym. Otherwise cauliflower rice always.
+### Carb Base
+- Cauliflower rice REMOVED — caused excessive bloating/gas. Replaced with extra kumara.
+- Training day: 250g kumara per meal. Rest day: 150g kumara per meal.
+- White rice is NOT used.
 
 ---
 
@@ -222,7 +227,7 @@ Wait 15-20 min before breakfast.
 - L-glutamine total 5g/day (3g from Happy Gut + 2g standalone)
 - Zinc carnosine 75mg for 8 weeks
 - Life-Space Broad Spectrum Probiotic
-- Cauliflower rice at 150g/meal — monitor for bloating, reduce to 100g if gut worsens
+- Cauliflower rice REMOVED — caused excessive bloating. Replaced with extra kumara.
 - Left-sided abdominal pain: dull, on/off for 5 months, radiates to groin. Dr. Kelly said likely dysautonomia. Still needs physical inguinal exam to rule out hernia recurrence.
 - If no improvement in 4 weeks → escalate with Dr. Robin Kelly
 
