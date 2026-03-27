@@ -181,9 +181,10 @@ Does the response violate ANY constraint or schedule rule? Check carefully:
 
 Respond with EXACTLY one of:
 - PASS — if no rules are violated
-- VIOLATION: [brief description of what rule was violated and what the response said]
+- CONSTRAINT_VIOLATION: [brief description] — for food, equipment, device, or explicit rule violations
+- SCHEDULE_MISMATCH: [brief description] — for wrong workout day or training on rest day
 
-Be strict on food and equipment. For schedule violations, only flag if the bot clearly prescribes the wrong workout or tells the user to gym on a rest/recovery day."""
+Be strict on food and equipment. For schedule mismatches, only flag if the bot clearly prescribes the wrong workout or tells the user to gym on a rest/recovery day. Note: users sometimes swap training days — a schedule mismatch is less severe than a constraint violation."""
 
     try:
         import anthropic
@@ -196,10 +197,15 @@ Be strict on food and equipment. For schedule violations, only flag if the bot c
         )
         response = result.content[0].text.strip()
 
-        if "VIOLATION" in response:
-            violation_desc = response.replace("VIOLATION:", "").strip()
+        if "CONSTRAINT_VIOLATION" in response:
+            violation_desc = response.replace("CONSTRAINT_VIOLATION:", "").strip()
             logger.warning(f"Constraint violation for {agent_name}: {violation_desc[:200]}")
-            return {"passed": False, "violation": violation_desc}
+            return {"passed": False, "violation": violation_desc, "type": "constraint"}
+
+        if "SCHEDULE_MISMATCH" in response:
+            violation_desc = response.replace("SCHEDULE_MISMATCH:", "").strip()
+            logger.warning(f"Schedule mismatch for {agent_name}: {violation_desc[:200]}")
+            return {"passed": False, "violation": violation_desc, "type": "schedule"}
 
         return {"passed": True}
 

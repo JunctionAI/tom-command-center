@@ -71,6 +71,7 @@ AGENT_DISPLAY = {
     "walker-capital-trent": "Vesper",
     "prospector":           "Prospector",
     "apex":                 "Apex",
+    # "nova":              "Nova",  # UNCOMMENT when Tane is provisioned
 }
 
 # Logging configured by entrypoint.py — just get the logger here
@@ -142,6 +143,7 @@ CHAT_USER_MAP = {
     "aether": "jackson",
     "apex": "tom",
     "forge": "tyler",
+    # "nova": "tane",  # UNCOMMENT when Tane is provisioned
 }
 
 # --- Agent Brain Loader ---
@@ -1324,6 +1326,63 @@ def send_telegram(chat_id: str, text: str, bot_token: str):
     if success:
         logger.info(f"Message sent to {chat_id} ({len(text)} chars)")
     return success
+
+
+# Companion agents that also receive voice messages alongside text
+# Maps agent_name -> OpenAI TTS voice ID
+VOICE_AGENTS = {
+    "aether": "onyx",  # Jackson prefers voice — struggles with screen reading
+}
+
+
+def send_telegram_voice(chat_id: str, text: str, bot_token: str, voice_id: str = "onyx"):
+    """Send a voice message to a Telegram chat using OpenAI TTS."""
+    import requests
+    import tempfile
+    import os
+
+    if not text or len(text.strip()) < 10:
+        return False
+
+    # Strip markdown formatting for cleaner speech
+    clean = re.sub(r'\*\*(.+?)\*\*', r'\1', text)
+    clean = re.sub(r'\*(.+?)\*', r'\1', clean)
+    clean = re.sub(r'`(.+?)`', r'\1', clean)
+    clean = re.sub(r'#{1,6}\s*', '', clean)
+    clean = re.sub(r'\[(.+?)\]\(.+?\)', r'\1', clean)
+    # Truncate to avoid huge audio files (TTS limit ~4096 chars)
+    clean = clean[:4000]
+
+    try:
+        import openai
+        client = openai.OpenAI()
+        speech = client.audio.speech.create(
+            model="tts-1",
+            voice=voice_id,
+            input=clean,
+        )
+
+        with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as f:
+            f.write(speech.content)
+            audio_path = f.name
+
+        url = f"https://api.telegram.org/bot{bot_token}/sendVoice"
+        with open(audio_path, "rb") as f:
+            resp = requests.post(url, files={"voice": f}, data={"chat_id": chat_id}, timeout=120)
+
+        os.unlink(audio_path)
+
+        data = resp.json()
+        if data.get("ok"):
+            logger.info(f"Voice message sent to {chat_id} ({len(clean)} chars)")
+            return True
+        else:
+            logger.error(f"Telegram voice send failed: {data.get('description', 'unknown')}")
+            return False
+
+    except Exception as e:
+        logger.warning(f"Voice message failed for {chat_id} (non-fatal): {e}")
+        return False
 
 
 def identify_agent_from_chat(chat_id: str, telegram_config: dict) -> str:
@@ -2535,173 +2594,21 @@ Emit [STATE UPDATE:] with ALL metrics, [METRIC:] for each number, [INSIGHT:] or 
 
     task_prompt = task_prompts.get(task_name, f"Execute task: {task_name}. Follow the instructions and format in your AGENT.md.")
 
-    # Forge has its own task prompts — override the generic ones
-    forge_prompts = {
-        "morning_checkin": """Execute your morning check-in for Tyler. Follow the Morning Forge format in your AGENT.md exactly.
-
-CRITICAL: Read CURRENT_PLAN.md first. It contains Tyler's ACTUAL meal plan, training split, supplements, and active constraints. Use THAT, not the skills file templates.
-
-Greet Tyler directly — no fluff. Cover:
-- Sleep: how many hours, quality 1-10 (self-report — check ACTIVE CONSTRAINTS for whether wearable is available)
-- Today's training plan from CURRENT_PLAN.md: what day is it in his split? Give specific exercises, sets, reps
-- Today's meals from CURRENT_PLAN.md: reference his ACTUAL agreed meals, not the template
-- Check ACTIVE CONSTRAINTS: respect all eliminations (no rice, no nightshades, no legumes, etc.)
-- One brain recovery action (cognitive exercise, breathwork, cold exposure — rotate)
-- One brain teaching from MASTERS.md (rotate through thought leaders)
-- End with: "What's the one thing you're committing to today?"
-
-Keep it punchy — Tyler reads in 60 seconds, responds in 30. No tables.""",
-
-        "midday_checkin": """Execute your midday check for Tyler. Quick accountability pulse — 3-4 questions max:
-- Did you train? What did you do?
-- Have you eaten? Hit protein target?
-- Energy level (1-10), brain fog (1-10)
-- Any symptoms (gut, headaches, dizziness, mood)?
-In and out. Keep it SHORT. Check CURRENT_PLAN.md ACTIVE CONSTRAINTS before asking for any wearable data.""",
-
-        "evening_checkin": """Execute your evening debrief for Tyler. This is your PRIMARY data collection session.
-
-CRITICAL: Read CURRENT_PLAN.md first for active constraints and today's actual plan.
-
-Start with 'How was today?' then collect metrics (self-report — check ACTIVE CONSTRAINTS for wearable availability):
-- Energy (1-10), Mood (1-10), Brain fog (1-10), Memory/focus (1-10), Anxiety (1-10), Gut symptoms (1-10)
-- Sleep last night (hours, quality 1-10)
-- Exercise (type, duration, intensity) — cross-check against CURRENT_PLAN.md training split
-- Nutrition (meals eaten, estimated protein, any junk) — cross-check against CURRENT_PLAN.md meal plan
-- Supplements taken (Y/N)
-- Social interaction, Cravings (none/mild/moderate/strong), Screen time
-
-After Tyler responds: reflect on 7-day patterns, name wins explicitly, preview tomorrow from CURRENT_PLAN.md training split, suggest evening wind-down.
-Emit [STATE UPDATE:], [METRIC:], [BRAIN_METRIC:], [INSIGHT:], [PATTERN:], [PHASE_CHECK:].""",
-    }
-
-    if agent_name == "forge" and task_name in forge_prompts:
-        task_prompt = forge_prompts[task_name]
-
-    # Apex has its own task prompts — override the generic ones
-    apex_prompts = {
-        "morning_protocol": """Execute your morning protocol. Follow the format in your AGENT.md but keep it CONVERSATIONAL — you're a coach checking in, not a system generating a report.
-
-CRITICAL: Read CURRENT_PLAN.md first. It contains Tom's ACTUAL training split, nutrition plan, supplement stack, and active constraints. Use THAT, not the skills file templates.
-
-Open warm. Use Tom's name. Reference yesterday if you have diary data (what he trained, how he felt, what he ate).
-
-Then deliver today's plan:
-- Phase + day count (one line)
-- Ask about sleep (hours, quality, how he feels right now)
-- Substance check (quick, no pressure — 'All clean?' is fine after the first few days)
-- Today's training plan from CURRENT_PLAN.md (specific: exercises, sets, reps, weights)
-- Today's nutrition from CURRENT_PLAN.md (practical — what to eat, not a lecture)
-- Supplement reminders from CURRENT_PLAN.md (which ones, when — be specific about what he ACTUALLY HAS vs what's still pending)
-- One brain science insight (rotate from MASTERS.md — mechanism, not motivation. 2-3 sentences max)
-- One focus priority for the day
-
-Check ACTIVE CONSTRAINTS in CURRENT_PLAN.md: respect training time window (after 7:30pm), hip niggle status, RDL status, sleep rules.
-Check WHAT'S NOT STARTED YET: don't ask about blood work unless it emerges naturally from symptoms. Don't ask about supplements he hasn't purchased yet as if he should already have them.
-
-Keep it SHORT. Tom reads this on his phone in 90 seconds. No tables. No walls of text. End with energy.
-
-After delivering, emit [STATE UPDATE:] with the day count and any data collected.""",
-
-        "midday_pulse": """Execute your midday pulse. This is a 30-second touchpoint, not a deep dive.
-
-CRITICAL: Read CURRENT_PLAN.md first for tonight's training plan and active constraints.
-
-Tone: Casual, quick, like a mate checking in.
-
-Ask 3-4 things max:
-- Have you eaten well? (protein specifically)
-- Energy right now? (1-10)
-- Any cravings or triggers today?
-- Quick reminder of tonight's training from CURRENT_PLAN.md
-
-Drop ONE micro-insight — 1-2 sentences of brain science.
-
-If Tom mentioned something specific in his morning response, reference it. Show you're listening.
-
-Keep the whole message under 100 words.""",
-
-        "evening_debrief": """Execute your evening debrief. This is your PRIMARY data collection session.
-
-CRITICAL: Read CURRENT_PLAN.md first for active constraints, today's actual training plan, and nutrition targets.
-
-Start open: 'How was today, Tom?' or reference something specific from the day.
-
-Then collect (make it feel like a conversation, not a form):
-- Focus quality (1-10)
-- Mood (1-10)
-- Energy (1-10)
-- Social ease (1-10)
-- Memory lapses (any?)
-- Substance use (weed, alcohol, porn — Y/N, zero target)
-- Training: what did you do, duration, any PBs, any pain (hip?) — cross-check against CURRENT_PLAN.md training split
-- Nutrition: what did you eat, estimated protein, any skipped meals — cross-check against CURRENT_PLAN.md meal plan
-- Protocol: cardio done? Supplements taken? Meditation? Cold exposure?
-
-After Tom responds:
-- Connect today's data to the 7-day trend. Name patterns.
-- Name wins Tom might not see himself.
-- If crash-state mood: flag it as a depleted-day assessment, NOT a reliable signal.
-- Preview tomorrow's training from CURRENT_PLAN.md.
-- Sleep protocol reminder (target bedtime, wind-down, magnesium).
-
-Emit [STATE UPDATE:] with ALL metrics, [METRIC:] for each number, [INSIGHT:] or [PATTERN:] for any trends detected.""",
-    }
-
-    if agent_name == "apex" and task_name in apex_prompts:
-        task_prompt = apex_prompts[task_name]
-
-    # Aether has its own task prompts — override the generic ones
-    aether_prompts = {
-        "morning_checkin": """Execute your morning check-in for Jackson. Follow the Morning Ground format in your AGENT.md.
-
-CRITICAL: Read CURRENT_PLAN.md first (if it exists). It contains Jackson's ACTUAL current plan — nutrition, techniques, constraints. Use THAT over skills file templates.
-
-Be warm and gentle. Ask about:
-- Sleep (hours, quality, disturbances)
-- Current body state (tension level 1-10, locations, POTS symptoms)
-- Current mind state (mood 1-10, anxiety, OCD intrusion)
-
-Deliver:
-- Today's micro-practice (rotate based on current phase from CONTEXT.md)
-- A psychoeducation snippet from one thought leader in MASTERS.md
-- Nutrition reminder from CURRENT_PLAN.md
-
-Keep it SHORT — Jackson should read this in 60 seconds and respond in 30 seconds. Check CONTEXT.md for current phase.""",
-
-        "midday_checkin": """Execute your midday check-in for Jackson. Quick touchpoint only.
-
-CRITICAL: Read CURRENT_PLAN.md first (if it exists) for Jackson's actual plan.
-
-3-4 questions max:
-- Did he try this morning's practice?
-- Has he had a shake/meal?
-- Tension right now (1-10)?
-- Any symptom spike?
-
-Ask for one micro-win (one thing he did today, even tiny). Keep it SHORT and encouraging.""",
-
-        "evening_checkin": """Execute your evening check-in for Jackson. This is your PRIMARY data collection session.
-
-CRITICAL: Read CURRENT_PLAN.md first (if it exists) for active constraints and today's actual plan.
-
-Start with 'How was today overall?' then collect ALL structured metrics:
-- Energy (1-10), Mood (1-10), Tension peak (1-10 + trigger)
-- OCD intrusion frequency, Fear-of-damage (1-10), POTS severity (1-10)
-- Social interaction type
-- Nutrition (shakes/meals + estimated calories) — cross-check against CURRENT_PLAN.md
-- Exercise (type + duration)
-- Practice adherence (which techniques used/skipped)
-
-After Jackson responds: point out patterns from 7-day diary. Name today's wins explicitly. Suggest tomorrow's focus and a wind-down technique.
-Emit [STATE UPDATE:] with ALL metrics, [METRIC:] for each number, [INSIGHT:] or [PATTERN:] detected, [PHASE_CHECK: current_phase|criteria_met_list|criteria_remaining_list].""",
-    }
-
-    if agent_name == "aether" and task_name in aether_prompts:
-        task_prompt = aether_prompts[task_name]
+    # Companion agents: load task prompts from agents/[name]/prompts/[task_name].md if present.
+    # This means zero orchestrator changes are needed when adding a new companion agent.
+    _prompt_file = AGENTS_DIR / agent_name / "prompts" / f"{task_name}.md"
+    if _prompt_file.exists():
+        try:
+            _file_prompt = _prompt_file.read_text(encoding='utf-8').strip()
+            if _file_prompt:
+                task_prompt = _file_prompt
+                logger.debug(f"Loaded prompt from file: {_prompt_file}")
+        except Exception as e:
+            logger.warning(f"Could not read prompt file {_prompt_file}: {e}")
 
     # Recovery companion weekly progress report: generates a privacy-respecting summary for Tom
-    if task_name == "weekly_progress_report" and agent_name in ("aether", "forge"):
+    # All companion agents (any agent in CHAT_USER_MAP) can generate weekly progress reports.
+    if task_name == "weekly_progress_report" and agent_name in CHAT_USER_MAP:
         try:
             # Read CONTEXT.md for phase and metrics
             context_file = AGENTS_DIR / agent_name / "state" / "CONTEXT.md"
@@ -2721,7 +2628,7 @@ Emit [STATE UPDATE:] with ALL metrics, [METRIC:] for each number, [INSIGHT:] or 
 
             # Get memory fact count for the user
             report_user_id = CHAT_USER_MAP.get(agent_name, "unknown")
-            report_user_name = {"aether": "Jackson", "forge": "Tyler"}.get(agent_name, "user")
+            report_user_name = CHAT_USER_MAP.get(agent_name, "user").capitalize()
             report_agent_display = AGENT_DISPLAY.get(agent_name, agent_name)
             try:
                 from core.user_memory import get_memory_stats
@@ -2857,6 +2764,28 @@ Cross-reference with your state/CONTEXT.md to identify changes since your last b
         except Exception as e:
             logger.warning(f"News fetch failed (non-fatal): {e}")
             data_status["Live News (RSS)"] = f"FAILED: {e}"
+
+    # 1b. X live event intelligence for Atlas (global-events) — free via twscrape
+    if task_name in live_news_tasks and agent_name == "global-events":
+        try:
+            from core.x_event_scraper import scrape_all_events, format_events_for_atlas
+            x_results = scrape_all_events()
+            x_intel = format_events_for_atlas(x_results)
+            if x_intel:
+                task_prompt += f"""
+
+{x_intel}
+
+Cross-reference the X posts above with the RSS headlines. Viral/high-engagement posts
+often signal breaking developments before traditional media catches up. Note sentiment,
+key accounts amplifying, and emerging narratives not yet in mainstream coverage."""
+                logger.info(f"Injected X event intelligence for Atlas ({sum(len(v['tweets']) for v in x_results.values())} tweets)")
+                data_status["X Live Events"] = "OK"
+            else:
+                data_status["X Live Events"] = "No tweets returned"
+        except Exception as e:
+            logger.warning(f"X event scrape failed (non-fatal): {e}")
+            data_status["X Live Events"] = f"FAILED: {e}"
 
     # 2. Performance data for business briefings — SINGLE SOURCE OF TRUTH
     # Uses core.data_brief which pulls from the same sources as the dashboard.
@@ -3481,7 +3410,7 @@ The daily plan should reference the 90-day execution map from Meridian's intelli
             logger.warning(f"Brief generator integration failed (non-fatal): {bg_e}")
 
     # Order manager: handle [ORDER:] markers from recovery companions
-    if agent_name in ("aether", "forge") and "[ORDER:" in response:
+    if agent_name in CHAT_USER_MAP and "[ORDER:" in response:
         try:
             import re as _order_re
             order_matches = _order_re.findall(r'\[ORDER:\s*(.*?)\]', response, _order_re.DOTALL)
@@ -3566,16 +3495,29 @@ The daily plan should reference the 90-day execution map from Meridian's intelli
             check = check_response(agent_name, response)
             if not check.get("passed"):
                 violation = check.get("violation", "unknown")
-                logger.warning(f"CONSTRAINT VIOLATION {agent_name}/{task_name}: {violation}")
-                # Alert Tom on command-center
+                violation_type = check.get("type", "constraint")
                 cc_chat = telegram_config.get("chat_ids", {}).get("command-center", "")
-                if cc_chat:
-                    from core.notification_router import route_notification
-                    agent_display = AGENT_DISPLAY.get(agent_name, agent_name)
-                    route_notification(cc_chat,
-                        f"BLOCKED: {agent_display}/{task_name}\n\nViolation: {violation}\n\nResponse was not sent to user. Will retry next schedule.",
-                        bot_token, severity="IMPORTANT", agent="command-center")
-                return  # Do NOT send the response
+                agent_display = AGENT_DISPLAY.get(agent_name, agent_name)
+
+                if violation_type == "schedule":
+                    # Schedule mismatches: ALERT but DON'T BLOCK
+                    # Users swap training days — the plan may be outdated
+                    logger.warning(f"SCHEDULE MISMATCH {agent_name}/{task_name}: {violation}")
+                    if cc_chat:
+                        from core.notification_router import route_notification
+                        route_notification(cc_chat,
+                            f"SCHEDULE MISMATCH: {agent_display}/{task_name}\n\nNote: {violation}\n\nResponse was still sent — user may have swapped days. Check if CURRENT_PLAN.md needs updating.",
+                            bot_token, severity="INFO", agent="command-center")
+                    # Don't return — let the message through
+                else:
+                    # Constraint violations: BLOCK
+                    logger.warning(f"CONSTRAINT VIOLATION {agent_name}/{task_name}: {violation}")
+                    if cc_chat:
+                        from core.notification_router import route_notification
+                        route_notification(cc_chat,
+                            f"BLOCKED: {agent_display}/{task_name}\n\nViolation: {violation}\n\nResponse was not sent to user. Will retry next schedule.",
+                            bot_token, severity="IMPORTANT", agent="command-center")
+                    return  # Do NOT send the response
         except Exception as cc_e:
             logger.warning(f"Constraint check failed (non-fatal, sending anyway): {cc_e}")
 
@@ -3584,12 +3526,12 @@ The daily plan should reference the 90-day execution map from Meridian's intelli
     send_chat_id = chat_id
 
     # Recovery companions: notify Tom's command-center that check-ins were sent (quiet, no content)
-    if agent_name in ("aether", "forge") and task_name in ("morning_checkin", "midday_checkin", "evening_checkin"):
+    if agent_name in CHAT_USER_MAP and task_name in ("morning_checkin", "midday_checkin", "evening_checkin"):
         cc_chat = telegram_config.get("chat_ids", {}).get("command-center", "")
         if cc_chat:
             checkin_labels = {"morning_checkin": "Morning", "midday_checkin": "Midday", "evening_checkin": "Evening"}
             agent_display = AGENT_DISPLAY.get(agent_name, agent_name)
-            user_display = {"aether": "Jackson", "forge": "Tyler"}.get(agent_name, "user")
+            user_display = CHAT_USER_MAP.get(agent_name, "user").capitalize()
             from core.notification_router import route_notification
             route_notification(cc_chat,
                                f"{agent_display} {checkin_labels.get(task_name, task_name)} check-in sent to {user_display}.",
@@ -3608,6 +3550,12 @@ The daily plan should reference the 90-day execution map from Meridian's intelli
         # Morning/weekly briefings are IMPORTANT, scans are NOTABLE, other tasks INFO
         _sched_severity = "NOTABLE" if task_name in ("scan", "model_scan", "health_check") else "IMPORTANT"
         route_notification(send_chat_id, response, bot_token, severity=_sched_severity, agent=agent_name)
+        # Send voice message for agents that have voice enabled
+        if agent_name in VOICE_AGENTS:
+            try:
+                send_telegram_voice(send_chat_id, response, bot_token, voice_id=VOICE_AGENTS[agent_name])
+            except Exception as _ve:
+                logger.warning(f"Voice message failed for {agent_name} (non-fatal): {_ve}")
     else:
         logger.warning(f"No chat ID configured for {agent_name}, printing to console:")
         print(f"\n{'='*60}")
@@ -4061,8 +4009,7 @@ After your response, emit [STATE UPDATE: <what to remember from this exchange>].
             events_section = f"\n\n{pending_events}" if pending_events else ""
 
             # Resolve display name: companions use their user's name, others default to Tom
-            _user_display_names = {"aether": "Jackson", "forge": "Tyler", "apex": "Tom"}
-            _user_display = _user_display_names.get(agent_name, "Tom")
+            _user_display = CHAT_USER_MAP.get(agent_name, "tom").capitalize()
 
             # Inject current date/time so agents never get the time wrong
             _reply_now = datetime.now(NZ_TZ)
@@ -4165,6 +4112,12 @@ If you identify a campaign opportunity or creative need (Meridian/PREP only), em
         sent = send_telegram(chat_id, clean_response, telegram_config["bot_token"])
         if sent:
             logger.info(f"Response from {agent_name} delivered to {chat_id}")
+            # Send voice message for agents that have voice enabled
+            if agent_name in VOICE_AGENTS:
+                try:
+                    send_telegram_voice(chat_id, clean_response, telegram_config["bot_token"], voice_id=VOICE_AGENTS[agent_name])
+                except Exception as _ve:
+                    logger.warning(f"Voice message failed for {agent_name} (non-fatal): {_ve}")
         else:
             logger.error(f"FAILED to deliver {agent_name} response to {chat_id}")
 
@@ -4250,8 +4203,7 @@ def handle_photo_message(chat_id: str, photo_sizes: list, caption: str,
         save_memory_message(user_id, agent_name, chat_id, "user", photo_msg)
 
         # Build caption prompt with correct user name
-        _user_display_names = {"aether": "Jackson", "forge": "Tyler", "apex": "Tom"}
-        _user_display = _user_display_names.get(agent_name, "Tom")
+        _user_display = CHAT_USER_MAP.get(agent_name, "tom").capitalize()
         if caption:
             user_text = f"{_user_display} sent a photo with caption: {caption}\n\nFORMATTING: This goes to Telegram. NEVER use markdown tables. Use bullet points and Label: Value pairs.\n\nIMPORTANT: After analysing, emit [STATE UPDATE: <what to remember about this photo>]."
         else:
@@ -4290,6 +4242,11 @@ def handle_photo_message(chat_id: str, photo_sizes: list, caption: str,
         sent = send_telegram(chat_id, clean_response, bot_token)
         if sent:
             logger.info(f"Photo response from {agent_name} delivered")
+            if agent_name in VOICE_AGENTS:
+                try:
+                    send_telegram_voice(chat_id, clean_response, bot_token, voice_id=VOICE_AGENTS[agent_name])
+                except Exception as _ve:
+                    logger.warning(f"Voice message failed for {agent_name} (non-fatal): {_ve}")
         else:
             logger.error(f"FAILED to deliver {agent_name} photo response")
 
