@@ -1331,7 +1331,9 @@ def send_telegram(chat_id: str, text: str, bot_token: str):
 # Companion agents that also receive voice messages alongside text
 # Maps agent_name -> OpenAI TTS voice ID
 VOICE_AGENTS = {
-    "aether": "onyx",  # Jackson prefers voice — struggles with screen reading
+    "aether": "onyx",   # Jackson prefers voice — struggles with screen reading
+    "forge": "onyx",    # Tyler — testing voice alongside text
+    "apex": "onyx",     # Tom — testing voice alongside text
 }
 
 
@@ -3873,8 +3875,42 @@ def handle_incoming_message(chat_id: str, message_text: str, telegram_config: di
             return
         # Falls through to normal Vesper chat if not a recognised command
 
-    # /memory command works in ANY agent chat — shows what that agent knows
+    # /transcript command — pull session log for a date (defaults to today)
+    # Usage: /transcript  OR  /transcript 2026-03-27  OR  /transcript forge 2026-03-27
     msg_lower = message_text.strip().lower()
+    if msg_lower.startswith("/transcript"):
+        try:
+            parts = message_text.strip().split()
+            target_agent = agent_name
+            target_date = datetime.now(NZ_TZ).strftime("%Y-%m-%d")
+
+            if len(parts) == 2:
+                # Could be agent name or date
+                if "-" in parts[1] and len(parts[1]) == 10:
+                    target_date = parts[1]
+                else:
+                    target_agent = parts[1].lower()
+            elif len(parts) >= 3:
+                target_agent = parts[1].lower()
+                target_date = parts[2]
+
+            log_file = AGENTS_DIR / target_agent / "state" / f"session-log-{target_date}.md"
+            if log_file.exists():
+                content = log_file.read_text(encoding="utf-8")
+                if len(content) > 4000:
+                    # Split into chunks for Telegram
+                    chunks = [content[i:i+4000] for i in range(0, len(content), 4000)]
+                    for i, chunk in enumerate(chunks):
+                        send_telegram(chat_id, f"Transcript {target_agent} {target_date} ({i+1}/{len(chunks)}):\n\n{chunk}", telegram_config["bot_token"])
+                else:
+                    send_telegram(chat_id, f"Transcript {target_agent} {target_date}:\n\n{content}", telegram_config["bot_token"])
+            else:
+                send_telegram(chat_id, f"No session log found for {target_agent} on {target_date}", telegram_config["bot_token"])
+        except Exception as e:
+            send_telegram(chat_id, f"Transcript error: {e}", telegram_config["bot_token"])
+        return
+
+    # /memory command works in ANY agent chat — shows what that agent knows
     if msg_lower in ("/memory", "memory", "/what do you know about me"):
         try:
             user_id = CHAT_USER_MAP.get(agent_name, str(telegram_config.get("owner_user_id", os.environ.get("TELEGRAM_OWNER_ID", "default"))))
