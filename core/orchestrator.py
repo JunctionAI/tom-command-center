@@ -3864,6 +3864,23 @@ def handle_incoming_message(chat_id: str, message_text: str, telegram_config: di
         logger.warning(f"Unknown chat ID: {chat_id}")
         return
 
+    # -------------------------------------------------------------------------
+    # ACTIVE AGENT ALLOWLIST — only these agents respond to messages.
+    # All others are offline and cost zero. Update this list to enable agents.
+    # Companion agents (CHAT_USER_MAP) are always active.
+    # -------------------------------------------------------------------------
+    ACTIVE_AGENTS = {
+        "apex",           # Tom's personal companion
+        "global-events",  # Atlas — geopolitical intelligence
+        "command-center", # Nexus — admin commands (always needed)
+        *CHAT_USER_MAP.keys(),  # All companion agents (forge, aether, etc.)
+    }
+    if agent_name not in ACTIVE_AGENTS:
+        logger.info(f"Agent '{agent_name}' is offline (not in ACTIVE_AGENTS). Message ignored, no API call made.")
+        bot_token = telegram_config.get("bot_token", os.environ.get("TELEGRAM_BOT_TOKEN", ""))
+        send_telegram(chat_id, f"[{agent_name} is currently offline]", bot_token)
+        return
+
     # Command Center special handling
     if agent_name == "command-center":
         handle_command(message_text, telegram_config)
@@ -4207,6 +4224,16 @@ def handle_photo_message(chat_id: str, photo_sizes: list, caption: str,
     agent_name = identify_agent_from_chat(chat_id, telegram_config)
     if not agent_name:
         logger.warning(f"Photo from unknown chat ID: {chat_id}")
+        return
+
+    # Same allowlist as handle_incoming_message
+    ACTIVE_AGENTS = {
+        "apex", "global-events", "command-center",
+        *CHAT_USER_MAP.keys(),
+    }
+    if agent_name not in ACTIVE_AGENTS:
+        logger.info(f"Agent '{agent_name}' is offline. Photo ignored.")
+        send_telegram(chat_id, f"[{agent_name} is currently offline]", bot_token)
         return
 
     try:
