@@ -3968,7 +3968,7 @@ def handle_incoming_message(chat_id: str, message_text: str, telegram_config: di
 
         # Load conversation history for multi-turn context (permanent storage)
         from core.user_memory import get_recent_messages as get_memory_messages, save_message as save_memory_message
-        conv_history = get_memory_messages(user_id, agent_name, chat_id, max_messages=20, max_age_hours=72)
+        conv_history = get_memory_messages(user_id, agent_name, chat_id, max_messages=6, max_age_hours=48)
         # Save incoming message permanently
         save_memory_message(user_id, agent_name, chat_id, "user", message_text)
 
@@ -4259,7 +4259,7 @@ def handle_photo_message(chat_id: str, photo_sizes: list, caption: str,
 
         # Load conversation history for multi-turn context
         from core.user_memory import get_recent_messages as get_memory_messages, save_message as save_memory_message
-        conv_history = get_memory_messages(user_id, agent_name, chat_id, max_messages=20, max_age_hours=72)
+        conv_history = get_memory_messages(user_id, agent_name, chat_id, max_messages=6, max_age_hours=48)
 
         # Save incoming photo message permanently
         photo_msg = f"[Photo] {caption}" if caption else "[Photo sent]"
