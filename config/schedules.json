@@ -33,6 +33,12 @@
     },
     {
       "agent": "command-center",
+      "task": "daily_cost_report",
+      "cron": "5 7 * * *",
+      "description": "Send per-user API cost report to Nexus (7:05am daily — after Tom's morning brief)"
+    },
+    {
+      "agent": "command-center",
       "task": "flush_dnd_queue",
       "cron": "0 6 * * *",
       "description": "Flush DND-held messages at 6am when Do Not Disturb ends"

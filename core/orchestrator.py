@@ -541,8 +541,19 @@ def extract_markers_from_response(response: str) -> dict:
 # Global variable to track which agent is currently being served (set before call_claude)
 _current_agent_name = None
 
-def _track_api_usage(agent_name: str, model: str, input_tokens: int, output_tokens: int):
-    """Track API usage per agent per day to data/api_usage.json"""
+def _calc_cost(model: str, input_tokens: int, output_tokens: int) -> float:
+    """Calculate API cost in USD from token counts and model."""
+    if "opus" in model:
+        return (input_tokens * 15.0 / 1_000_000) + (output_tokens * 75.0 / 1_000_000)
+    elif "haiku" in model:
+        return (input_tokens * 0.80 / 1_000_000) + (output_tokens * 4.0 / 1_000_000)
+    else:  # Sonnet
+        return (input_tokens * 3.0 / 1_000_000) + (output_tokens * 15.0 / 1_000_000)
+
+
+def _track_api_usage(agent_name: str, model: str, input_tokens: int, output_tokens: int,
+                     call_type: str = "main", user_id: str = None):
+    """Track API usage per agent and per user per day to data/api_usage.json"""
     import json
     usage_file = Path(__file__).parent.parent / "data" / "api_usage.json"
     usage_file.parent.mkdir(parents=True, exist_ok=True)
@@ -556,37 +567,97 @@ def _track_api_usage(agent_name: str, model: str, input_tokens: int, output_toke
             usage = {}
 
     today = datetime.now(NZ_TZ).date().isoformat()
+    cost = _calc_cost(model, input_tokens, output_tokens)
 
-    # Ensure agent entry exists
+    # --- Per-agent tracking (existing) ---
     if agent_name not in usage:
         usage[agent_name] = {"_total_input_tokens": 0, "_total_output_tokens": 0, "_total_cost_usd": 0}
 
     agent_data = usage[agent_name]
-
-    # Ensure day entry exists
     if today not in agent_data:
-        agent_data[today] = {"input_tokens": 0, "output_tokens": 0, "calls": 0, "model": model}
+        agent_data[today] = {"input_tokens": 0, "output_tokens": 0, "calls": 0, "cost_usd": 0, "model": model}
 
-    # Pricing (Sonnet 4.6)
-    # Input: $3/M tokens, Output: $15/M tokens (Sonnet)
-    # Input: $15/M tokens, Output: $75/M tokens (Opus)
-    if "opus" in model:
-        cost = (input_tokens * 15.0 / 1_000_000) + (output_tokens * 75.0 / 1_000_000)
-    else:  # Sonnet
-        cost = (input_tokens * 3.0 / 1_000_000) + (output_tokens * 15.0 / 1_000_000)
-
-    # Update daily
     agent_data[today]["input_tokens"] += input_tokens
     agent_data[today]["output_tokens"] += output_tokens
     agent_data[today]["calls"] += 1
-
-    # Update totals
+    agent_data[today]["cost_usd"] = agent_data[today].get("cost_usd", 0) + cost
     agent_data["_total_input_tokens"] += input_tokens
     agent_data["_total_output_tokens"] += output_tokens
     agent_data["_total_cost_usd"] += cost
 
+    # --- Per-user tracking (new) ---
+    # Companion agents → their user. Everything else → "system".
+    if user_id is None:
+        user_id = CHAT_USER_MAP.get(agent_name, "system")
+
+    by_user = usage.setdefault("_by_user", {})
+    user_data = by_user.setdefault(user_id, {"_total_cost_usd": 0})
+    day_data = user_data.setdefault(today, {})
+    day_data["total_cost_usd"] = day_data.get("total_cost_usd", 0) + cost
+    day_data["calls"] = day_data.get("calls", 0) + 1
+    day_data.setdefault("by_type", {})[call_type] = day_data["by_type"].get(call_type, 0) + cost
+    user_data["_total_cost_usd"] += cost
+
     # Write back
     usage_file.write_text(json.dumps(usage, indent=2), encoding='utf-8')
+
+
+def get_daily_cost_summary(date_str: str = None) -> str:
+    """Return a formatted per-user cost summary for a given date (defaults to today)."""
+    import json
+    usage_file = Path(__file__).parent.parent / "data" / "api_usage.json"
+    if not usage_file.exists():
+        return "No API usage data yet."
+
+    try:
+        usage = json.loads(usage_file.read_text(encoding='utf-8'))
+    except Exception:
+        return "Could not read API usage data."
+
+    if date_str is None:
+        date_str = datetime.now(NZ_TZ).date().isoformat()
+
+    by_user = usage.get("_by_user", {})
+    if not by_user:
+        return "No per-user data yet."
+
+    # User display names
+    user_labels = {
+        "tom": "Tom (Apex)",
+        "tyler": "Tyler (Forge)",
+        "jackson": "Jackson (Aether)",
+        "tane": "Tane (Nova)",
+        "system": "System agents",
+    }
+
+    lines = [f"API Costs — {date_str}"]
+    total_day = 0.0
+    for uid, udata in sorted(by_user.items()):
+        day = udata.get(date_str, {})
+        cost = day.get("total_cost_usd", 0)
+        calls = day.get("calls", 0)
+        total_day += cost
+        label = user_labels.get(uid, uid)
+        lines.append(f"- {label}: ${cost:.3f} ({calls} calls)")
+
+    lines.append(f"Total today: ${total_day:.3f}")
+
+    # Running monthly estimate (extrapolate from recent days)
+    all_days = set()
+    for udata in by_user.values():
+        all_days.update(k for k in udata if not k.startswith("_"))
+
+    if len(all_days) >= 3:
+        total_all = sum(
+            udata.get(d, {}).get("total_cost_usd", 0)
+            for udata in by_user.values()
+            for d in all_days
+        )
+        avg_per_day = total_all / len(all_days)
+        monthly = avg_per_day * 30
+        lines.append(f"30-day run rate: ${monthly:.2f}/mo")
+
+    return "\n".join(lines)
 
 
 # --- Claude API Caller ---
@@ -627,9 +698,10 @@ def call_claude(system_prompt: str, user_message: str, task_type: str = "chat",
         )
         logger.info(f"Claude API responded: {len(response.content[0].text)} chars, stop={response.stop_reason}")
 
-        # Track API usage per agent per day
+        # Track API usage per agent and per user per day
         try:
-            _track_api_usage(agent_name, model, response.usage.input_tokens, response.usage.output_tokens)
+            _track_api_usage(agent_name, model, response.usage.input_tokens, response.usage.output_tokens,
+                             call_type="main")
         except Exception as track_err:
             logger.warning(f"Usage tracking failed (non-fatal): {track_err}")
 
@@ -1437,6 +1509,26 @@ def run_scheduled_task(agent_name: str, task_name: str, telegram_config: dict):
 
 def _run_scheduled_task_inner(agent_name: str, task_name: str, telegram_config: dict):
     """Inner task runner — exceptions bubble up to run_scheduled_task wrapper."""
+
+    # --- Daily API cost report (sent to Nexus command-center) ---
+    if task_name == "daily_cost_report":
+        try:
+            from datetime import date, timedelta
+            yesterday = (datetime.now(NZ_TZ).date() - timedelta(days=1)).isoformat()
+            summary = get_daily_cost_summary(yesterday)
+            chat_id = telegram_config.get("chat_ids", {}).get("command-center", "")
+            bot_token = telegram_config.get("bot_token", os.environ.get("TELEGRAM_BOT_TOKEN", ""))
+            if chat_id and bot_token:
+                import requests as _req
+                _req.post(
+                    f"https://api.telegram.org/bot{bot_token}/sendMessage",
+                    json={"chat_id": chat_id, "text": summary},
+                    timeout=10
+                )
+            logger.info(f"Daily cost report sent: {summary[:100]}")
+        except Exception as e:
+            logger.error(f"Daily cost report failed: {e}")
+        return
 
     # --- Flush DND-held messages (6am daily) ---
     if task_name == "flush_dnd_queue":
@@ -3694,6 +3786,12 @@ Only flag actual modifications to what the user is doing going forward, OR agent
             timeout=30.0,
         )
         detect_response = detect_result.content[0].text.strip()
+        try:
+            _track_api_usage(agent_name, _HAIKU,
+                             detect_result.usage.input_tokens, detect_result.usage.output_tokens,
+                             call_type="auto_evolve_detect")
+        except Exception:
+            pass
 
         if not detect_response or "PLAN_CHANGED" not in detect_response:
             logger.info(f"Auto-evolve {agent_name}: no plan change detected")
@@ -3737,6 +3835,12 @@ Output ONLY the complete file content, no explanation."""
             timeout=60.0,
         )
         rewrite_response = rewrite_result.content[0].text.strip()
+        try:
+            _track_api_usage(agent_name, _HAIKU,
+                             rewrite_result.usage.input_tokens, rewrite_result.usage.output_tokens,
+                             call_type="auto_evolve_rewrite")
+        except Exception:
+            pass
 
         if rewrite_response and len(rewrite_response) > 200 and "CURRENT_PLAN" in rewrite_response:
             # Sanity check: new plan should have key sections
@@ -4185,9 +4289,21 @@ If you identify a campaign opportunity or creative need (Meridian/PREP only), em
             if agent_name in CHAT_USER_MAP:
                 from core.asmr_memory import asmr_extract
                 asmr_extract(user_id, agent_name, extraction_conv, agent_display)
+                # ASMR uses 3 observer Haiku calls (~6000 input + 1500 output total). Track as estimate.
+                try:
+                    _track_api_usage(agent_name, "claude-haiku-4-5-20251001", 6000, 1500,
+                                     call_type="memory_asmr", user_id=user_id)
+                except Exception:
+                    pass
             else:
                 from core.user_memory import extract_and_store_memories
                 extract_and_store_memories(user_id, agent_name, extraction_conv, agent_display)
+                # Legacy extraction uses 1 Haiku call (~2000 input + 300 output). Track as estimate.
+                try:
+                    _track_api_usage(agent_name, "claude-haiku-4-5-20251001", 2000, 300,
+                                     call_type="memory_extract", user_id=user_id)
+                except Exception:
+                    pass
         except Exception as mem_e:
             logger.warning(f"Memory extraction failed (non-fatal): {mem_e}")
 
