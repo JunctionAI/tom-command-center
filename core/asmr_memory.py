@@ -108,10 +108,15 @@ def _ensure_asmr_schema(db):
     db.commit()
 
 
+# Module-level API key override — set by orchestrator before companion agent calls
+# so all Haiku calls in this module use the correct per-user key.
+_api_key_override: str = None
+
+
 def _call_haiku(prompt: str, max_tokens: int = 2000) -> str:
-    """Call Haiku for cheap agent tasks."""
+    """Call Haiku for cheap agent tasks. Uses _api_key_override if set."""
     import anthropic
-    client = anthropic.Anthropic()
+    client = anthropic.Anthropic(api_key=_api_key_override) if _api_key_override else anthropic.Anthropic()
     response = client.messages.create(
         model=HAIKU_MODEL,
         max_tokens=max_tokens,
@@ -530,14 +535,19 @@ def retrieve_active_memory(user_id: str, agent_id: str,
 # =============================================================================
 
 def asmr_extract(user_id: str, agent_id: str, conversation: list,
-                  agent_display_name: str = ""):
+                  agent_display_name: str = "", api_key: str = None):
     """Drop-in replacement for extract_and_store_memories."""
+    global _api_key_override
+    _api_key_override = api_key
     try:
         extract_with_observers(user_id, agent_id, conversation, agent_display_name)
     except Exception as e:
         logger.error(f"ASMR extraction failed, falling back to legacy: {e}")
         from core.user_memory import extract_and_store_memories
-        extract_and_store_memories(user_id, agent_id, conversation, agent_display_name)
+        extract_and_store_memories(user_id, agent_id, conversation, agent_display_name,
+                                   api_key=api_key)
+    finally:
+        _api_key_override = None
 
 
 def asmr_load(user_id: str, agent_id: str, current_context: str = "") -> str:

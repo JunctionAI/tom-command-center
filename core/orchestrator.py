@@ -660,6 +660,22 @@ def get_daily_cost_summary(date_str: str = None) -> str:
     return "\n".join(lines)
 
 
+# --- Per-user API key routing ---
+# Each companion agent has its own Anthropic API key so costs appear separately
+# on Anthropic's dashboard and can be billed back to each client independently.
+# Keys: ANTHROPIC_API_KEY_TOM, ANTHROPIC_API_KEY_TYLER, ANTHROPIC_API_KEY_JACKSON,
+#       ANTHROPIC_API_KEY_TANE. Falls back to ANTHROPIC_API_KEY if not set.
+
+def _get_api_key(agent_name: str) -> str:
+    """Return the Anthropic API key for this agent. Companion agents get their own key."""
+    user_id = CHAT_USER_MAP.get(agent_name)
+    if user_id:
+        key = os.environ.get(f"ANTHROPIC_API_KEY_{user_id.upper()}")
+        if key:
+            return key
+    return os.environ.get("ANTHROPIC_API_KEY", "")
+
+
 # --- Claude API Caller ---
 
 def call_claude(system_prompt: str, user_message: str, task_type: str = "chat",
@@ -675,7 +691,7 @@ def call_claude(system_prompt: str, user_message: str, task_type: str = "chat",
     """
     import anthropic
 
-    client = anthropic.Anthropic()  # Uses ANTHROPIC_API_KEY env var
+    client = anthropic.Anthropic(api_key=_get_api_key(agent_name))
 
     # All agents use Sonnet to control costs
     model = "claude-sonnet-4-6"
@@ -1061,13 +1077,14 @@ def download_telegram_photo(photo_sizes: list, bot_token: str) -> tuple:
 
 
 def call_claude_vision(system_prompt: str, image_b64: str, media_type: str,
-                       caption: str = None, task_type: str = "chat") -> str:
+                       caption: str = None, task_type: str = "chat",
+                       agent_name: str = "unknown") -> str:
     """
     Call Claude API with an image (vision). Used for photos sent via Telegram.
     """
     import anthropic
 
-    client = anthropic.Anthropic()
+    client = anthropic.Anthropic(api_key=_get_api_key(agent_name))
 
     # All agents use Sonnet to control costs
     model = "claude-sonnet-4-6"
@@ -3707,7 +3724,9 @@ The daily plan should reference the 90-day execution map from Meridian's intelli
                 {"role": "assistant", "content": response}
             ]
             from core.user_memory import extract_and_store_memories
-            extract_and_store_memories(sched_user_id_mem, agent_name, extraction_conv, AGENT_DISPLAY.get(agent_name, agent_name))
+            extract_and_store_memories(sched_user_id_mem, agent_name, extraction_conv,
+                                       AGENT_DISPLAY.get(agent_name, agent_name),
+                                       api_key=_get_api_key(agent_name))
         except Exception as mem_e:
             logger.warning(f"Scheduled task memory extraction failed (non-fatal): {mem_e}")
 
@@ -3774,7 +3793,7 @@ Only flag actual modifications to what the user is doing going forward, OR agent
 
     try:
         import anthropic
-        _evolve_client = anthropic.Anthropic()
+        _evolve_client = anthropic.Anthropic(api_key=_get_api_key(agent_name))
         _HAIKU = "claude-haiku-4-5-20251001"
 
         # Step 1: Haiku detection (~$0.001)
@@ -4288,22 +4307,12 @@ If you identify a campaign opportunity or creative need (Meridian/PREP only), em
             ]
             if agent_name in CHAT_USER_MAP:
                 from core.asmr_memory import asmr_extract
-                asmr_extract(user_id, agent_name, extraction_conv, agent_display)
-                # ASMR uses 3 observer Haiku calls (~6000 input + 1500 output total). Track as estimate.
-                try:
-                    _track_api_usage(agent_name, "claude-haiku-4-5-20251001", 6000, 1500,
-                                     call_type="memory_asmr", user_id=user_id)
-                except Exception:
-                    pass
+                asmr_extract(user_id, agent_name, extraction_conv, agent_display,
+                             api_key=_get_api_key(agent_name))
             else:
                 from core.user_memory import extract_and_store_memories
-                extract_and_store_memories(user_id, agent_name, extraction_conv, agent_display)
-                # Legacy extraction uses 1 Haiku call (~2000 input + 300 output). Track as estimate.
-                try:
-                    _track_api_usage(agent_name, "claude-haiku-4-5-20251001", 2000, 300,
-                                     call_type="memory_extract", user_id=user_id)
-                except Exception:
-                    pass
+                extract_and_store_memories(user_id, agent_name, extraction_conv, agent_display,
+                                           api_key=_get_api_key(agent_name))
         except Exception as mem_e:
             logger.warning(f"Memory extraction failed (non-fatal): {mem_e}")
 
@@ -4437,10 +4446,12 @@ def handle_photo_message(chat_id: str, photo_sizes: list, caption: str,
             ]
             if agent_name in CHAT_USER_MAP:
                 from core.asmr_memory import asmr_extract
-                asmr_extract(user_id, agent_name, extraction_conv, agent_display)
+                asmr_extract(user_id, agent_name, extraction_conv, agent_display,
+                             api_key=_get_api_key(agent_name))
             else:
                 from core.user_memory import extract_and_store_memories
-                extract_and_store_memories(user_id, agent_name, extraction_conv, agent_display)
+                extract_and_store_memories(user_id, agent_name, extraction_conv, agent_display,
+                                           api_key=_get_api_key(agent_name))
         except Exception as mem_e:
             logger.warning(f"Photo memory extraction failed (non-fatal): {mem_e}")
 

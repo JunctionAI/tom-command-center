@@ -348,7 +348,8 @@ def get_recent_summaries(user_id: str, agent_id: str, days: int = 30) -> list:
 # =============================================================================
 
 def extract_and_store_memories(user_id: str, agent_id: str,
-                                conversation: list, agent_display_name: str = ""):
+                                conversation: list, agent_display_name: str = "",
+                                api_key: str = None):
     """
     Extract facts from a conversation and store them.
     Uses Haiku for cost efficiency (~$0.001 per extraction).
@@ -363,7 +364,7 @@ def extract_and_store_memories(user_id: str, agent_id: str,
 
     try:
         import anthropic
-        client = anthropic.Anthropic()
+        client = anthropic.Anthropic(api_key=api_key) if api_key else anthropic.Anthropic()
 
         # Get existing facts for dedup context
         existing_facts = get_user_facts(user_id, agent_id, include_global=False)
