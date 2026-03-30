@@ -4983,6 +4983,73 @@ def handle_command(command: str, telegram_config: dict):
             from core.notification_router import route_notification
             route_notification(chat_id, f"Forget failed: {e}", bot_token, severity="INFO", agent="command-center")
 
+    elif cmd in ("sync-graph", "/sync-graph", "sync graph"):
+        # Backfill all SQLite facts into Neo4j graph
+        from core.notification_router import route_notification
+        route_notification(chat_id, "Starting Neo4j graph sync from SQLite...", bot_token, severity="INFO", agent="command-center")
+        try:
+            from core.graph_memory import is_available, sync_facts_to_graph
+            from core.user_memory import get_user_facts
+            import sqlite3 as _sg_sql
+
+            if not is_available():
+                route_notification(chat_id,
+                    "Neo4j not connected. Add NEO4J_URI, NEO4J_USERNAME, NEO4J_PASSWORD to Railway env vars first.",
+                    bot_token, severity="IMPORTANT", agent="command-center")
+            else:
+                db_path = BASE_DIR / "data" / "user_memory.db"
+                conn = _sg_sql.connect(str(db_path))
+                conn.row_factory = _sg_sql.Row
+                rows = conn.execute(
+                    "SELECT id, user_id, agent_id, fact, category, confidence FROM user_facts WHERE is_active = 1"
+                ).fetchall()
+                conn.close()
+
+                # Group by user/agent
+                from itertools import groupby as _grp
+                sorted_rows = sorted(rows, key=lambda r: (r["user_id"], r["agent_id"]))
+                total = 0
+                users_done = set()
+                for (uid, aid), grp in _grp(sorted_rows, key=lambda r: (r["user_id"], r["agent_id"])):
+                    facts = [{"fact_id": str(r["id"]), "fact": r["fact"],
+                               "category": r["category"], "confidence": float(r["confidence"])} for r in grp]
+                    sync_facts_to_graph(uid, aid, facts)
+                    total += len(facts)
+                    users_done.add(uid)
+
+                route_notification(chat_id,
+                    f"Graph sync complete.\n{total} facts synced across {len(users_done)} users.\nNeo4j now active — conversations will use targeted retrieval (top-50 facts instead of all {total}).",
+                    bot_token, severity="INFO", agent="command-center")
+        except Exception as e:
+            route_notification(chat_id, f"Graph sync failed: {e}", bot_token, severity="IMPORTANT", agent="command-center")
+
+    elif cmd in ("graph-status", "/graph-status"):
+        # Show Neo4j graph stats
+        from core.notification_router import route_notification
+        try:
+            from core.graph_memory import is_available, _get_driver
+            if not is_available():
+                route_notification(chat_id, "Neo4j not connected. Set NEO4J_URI, NEO4J_USERNAME, NEO4J_PASSWORD in Railway.", bot_token, severity="INFO", agent="command-center")
+            else:
+                driver = _get_driver()
+                with driver.session() as s:
+                    facts = s.run("MATCH (f:Fact) RETURN COUNT(f) AS n").single()["n"]
+                    users = s.run("MATCH (u:User) RETURN COUNT(u) AS n").single()["n"]
+                    supps = s.run("MATCH (s:Supplement) RETURN COUNT(s) AS n").single()["n"]
+                    conds = s.run("MATCH (c:Condition) RETURN COUNT(c) AS n").single()["n"]
+                    goals = s.run("MATCH (g:Goal) RETURN COUNT(g) AS n").single()["n"]
+                lines = [
+                    "Neo4j Graph Status",
+                    f"Users: {users}",
+                    f"Facts: {facts}",
+                    f"Supplements: {supps}",
+                    f"Conditions: {conds}",
+                    f"Goals: {goals}",
+                ]
+                route_notification(chat_id, "\n".join(lines), bot_token, severity="INFO", agent="command-center")
+        except Exception as e:
+            route_notification(chat_id, f"Graph status error: {e}", bot_token, severity="INFO", agent="command-center")
+
     else:
         # Unknown command -- show available commands instead of hallucinating
         help_text = """NEXUS -- Available Commands
@@ -4998,6 +5065,8 @@ System:
   memory -- Show what all agents know about you
   forget <text> -- Delete memories matching text
   forget all -- Delete ALL memories (nuclear option)
+  sync-graph -- Backfill all SQLite facts to Neo4j graph
+  graph-status -- Show Neo4j graph node counts
 
 Campaigns:
   setup pure pets -- Create Pure Pets campaign via Meta API (PAUSED)
