@@ -342,23 +342,40 @@ def load_agent_brain(agent_name: str, user_id: str = None, current_context: str 
                 logger.info(f"Loaded {len(strategy_files)} shared strategy files for {agent_name}")
 
     # 9. USER MEMORY -- Persistent learned knowledge about this user
-    # Memory system: ASMR active retrieval for companions, legacy flat loading for others
+    # Memory system priority:
+    #   1. Neo4j graph retrieval (targeted ~50 facts) — if available
+    #   2. ASMR active retrieval (companions) — fallback
+    #   3. Legacy flat loading — final fallback
     if user_id:
         try:
-            if agent_name in CHAT_USER_MAP and current_context:
-                # ASMR: active retrieval with 3 parallel search agents
-                from core.asmr_memory import asmr_load
-                user_memory = asmr_load(user_id, agent_name, current_context)
-                if user_memory:
-                    brain_parts.append(user_memory)
-                    logger.info(f"ASMR memory loaded for {agent_name}/{user_id}: {len(user_memory)} chars")
-            else:
-                # Legacy: flat fact loading for Tom's agents
-                from core.user_memory import load_user_memory
-                user_memory = load_user_memory(user_id, agent_name)
-                if user_memory:
-                    brain_parts.append(user_memory)
-                    logger.info(f"Legacy memory loaded for {agent_name}/{user_id}: {len(user_memory)} chars")
+            # Try Neo4j graph retrieval first (token-efficient, relationship-aware)
+            _graph_memory_used = False
+            if current_context:
+                try:
+                    from core.graph_memory import is_available as graph_available, format_graph_context_for_prompt
+                    if graph_available():
+                        graph_ctx = format_graph_context_for_prompt(user_id, agent_name, current_context)
+                        if graph_ctx:
+                            brain_parts.append(graph_ctx)
+                            _graph_memory_used = True
+                            logger.info(f"Graph memory loaded for {agent_name}/{user_id}: ~{len(graph_ctx)//4} tokens (targeted retrieval)")
+                except Exception as _ge:
+                    logger.debug(f"Graph memory unavailable, falling back: {_ge}")
+
+            if not _graph_memory_used:
+                # Fallback: ASMR for companions, legacy for others
+                if agent_name in CHAT_USER_MAP and current_context:
+                    from core.asmr_memory import asmr_load
+                    user_memory = asmr_load(user_id, agent_name, current_context)
+                    if user_memory:
+                        brain_parts.append(user_memory)
+                        logger.info(f"ASMR memory loaded for {agent_name}/{user_id}: {len(user_memory)} chars")
+                else:
+                    from core.user_memory import load_user_memory
+                    user_memory = load_user_memory(user_id, agent_name)
+                    if user_memory:
+                        brain_parts.append(user_memory)
+                        logger.info(f"Legacy memory loaded for {agent_name}/{user_id}: {len(user_memory)} chars")
         except Exception as e:
             logger.warning(f"Memory load failed (non-fatal): {e}")
 
@@ -3783,10 +3800,17 @@ The daily plan should reference the 90-day execution map from Meridian's intelli
                 {"role": "user", "content": task_prompt},
                 {"role": "assistant", "content": response}
             ]
-            from core.user_memory import extract_and_store_memories
+            from core.user_memory import extract_and_store_memories, get_user_facts
             extract_and_store_memories(sched_user_id_mem, agent_name, extraction_conv,
                                        AGENT_DISPLAY.get(agent_name, agent_name),
                                        api_key=_get_api_key(agent_name))
+            # Sync new facts to Neo4j graph (fire-and-forget)
+            try:
+                from core.graph_memory import sync_facts_to_graph
+                _new_facts = get_user_facts(sched_user_id_mem, agent_name)
+                sync_facts_to_graph(sched_user_id_mem, agent_name, _new_facts)
+            except Exception:
+                pass
         except Exception as mem_e:
             logger.warning(f"Scheduled task memory extraction failed (non-fatal): {mem_e}")
 
@@ -4401,6 +4425,14 @@ If you identify a campaign opportunity or creative need (Meridian/PREP only), em
                 from core.user_memory import extract_and_store_memories
                 extract_and_store_memories(user_id, agent_name, extraction_conv, agent_display,
                                            api_key=_get_api_key(agent_name))
+            # Sync updated facts to Neo4j graph layer (fire-and-forget)
+            try:
+                from core.graph_memory import sync_facts_to_graph
+                from core.user_memory import get_user_facts
+                _synced_facts = get_user_facts(user_id, agent_name)
+                sync_facts_to_graph(user_id, agent_name, _synced_facts)
+            except Exception:
+                pass
         except Exception as mem_e:
             logger.warning(f"Memory extraction failed (non-fatal): {mem_e}")
 
@@ -4540,6 +4572,14 @@ def handle_photo_message(chat_id: str, photo_sizes: list, caption: str,
                 from core.user_memory import extract_and_store_memories
                 extract_and_store_memories(user_id, agent_name, extraction_conv, agent_display,
                                            api_key=_get_api_key(agent_name))
+            # Sync updated facts to Neo4j graph layer (fire-and-forget)
+            try:
+                from core.graph_memory import sync_facts_to_graph
+                from core.user_memory import get_user_facts
+                _synced_facts = get_user_facts(user_id, agent_name)
+                sync_facts_to_graph(user_id, agent_name, _synced_facts)
+            except Exception:
+                pass
         except Exception as mem_e:
             logger.warning(f"Photo memory extraction failed (non-fatal): {mem_e}")
 
