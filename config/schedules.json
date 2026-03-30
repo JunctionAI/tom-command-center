@@ -78,6 +78,24 @@
       "task": "evening_checkin",
       "cron": "30 18 * * *",
       "description": "Aether evening check-in for Jackson (6:30pm daily)"
+    },
+    {
+      "agent": "nova",
+      "task": "morning_checkin",
+      "cron": "0 8 * * *",
+      "description": "Nova morning check-in for Tane (8am daily)"
+    },
+    {
+      "agent": "nova",
+      "task": "midday_checkin",
+      "cron": "0 12 * * *",
+      "description": "Nova midday accountability pulse for Tane (12pm daily)"
+    },
+    {
+      "agent": "nova",
+      "task": "evening_checkin",
+      "cron": "0 18 * * *",
+      "description": "Nova evening debrief + data collection for Tane (6pm daily)"
     }
   ]
 }

@@ -31,7 +31,8 @@
     "prospector": "-5255505982",
     "aether": "-5193433346",
     "forge": "-5101300533",
-    "apex": "-5202146984"
+    "apex": "-5202146984",
+    "nova": "SETUP_NEEDED"
   },
   "authorized_users": ["8502825979", "8380468775"],
   "agent_names": {
@@ -64,6 +65,7 @@
     "prospector": "Prospector",
     "aether": "Aether",
     "forge": "Forge",
-    "apex": "Apex"
+    "apex": "Apex",
+    "nova": "Nova"
   }
 }

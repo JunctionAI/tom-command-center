@@ -71,7 +71,7 @@ AGENT_DISPLAY = {
     "walker-capital-trent": "Vesper",
     "prospector":           "Prospector",
     "apex":                 "Apex",
-    # "nova":              "Nova",  # UNCOMMENT when Tane is provisioned
+    "nova":                 "Nova",
 }
 
 # Logging configured by entrypoint.py — just get the logger here
@@ -143,7 +143,7 @@ CHAT_USER_MAP = {
     "aether": "jackson",
     "apex": "tom",
     "forge": "tyler",
-    # "nova": "tane",  # UNCOMMENT when Tane is provisioned
+    "nova": "tane",
 }
 
 # --- Agent Brain Loader ---
