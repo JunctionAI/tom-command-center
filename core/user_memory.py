@@ -177,6 +177,30 @@ def get_message_count(user_id: str, agent_id: str) -> int:
     return row["cnt"] if row else 0
 
 
+def get_last_user_message_age_hours(user_id: str, agent_id: str) -> float | None:
+    """
+    Returns how many hours ago the user last sent a message, or None if never.
+    Used by scheduled tasks to detect non-engagement and live-conversation state.
+    """
+    db = get_db()
+    row = db.execute(
+        """SELECT created_at FROM messages
+           WHERE user_id = ? AND agent_id = ? AND role = 'user'
+           ORDER BY created_at DESC LIMIT 1""",
+        (user_id, agent_id)
+    ).fetchone()
+    if not row:
+        return None
+    try:
+        last_ts = datetime.fromisoformat(row["created_at"])
+        if last_ts.tzinfo is None:
+            last_ts = last_ts.replace(tzinfo=NZ_TZ)
+        now = datetime.now(NZ_TZ)
+        return (now - last_ts).total_seconds() / 3600
+    except Exception:
+        return None
+
+
 # =============================================================================
 # FACT STORE (Permanent, deduplicated)
 # =============================================================================

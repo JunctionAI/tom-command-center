@@ -2541,6 +2541,61 @@ def _run_scheduled_task_general(agent_name: str, task_name: str, telegram_config
 
     # Resolve user_id for agents serving non-default users (e.g., Aether → Jackson)
     sched_user_id = CHAT_USER_MAP.get(agent_name)
+
+    # -------------------------------------------------------------------------
+    # ENGAGEMENT GUARDS (companion agents only)
+    # -------------------------------------------------------------------------
+    if sched_user_id and task_name in ("morning_checkin", "midday_checkin", "evening_checkin"):
+        try:
+            from core.user_memory import get_last_user_message_age_hours
+            hours_since_reply = get_last_user_message_age_hours(sched_user_id, agent_name)
+
+            # Guard 1: Live conversation deferral
+            # If the user messaged in the last 60 minutes, a scheduled check-in would
+            # interrupt an active conversation. Defer by logging and returning — the
+            # scheduler will fire again at the next scheduled slot.
+            if hours_since_reply is not None and hours_since_reply < 1.0:
+                logger.info(
+                    f"DEFERRED {agent_name}/{task_name}: user {sched_user_id} messaged "
+                    f"{hours_since_reply:.1f}h ago (active conversation). Skipping this fire."
+                )
+                return
+
+            # Guard 2: Non-engagement mode
+            # If the user hasn't responded in 24h+, switch to a minimal soft check-in.
+            # This avoids sending a full structured check-in to someone who may be
+            # overwhelmed or unable to engage (e.g. Jackson's screen sensitivity).
+            _engagement_note = ""
+            if hours_since_reply is None or hours_since_reply > 72:
+                # 72h+ silence: one very short "I'm still here" per day per session
+                # Only fire for the morning check-in to avoid flooding
+                if task_name != "morning_checkin":
+                    logger.info(
+                        f"NON-ENGAGEMENT SKIP {agent_name}/{task_name}: "
+                        f"no reply for {hours_since_reply}h. Suppressing non-morning check-ins."
+                    )
+                    return
+                _engagement_note = (
+                    "\n\nIMPORTANT: This user has not responded in 3+ days. "
+                    "Send a SINGLE brief warm message only — 2-3 sentences max. "
+                    "No structured questions. No lists. Just let them know you're here "
+                    "and there is no pressure. Something like: 'Hey [name], just checking in. "
+                    "No need to reply. I\'m here whenever you\'re ready.' Keep it that simple."
+                )
+            elif hours_since_reply > 24:
+                # 24-72h silence: shorter check-in, fewer questions
+                _engagement_note = (
+                    "\n\nNOTE: This user hasn't responded in 24+ hours. "
+                    "Keep this check-in shorter than usual — 3-4 questions max, "
+                    "gentle tone, no pressure language."
+                )
+        except Exception as _eg:
+            logger.warning(f"Engagement guard check failed (non-fatal): {_eg}")
+            _engagement_note = ""
+    else:
+        _engagement_note = ""
+    # -------------------------------------------------------------------------
+
     # For companions: build richer ASMR context from CURRENT_PLAN.md active constraints + recent state
     sched_context = ""
     if sched_user_id:
@@ -2717,6 +2772,11 @@ Emit [STATE UPDATE:] with ALL metrics, [METRIC:] for each number, [INSIGHT:] or 
                 logger.debug(f"Loaded prompt from file: {_prompt_file}")
         except Exception as e:
             logger.warning(f"Could not read prompt file {_prompt_file}: {e}")
+
+    # Apply engagement note (set by engagement guards above) — overrides normal prompt
+    # for non-engagement or live-conversation situations.
+    if _engagement_note:
+        task_prompt += _engagement_note
 
     # Recovery companion weekly progress report: generates a privacy-respecting summary for Tom
     # All companion agents (any agent in CHAT_USER_MAP) can generate weekly progress reports.
@@ -4192,6 +4252,34 @@ After your response, emit [STATE UPDATE: <what to remember from this exchange>].
             _reply_time = _reply_now.strftime("%I:%M %p")
             _time_context = f"\nCURRENT DATE/TIME: {_reply_date}, {_reply_time} NZST. Always use this as the actual time — never guess."
 
+            # First-response recognition for companion agents
+            # If this is the first message ever, or first message after 48h+ silence,
+            # inject a note so the agent acknowledges the engagement warmly.
+            _first_response_note = ""
+            if agent_name in CHAT_USER_MAP:
+                try:
+                    from core.user_memory import get_last_user_message_age_hours, get_message_count
+                    _msg_count = get_message_count(user_id, agent_name)
+                    _hours_since = get_last_user_message_age_hours(user_id, agent_name)
+                    # Note: save_message above already saved this message, so count includes it.
+                    # First-ever message: count is exactly 1 after save
+                    if _msg_count <= 1:
+                        _first_response_note = (
+                            "\n\nFIRST MESSAGE NOTE: This is the very first message this person has sent. "
+                            "Acknowledge their engagement warmly — it may have taken courage to reach out. "
+                            "Don't launch straight into structured questions. Start with a genuine, warm welcome."
+                        )
+                    elif _hours_since is not None and _hours_since > 48:
+                        # Re-engagement after silence
+                        _hours_display = f"{int(_hours_since)}h" if _hours_since < 48 else f"{int(_hours_since/24)}d"
+                        _first_response_note = (
+                            f"\n\nRE-ENGAGEMENT NOTE: This person hasn't replied for {_hours_display}. "
+                            "Briefly acknowledge you're glad they're back — keep it warm and natural, "
+                            "not clinical. Then continue with their message as normal."
+                        )
+                except Exception:
+                    pass
+
             user_prompt = f"""{_user_display} says: {message_text}
 {events_section}{_time_context}
 Respond as your agent character. You have your full context loaded above.
@@ -4208,7 +4296,7 @@ If you discover something another agent should know, emit:
 If something needs to be done, emit:
 [TASK: title|priority|description]
 If you identify a campaign opportunity or creative need (Meridian/PREP only), emit:
-[BRIEF: description of insight]"""
+[BRIEF: description of insight]{_first_response_note}"""
 
             response = call_claude(brain, user_prompt, task_type=task_type, conversation_history=conv_history, agent_name=agent_name)
 
