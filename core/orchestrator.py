@@ -1339,6 +1339,7 @@ VOICE_AGENTS = {
 
 def send_telegram_voice(chat_id: str, text: str, bot_token: str, voice_id: str = "onyx"):
     """Send a voice message to a Telegram chat using OpenAI TTS."""
+    import re
     import requests
     import tempfile
     import os
@@ -3590,8 +3591,22 @@ The daily plan should reference the 90-day execution map from Meridian's intelli
     # Without this, scheduled check-in content (insights, patterns) is lost.
     # SKIP for weekly_progress_report — it's a Tom-facing summary, not user content.
     # Extracting from it would store Tom-context facts under the companion user's ID.
+    # --- Memory extraction and auto-evolve for scheduled tasks ---
+    # COST GATE: Scheduled tasks are OUTBOUND-ONLY (the user hasn't spoken).
+    # Memory extraction on a morning check-in prompt is wasteful — there's no new user info.
+    # Auto-evolve on a routine scheduled message rarely detects changes.
+    # Only run these on tasks likely to contain new information:
+    # - weekly_progress_report: SKIP entirely (Tom-facing)
+    # - Companion scheduled tasks: SKIP memory + auto-evolve (no user input)
+    # - Non-companion scheduled tasks (Meridian, Oracle, etc.): extract normally
     if task_name == "weekly_progress_report":
         logger.info(f"Skipping memory extraction for {agent_name}/weekly_progress_report (Tom-facing report)")
+    elif agent_name in CHAT_USER_MAP:
+        # Companion scheduled tasks: NO memory extraction, NO auto-evolve.
+        # These are outbound check-ins with no user content to extract.
+        # Memory + auto-evolve run on the user's REPLY (in handle_message), not here.
+        # Saves ~6 Haiku calls per scheduled companion task.
+        logger.info(f"Skipping memory extraction + auto-evolve for {agent_name}/{task_name} (outbound scheduled, no user input)")
     else:
         try:
             sched_user_id_mem = CHAT_USER_MAP.get(agent_name, str(telegram_config.get("owner_user_id", os.environ.get("TELEGRAM_OWNER_ID", "default"))))
@@ -3599,26 +3614,10 @@ The daily plan should reference the 90-day execution map from Meridian's intelli
                 {"role": "user", "content": task_prompt},
                 {"role": "assistant", "content": response}
             ]
-            if agent_name in CHAT_USER_MAP:
-                from core.asmr_memory import asmr_extract
-                asmr_extract(sched_user_id_mem, agent_name, extraction_conv, AGENT_DISPLAY.get(agent_name, agent_name))
-                logger.info(f"ASMR memory extracted for {agent_name}/{task_name}")
-            else:
-                from core.user_memory import extract_and_store_memories
-                extract_and_store_memories(sched_user_id_mem, agent_name, extraction_conv, AGENT_DISPLAY.get(agent_name, agent_name))
+            from core.user_memory import extract_and_store_memories
+            extract_and_store_memories(sched_user_id_mem, agent_name, extraction_conv, AGENT_DISPLAY.get(agent_name, agent_name))
         except Exception as mem_e:
             logger.warning(f"Scheduled task memory extraction failed (non-fatal): {mem_e}")
-
-    # --- Auto-evolve for companion agents after scheduled tasks ---
-    # When a scheduled check-in contains self-corrections (e.g., "sourdough is out",
-    # "actually your plan says X not Y"), those corrections must be persisted to
-    # CURRENT_PLAN.md. Without this, the next scheduled task loads the uncorrected plan
-    # and repeats the same error.
-    if agent_name in CHAT_USER_MAP and task_name != "weekly_progress_report":
-        try:
-            _auto_evolve_plan(agent_name, task_prompt, response, source="scheduled")
-        except Exception as ae_e:
-            logger.warning(f"Auto-evolution (scheduled) failed (non-fatal): {ae_e}")
 
     logger.info(f"Completed: {agent_name}/{task_name}")
 
