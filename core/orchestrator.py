@@ -4181,36 +4181,58 @@ def handle_incoming_message(chat_id: str, message_text: str, telegram_config: di
             return
 
         # ── VAULT + MEDICAL GRAPH + THOUGHT LEADER INJECTION (companion agents only) ──
+        # Only inject when the message contains health/body/symptom keywords — skip for
+        # greetings, check-in replies, and short social messages to avoid token waste.
         if agent_name in CHAT_USER_MAP:
-            try:
-                from core.vault_indexer import VaultIndexer as _VI
-                _vi = _VI()
-                _vault_section = _vi.format_search_for_agent(message_text, limit=3)
-                if _vault_section and len(_vault_section) > 50:
-                    brain = brain + "\n\n" + _vault_section
-            except Exception as _vi_e:
-                logger.debug(f"Vault injection skipped: {_vi_e}")
+            _msg_lower = message_text.lower()
+            _health_keywords = [
+                "pain", "symptom", "hurt", "ache", "tired", "fatigue", "sleep", "stress",
+                "anxiety", "depress", "mood", "brain", "gut", "digest", "supplement",
+                "medication", "dose", "exercise", "train", "workout", "diet", "nutrition",
+                "protein", "vitamin", "mineral", "blood", "heart", "breath", "dizzy",
+                "headache", "nausea", "inflam", "injury", "recover", "rehabilit",
+                "nervous system", "cortisol", "hormone", "thyroid", "insulin", "glucose",
+                "back", "neck", "shoulder", "hip", "knee", "spine", "muscle", "joint",
+                "adhd", "focus", "memory", "cognit", "concuss", "migraine", "seizure",
+                "pots", "fibro", "autoimmune", "chronic", "flare",
+            ]
+            _is_health_message = (
+                len(message_text) > 30  # Skip very short messages (hi, ok, thanks)
+                and any(kw in _msg_lower for kw in _health_keywords)
+            )
 
-            try:
-                from core.medical_knowledge_graph import extract_health_keywords, format_health_context_for_agent
-                _health_kws = extract_health_keywords(message_text)
-                if _health_kws:
-                    _med_section = format_health_context_for_agent(_health_kws)
-                    if _med_section:
-                        brain = brain + "\n\n" + _med_section
-            except Exception as _mg_e:
-                logger.debug(f"Medical graph injection skipped: {_mg_e}")
+            if _is_health_message:
+                try:
+                    from core.vault_indexer import VaultIndexer as _VI
+                    _vi = _VI()
+                    _vault_section = _vi.format_search_for_agent(message_text, limit=2)
+                    if _vault_section and len(_vault_section) > 50:
+                        brain = brain + "\n\n" + _vault_section
+                except Exception as _vi_e:
+                    logger.debug(f"Vault injection skipped: {_vi_e}")
 
-            try:
-                from core.thought_leader_scraper import ThoughtLeaderDB as _TLD
-                _tld = _TLD()
-                _health_insights = _tld.get_recent_insights(hours=72, min_relevance=0.5)
-                _health_filtered = [i for i in _health_insights if "health_companion" in i.get("tags", [])]
-                if _health_filtered:
-                    _tl_lines = [f"- {i['leader_name']}: {i['insight']}" for i in _health_filtered[:3]]
-                    brain = brain + "\n\n=== CURRENT THINKING FROM HEALTH FIELD ===\n" + "\n".join(_tl_lines)
-            except Exception as _tl_e:
-                logger.debug(f"Health thought leader injection skipped: {_tl_e}")
+                try:
+                    from core.medical_knowledge_graph import extract_health_keywords, format_health_context_for_agent
+                    _health_kws = extract_health_keywords(message_text)
+                    if _health_kws:
+                        _med_section = format_health_context_for_agent(_health_kws)
+                        if _med_section:
+                            brain = brain + "\n\n" + _med_section
+                except Exception as _mg_e:
+                    logger.debug(f"Medical graph injection skipped: {_mg_e}")
+
+                try:
+                    from core.thought_leader_scraper import ThoughtLeaderDB as _TLD
+                    _tld = _TLD()
+                    _health_insights = _tld.get_recent_insights(hours=72, min_relevance=0.5)
+                    _health_filtered = [i for i in _health_insights if "health_companion" in i.get("tags", [])]
+                    if _health_filtered:
+                        _tl_lines = [f"- {i['leader_name']}: {i['insight']}" for i in _health_filtered[:3]]
+                        brain = brain + "\n\n=== CURRENT THINKING FROM HEALTH FIELD ===\n" + "\n".join(_tl_lines)
+                except Exception as _tl_e:
+                    logger.debug(f"Health thought leader injection skipped: {_tl_e}")
+            else:
+                logger.debug(f"Skipping vault/graph injection for short/non-health message: {message_text[:40]}")
 
         # Load conversation history for multi-turn context (permanent storage)
         from core.user_memory import get_recent_messages as get_memory_messages, save_message as save_memory_message
