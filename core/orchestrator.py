@@ -5003,10 +5003,17 @@ def handle_command(command: str, telegram_config: dict):
                 ).fetchall()
                 conn.close()
 
-                # Build agent_id -> friendly user_id map from CHAT_USER_MAP
-                # This ensures facts synced via backfill use the same user_id
-                # as facts synced live (e.g. "tom" not "825333001")
-                agent_to_user = CHAT_USER_MAP  # e.g. {"apex": "tom", "aether": "jackson", ...}
+                # Build agent_id -> friendly user_id map.
+                # Starts from CHAT_USER_MAP (companions), then adds all of Tom's
+                # agents so their facts also land under "tom" not a numeric Telegram ID.
+                TOM_AGENTS = {
+                    "asclepius-brain", "global-events", "dbh-marketing", "health-science",
+                    "health-fitness", "social", "creative-projects", "daily-briefing",
+                    "strategic-advisor", "evening-reading", "beacon", "odysseus-money",
+                    "strategos-pg", "marcus-stoic", "scout", "muse", "medici",
+                    "prospector", "walker-capital-tom", "sentinel", "trajectory",
+                }
+                agent_to_user = {**CHAT_USER_MAP, **{a: "tom" for a in TOM_AGENTS}}
 
                 # Group by user/agent
                 from itertools import groupby as _grp
