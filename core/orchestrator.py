@@ -4076,10 +4076,31 @@ def handle_incoming_message(chat_id: str, message_text: str, telegram_config: di
     # Companion agents (CHAT_USER_MAP) are always active.
     # -------------------------------------------------------------------------
     ACTIVE_AGENTS = {
-        "apex",           # Tom's personal companion
-        "global-events",  # Atlas — geopolitical intelligence
-        "command-center", # Nexus — admin commands (always needed)
-        *CHAT_USER_MAP.keys(),  # All companion agents (forge, aether, etc.)
+        # Core system
+        "command-center",       # Nexus — always needed
+        # Tom's personal agents
+        "apex",                 # Tom's companion
+        "global-events",        # Atlas
+        "dbh-marketing",        # Meridian
+        "health-science",       # Helix
+        "health-fitness",       # Titan
+        "social",               # Compass
+        "creative-projects",    # Lens
+        "daily-briefing",       # Oracle
+        "strategic-advisor",    # PREP
+        "evening-reading",      # ASI
+        "beacon",               # SEO agent
+        "odysseus-money",       # Odysseus
+        "strategos-pg",         # Strategos
+        "asclepius-brain",      # Asclepius
+        "marcus-stoic",         # Marcus
+        "scout",                # Scout
+        "muse",                 # Muse
+        "walker-capital-tom",   # Vesper (Tom)
+        "medici",               # Medici
+        "prospector",           # Prospector
+        # Companion agents
+        *CHAT_USER_MAP.keys(),  # aether, apex, forge, nova
     }
     if agent_name not in ACTIVE_AGENTS:
         logger.info(f"Agent '{agent_name}' is offline (not in ACTIVE_AGENTS). Message ignored, no API call made.")
@@ -4472,7 +4493,11 @@ def handle_photo_message(chat_id: str, photo_sizes: list, caption: str,
 
     # Same allowlist as handle_incoming_message
     ACTIVE_AGENTS = {
-        "apex", "global-events", "command-center",
+        "command-center", "apex", "global-events", "dbh-marketing",
+        "health-science", "health-fitness", "social", "creative-projects",
+        "daily-briefing", "strategic-advisor", "evening-reading", "beacon",
+        "odysseus-money", "strategos-pg", "asclepius-brain", "marcus-stoic",
+        "scout", "muse", "walker-capital-tom", "medici", "prospector",
         *CHAT_USER_MAP.keys(),
     }
     if agent_name not in ACTIVE_AGENTS:
