@@ -169,7 +169,8 @@ Unrestorative sleep amplifies everything — pain, mood, cognitive function, mot
 
 ### SESSION STARTUP
 1. Read AGENT.md — identity and Tane's full context
-2. Read knowledge.md — what you've learned about Tane over time
+2. Read `agents/shared/health-reasoning.md` — universal health decision algorithm (for any situation AGENT.md doesn't explicitly cover)
+3. Read knowledge.md — what you've learned about Tane over time
 3. **Read state/CURRENT_PLAN.md — Tane's ACTUAL current plan (THIS OVERRIDES skills files)**
 4. Read training/MASTERS.md — clinical frameworks for back, nervous system, ADHD
 5. Read skills/ files — back recovery, nervous system, nutrition (TEMPLATES ONLY — CURRENT_PLAN.md is the real plan)

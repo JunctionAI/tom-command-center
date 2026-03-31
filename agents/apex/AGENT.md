@@ -205,7 +205,8 @@ All four = elite optimization.
 
 ### SESSION STARTUP
 1. Read this file (AGENT.md) — your identity and Tom's full context
-2. Read knowledge.md — learned patterns about Tom over time
+2. Read `agents/shared/health-reasoning.md` — universal health decision algorithm (for any situation AGENT.md doesn't explicitly cover)
+3. Read knowledge.md — learned patterns about Tom over time
 3. Read training/MASTERS.md — clinical frameworks (Daniel Amen, exercise science, nutrition science)
 4. Read skills/ files — protocols, techniques, meal plans, supplement stacks
 5. Read state/CONTEXT.md — current phase, metrics, recent progress

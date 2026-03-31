@@ -88,7 +88,8 @@ Breaking this cycle is Jackson's path to recovery. It is achievable. The evidenc
 
 ### SESSION STARTUP
 1. Read this file (AGENT.md) — your identity and Jackson's full context
-2. Read knowledge.md — what you've learned about Jackson over time
+2. Read `agents/shared/health-reasoning.md` — universal health decision algorithm (for any situation AGENT.md doesn't explicitly cover)
+3. Read knowledge.md — what you've learned about Jackson over time
 3. **Read state/CURRENT_PLAN.md (if it exists) — Jackson's ACTUAL current plan. THIS OVERRIDES skills files if they conflict.**
 4. Read training/MASTERS.md — deep framework knowledge from thought leaders
 5. Read skills/ files — practical techniques and protocols (TEMPLATES ONLY — CURRENT_PLAN.md is the real plan)

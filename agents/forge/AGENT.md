@@ -143,7 +143,8 @@ Recovery path: brain healing (reduce inflammation, restore neural networks) + ne
 
 ### SESSION STARTUP
 1. Read this file (AGENT.md) — identity and Tyler's full context
-2. Read knowledge.md — what you've learned about Tyler over time
+2. Read `agents/shared/health-reasoning.md` — universal health decision algorithm (for any situation AGENT.md doesn't explicitly cover)
+3. Read knowledge.md — what you've learned about Tyler over time
 3. **Read state/CURRENT_PLAN.md — Tyler's ACTUAL current plan (THIS OVERRIDES skills files if they conflict)**
 4. Read training/MASTERS.md — brain science and recovery frameworks
 5. Read skills/ files — exercise protocols, nutrition, brain recovery techniques (TEMPLATES ONLY — CURRENT_PLAN.md is the real plan)

@@ -139,6 +139,53 @@ LEADERS = {
         "twitter_rss": None,
         "blog_rss": "https://www.ycombinator.com/blog/rss/",
     },
+
+    # ── HEALTH SCIENCE LEADERS (for companion agent context) ────────────────
+    "peter_attia": {
+        "name": "Peter Attia",
+        "handle": "PeterAttiaMD",
+        "focus": "Longevity, performance medicine, metabolic health, VO2 max, Zone 2",
+        "tags": ["health_companion", "longevity", "metabolic"],
+        "youtube_channel_id": "UC8kGsMa0LygSX9nkBcBH1Sg",  # TODO: verify -- The Peter Attia Drive
+        "twitter_rss": None,
+        "blog_rss": "https://peterattiamd.com/feed/",
+    },
+    "andrew_huberman": {
+        "name": "Andrew Huberman",
+        "handle": "hubermanlab",
+        "focus": "Neuroscience protocols, sleep, stress, hormones, performance",
+        "tags": ["health_companion", "neuroscience", "performance"],
+        "youtube_channel_id": "UC2D2CMWXMOVWx7giW1n3LIg",  # TODO: verify -- Huberman Lab
+        "twitter_rss": None,
+        "blog_rss": None,
+    },
+    "rhonda_patrick": {
+        "name": "Rhonda Patrick",
+        "handle": "foundmyfitness",
+        "focus": "Micronutrients, biochemistry, longevity, sauna, omega-3, nutrition science",
+        "tags": ["health_companion", "nutrition", "longevity"],
+        "youtube_channel_id": "UCWF8338lnKvNPPeB0s27Q",  # TODO: verify -- FoundMyFitness
+        "twitter_rss": None,
+        "blog_rss": "https://www.foundmyfitness.com/feed.rss",
+    },
+    "gary_taubes": {
+        "name": "Gary Taubes",
+        "handle": "garytaubes",
+        "focus": "Metabolic health, insulin hypothesis, low-carb evidence, research critique",
+        "tags": ["health_companion", "metabolic", "nutrition"],
+        "youtube_channel_id": None,
+        "twitter_rss": None,
+        "blog_rss": "https://garytaubes.com/feed/",
+    },
+    "zoe_harcombe": {
+        "name": "Zoe Harcombe",
+        "handle": "ZoeHarcombe",
+        "focus": "Nutrition science critique, dietary fat evidence, public health research",
+        "tags": ["health_companion", "nutrition", "evidence"],
+        "youtube_channel_id": None,
+        "twitter_rss": None,
+        "blog_rss": "https://www.zoeharcombe.com/feed/",
+    },
 }
 
 # Valid insight tags
@@ -149,6 +196,14 @@ VALID_TAGS = [
     "scaling",          # Growth strategies, operational scaling
     "ai_tools",         # New AI tools, models, techniques
     "personal_brand",   # Content creation, audience building
+    # Health companion tags
+    "health_companion", # Relevant to companion agents (aether/apex/forge/nova)
+    "longevity",        # Longevity science, healthspan
+    "metabolic",        # Metabolic health, glucose, insulin
+    "neuroscience",     # Brain, CNS, HPA axis, mental performance
+    "nutrition",        # Diet, micronutrients, supplementation
+    "performance",      # Athletic performance, recovery, sleep
+    "evidence",         # Research methodology, evidence critique
 ]
 
 # User-Agent for HTTP requests
@@ -503,22 +558,30 @@ def scan_leader(leader_key: str, leader_info: dict, db: ThoughtLeaderDB) -> int:
                 new_items += 1
                 logger.debug(f"  New: {item['title'][:60]}")
 
-    # Twitter/X RSS (via Nitter proxy or similar)
-    twitter_rss = leader_info.get("twitter_rss")
-    if twitter_rss:
-        logger.info(f"Scanning Twitter/X for {name}...")
-        items = fetch_rss_feed(twitter_rss, max_items=15)
-        for item in items:
-            item_id = db.add_content_item(
-                leader_key=leader_key,
-                source_type="twitter",
-                title=item['title'][:200],
-                url=item['link'],
-                published_at=item.get('published'),
-                summary=item.get('summary', '')[:500],
-            )
-            if item_id is not None:
-                new_items += 1
+    # Twitter/X — use X API v2 client directly (Nitter proxies are unreliable)
+    handle = leader_info.get("handle")
+    if handle:
+        logger.info(f"Scanning Twitter/X for {name} via X API...")
+        try:
+            from core.x_client import get_user_tweets
+            tweets = get_user_tweets(handle, max_results=15)
+            for tweet in tweets:
+                if not tweet.get("url") or not tweet.get("text"):
+                    continue
+                # Use first 200 chars of text as title
+                title = tweet["text"][:200]
+                item_id = db.add_content_item(
+                    leader_key=leader_key,
+                    source_type="twitter",
+                    title=title,
+                    url=tweet["url"],
+                    published_at=tweet.get("created_at"),
+                    summary=tweet["text"][:500],
+                )
+                if item_id is not None:
+                    new_items += 1
+        except Exception as e:
+            logger.warning(f"X API scan failed for @{handle}: {e}")
 
     # Blog RSS
     blog_rss = leader_info.get("blog_rss")
