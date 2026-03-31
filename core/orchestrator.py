@@ -4599,22 +4599,20 @@ def handle_photo_message(chat_id: str, photo_sizes: list, caption: str,
                 {"role": "user", "content": photo_msg},
                 {"role": "assistant", "content": clean_response}
             ]
-            if agent_name in CHAT_USER_MAP:
-                from core.asmr_memory import asmr_extract
-                asmr_extract(user_id, agent_name, extraction_conv, agent_display,
-                             api_key=_get_api_key(agent_name))
-            else:
+            # Use neo4j_memory for extraction (single Haiku call, fire-and-forget)
+            try:
+                from core.neo4j_memory import extract as neo4j_extract
+                threading.Thread(
+                    target=neo4j_extract,
+                    args=(extraction_conv, user_id, agent_name),
+                    daemon=True,
+                    name=f"photo-neo4j-extract-{agent_name}"
+                ).start()
+            except Exception:
+                # Fallback to legacy
                 from core.user_memory import extract_and_store_memories
                 extract_and_store_memories(user_id, agent_name, extraction_conv, agent_display,
                                            api_key=_get_api_key(agent_name))
-            # Sync updated facts to Neo4j graph layer (fire-and-forget)
-            try:
-                from core.graph_memory import sync_facts_to_graph
-                from core.user_memory import get_user_facts
-                _synced_facts = get_user_facts(user_id, agent_name)
-                sync_facts_to_graph(user_id, agent_name, _synced_facts)
-            except Exception:
-                pass
         except Exception as mem_e:
             logger.warning(f"Photo memory extraction failed (non-fatal): {mem_e}")
 
