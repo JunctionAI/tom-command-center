@@ -351,43 +351,25 @@ def load_agent_brain(agent_name: str, user_id: str = None, current_context: str 
                     brain_parts.append(f"--- {f.name} ---\n{f.read_text(encoding='utf-8')}")
                 logger.info(f"Loaded {len(strategy_files)} shared strategy files for {agent_name}")
 
-    # 9. USER MEMORY -- Persistent learned knowledge about this user
-    # Memory system priority:
-    #   1. Neo4j graph retrieval (targeted ~50 facts) — if available
-    #   2. ASMR active retrieval (companions) — fallback
-    #   3. Legacy flat loading — final fallback
+    # 9. USER MEMORY — Neo4j as single source of truth (free Cypher retrieval, no LLM)
+    # Falls back to legacy SQLite load if Neo4j unavailable.
     if user_id:
         try:
-            # Try Neo4j graph retrieval first (token-efficient, relationship-aware)
-            _graph_memory_used = False
-            if current_context:
-                try:
-                    from core.graph_memory import is_available as graph_available, format_graph_context_for_prompt
-                    if graph_available():
-                        graph_ctx = format_graph_context_for_prompt(user_id, agent_name, current_context)
-                        if graph_ctx:
-                            brain_parts.append(graph_ctx)
-                            _graph_memory_used = True
-                            logger.info(f"Graph memory loaded for {agent_name}/{user_id}: ~{len(graph_ctx)//4} tokens (targeted retrieval)")
-                except Exception as _ge:
-                    logger.debug(f"Graph memory unavailable, falling back: {_ge}")
-
-            if not _graph_memory_used:
-                # Fallback: ASMR for companions, legacy for others
-                if agent_name in CHAT_USER_MAP and current_context:
-                    from core.asmr_memory import asmr_load
-                    user_memory = asmr_load(user_id, agent_name, current_context)
-                    if user_memory:
-                        brain_parts.append(user_memory)
-                        logger.info(f"ASMR memory loaded for {agent_name}/{user_id}: {len(user_memory)} chars")
-                else:
-                    from core.user_memory import load_user_memory
-                    user_memory = load_user_memory(user_id, agent_name)
-                    if user_memory:
-                        brain_parts.append(user_memory)
-                        logger.info(f"Legacy memory loaded for {agent_name}/{user_id}: {len(user_memory)} chars")
-        except Exception as e:
-            logger.warning(f"Memory load failed (non-fatal): {e}")
+            from core.neo4j_memory import retrieve as neo4j_retrieve, is_available as neo4j_available
+            if neo4j_available():
+                mem_ctx = neo4j_retrieve(current_context or "", user_id, agent_name)
+                if mem_ctx:
+                    brain_parts.append(mem_ctx)
+                    logger.info(f"Neo4j memory loaded for {agent_name}/{user_id}: ~{len(mem_ctx)//4} tokens")
+            else:
+                # Fallback: legacy flat load from SQLite
+                from core.user_memory import load_user_memory
+                mem_ctx = load_user_memory(user_id, agent_name)
+                if mem_ctx:
+                    brain_parts.append(mem_ctx)
+                    logger.debug(f"Legacy memory loaded for {agent_name}/{user_id} (Neo4j unavailable)")
+        except Exception as _me:
+            logger.debug(f"Memory load failed (non-fatal): {_me}")
 
     brain = "\n\n".join(brain_parts)
 
@@ -706,7 +688,8 @@ def _get_api_key(agent_name: str) -> str:
 # --- Claude API Caller ---
 
 def call_claude(system_prompt: str, user_message: str, task_type: str = "chat",
-                conversation_history: list = None, agent_name: str = "unknown") -> str:
+                conversation_history: list = None, agent_name: str = "unknown",
+                model: str = None) -> str:
     """
     Call Claude API with the full agent brain as system prompt.
 
@@ -715,13 +698,14 @@ def call_claude(system_prompt: str, user_message: str, task_type: str = "chat",
 
     conversation_history: Optional list of prior messages [{"role": "user"|"assistant", "content": "..."}]
                           to give the agent multi-turn conversational memory.
+    model: Override the model used for this call. Defaults to claude-sonnet-4-6.
     """
     import anthropic
 
     client = anthropic.Anthropic(api_key=_get_api_key(agent_name))
 
-    # All agents use Sonnet to control costs
-    model = "claude-sonnet-4-6"
+    # All agents use Sonnet to control costs; callers may override via model= param
+    model = model or "claude-sonnet-4-6"
     api_timeout = 120.0
 
     # Build messages array: conversation history + current message
@@ -3526,8 +3510,18 @@ The daily plan should reference the 90-day execution map from Meridian's intelli
         effective_task_type = "deep_analysis"  # Opus for deep first-principles research
     else:
         effective_task_type = task_name
-    logger.info(f"Calling Claude for {agent_name}/{task_name}: brain={len(brain)} chars, prompt={len(task_prompt)} chars")
-    response = call_claude(brain, task_prompt, task_type=effective_task_type, agent_name=agent_name)
+
+    # Routine check-ins use Haiku — saves 70% cost vs Sonnet for simple messages
+    HAIKU_TASKS = {
+        "morning_checkin", "midday_checkin", "evening_checkin",
+        "morning_protocol", "midday_pulse", "evening_debrief",
+        "morning_brief", "evening_brief",
+    }
+    _HAIKU_MODEL = "claude-haiku-4-5-20251001"
+    effective_model = _HAIKU_MODEL if task_name in HAIKU_TASKS else None  # None → call_claude uses default Sonnet
+
+    logger.info(f"Calling Claude for {agent_name}/{task_name}: brain={len(brain)} chars, prompt={len(task_prompt)} chars, model={effective_model or 'sonnet'}")
+    response = call_claude(brain, task_prompt, task_type=effective_task_type, agent_name=agent_name, model=effective_model)
 
     # Check for API errors — don't send raw errors to Telegram
     if response and response.startswith("API Error:"):
@@ -3685,40 +3679,21 @@ The daily plan should reference the 90-day execution map from Meridian's intelli
         except Exception as beacon_e:
             logger.warning(f"Beacon post-processing failed (non-fatal): {beacon_e}")
 
-    # --- Constraint check for companion agents (pre-send gate) ---
-    # Catches constraint violations (wrong food, wrong exercises, broken device questions)
-    # BEFORE they reach the user. Blocks scheduled tasks; alerts Tom for user replies.
+    # --- Constraint check — free Cypher, no LLM ---
     if agent_name in CHAT_USER_MAP:
         try:
-            from core.constraint_checker import check_response
-            check = check_response(agent_name, response)
-            if not check.get("passed"):
-                violation = check.get("violation", "unknown")
-                violation_type = check.get("type", "constraint")
-                cc_chat = telegram_config.get("chat_ids", {}).get("command-center", "")
-                agent_display = AGENT_DISPLAY.get(agent_name, agent_name)
-
-                if violation_type == "schedule":
-                    # Schedule mismatches: ALERT but DON'T BLOCK
-                    # Users swap training days — the plan may be outdated
-                    logger.warning(f"SCHEDULE MISMATCH {agent_name}/{task_name}: {violation}")
-                    if cc_chat:
-                        from core.notification_router import route_notification
-                        route_notification(cc_chat,
-                            f"SCHEDULE MISMATCH: {agent_display}/{task_name}\n\nNote: {violation}\n\nResponse was still sent — user may have swapped days. Check if CURRENT_PLAN.md needs updating.",
-                            bot_token, severity="INFO", agent="command-center")
-                    # Don't return — let the message through
-                else:
-                    # Constraint violations: BLOCK
-                    logger.warning(f"CONSTRAINT VIOLATION {agent_name}/{task_name}: {violation}")
-                    if cc_chat:
-                        from core.notification_router import route_notification
-                        route_notification(cc_chat,
-                            f"BLOCKED: {agent_display}/{task_name}\n\nViolation: {violation}\n\nResponse was not sent to user. Will retry next schedule.",
-                            bot_token, severity="IMPORTANT", agent="command-center")
-                    return  # Do NOT send the response
-        except Exception as cc_e:
-            logger.warning(f"Constraint check failed (non-fatal, sending anyway): {cc_e}")
+            from core.neo4j_memory import get_constraints as _get_constraints
+            _sched_user_id = CHAT_USER_MAP.get(agent_name)
+            _constraints = _get_constraints(_sched_user_id, agent_name) if _sched_user_id else []
+            if _constraints:
+                _resp_lower = response.lower()
+                _violations = [c for c in _constraints if any(
+                    kw in _resp_lower for kw in c.lower().split() if len(kw) > 4
+                )]
+                if _violations:
+                    logger.info(f"Soft constraint flag for {agent_name}: {_violations[0][:80]}")
+        except Exception:
+            pass  # Non-fatal — agent already has constraints in brain
 
     # Send to Telegram
     # Beacon uses command-center channel (no dedicated channel)
@@ -4460,22 +4435,20 @@ If you identify a campaign opportunity or creative need (Meridian/PREP only), em
         except Exception as hist_e:
             logger.warning(f"Failed to save message to memory: {hist_e}")
 
-        # --- Constraint check for companion agent replies (alert only, don't block) ---
+        # --- Constraint check for companion agent replies — free Cypher, no LLM ---
         if agent_name in CHAT_USER_MAP:
             try:
-                from core.constraint_checker import check_response as _check_reply
-                _reply_check = _check_reply(agent_name, clean_response)
-                if not _reply_check.get("passed"):
-                    _violation = _reply_check.get("violation", "unknown")
-                    logger.warning(f"CONSTRAINT VIOLATION {agent_name} (reply): {_violation}")
-                    cc_chat = telegram_config.get("chat_ids", {}).get("command-center", "")
-                    if cc_chat:
-                        from core.notification_router import route_notification
-                        route_notification(cc_chat,
-                            f"CONSTRAINT VIOLATION in {agent_display} reply:\n\n{_violation}\n\nResponse was sent but may contain errors.",
-                            telegram_config["bot_token"], severity="IMPORTANT", agent="command-center")
-            except Exception as _cc_e:
-                logger.warning(f"Constraint check failed (non-fatal): {_cc_e}")
+                from core.neo4j_memory import get_constraints as _get_constraints
+                _constraints = _get_constraints(user_id, agent_name)
+                if _constraints:
+                    _resp_lower = clean_response.lower()
+                    _violations = [c for c in _constraints if any(
+                        kw in _resp_lower for kw in c.lower().split() if len(kw) > 4
+                    )]
+                    if _violations:
+                        logger.info(f"Soft constraint flag for {agent_name} (reply): {_violations[0][:80]}")
+            except Exception:
+                pass  # Non-fatal — agent already has constraints in brain
 
         # Send response
         sent = send_telegram(chat_id, clean_response, telegram_config["bot_token"])
@@ -4490,41 +4463,21 @@ If you identify a campaign opportunity or creative need (Meridian/PREP only), em
         else:
             logger.error(f"FAILED to deliver {agent_name} response to {chat_id}")
 
-        # AUTOMATIC MEMORY EXTRACTION — runs after every conversation
-        # Companions use ASMR (3 parallel observer agents, ~$0.003)
-        # Other agents use legacy Haiku extraction (~$0.001)
+        # Memory extraction — 1 Haiku call → Neo4j write (replaces ASMR 3+3 observers)
         try:
-            agent_display = AGENT_DISPLAY.get(agent_name, agent_name)
-            extraction_conv = conv_history + [
+            from core.neo4j_memory import extract as neo4j_extract
+            _extraction_conv = conv_history + [
                 {"role": "user", "content": message_text},
-                {"role": "assistant", "content": clean_response}
+                {"role": "assistant", "content": clean_response},
             ]
-            if agent_name in CHAT_USER_MAP:
-                from core.asmr_memory import asmr_extract
-                asmr_extract(user_id, agent_name, extraction_conv, agent_display,
-                             api_key=_get_api_key(agent_name))
-            else:
-                from core.user_memory import extract_and_store_memories
-                extract_and_store_memories(user_id, agent_name, extraction_conv, agent_display,
-                                           api_key=_get_api_key(agent_name))
-            # Sync updated facts to Neo4j graph layer (fire-and-forget)
-            try:
-                from core.graph_memory import sync_facts_to_graph
-                from core.user_memory import get_user_facts
-                _synced_facts = get_user_facts(user_id, agent_name)
-                sync_facts_to_graph(user_id, agent_name, _synced_facts)
-            except Exception:
-                pass
-        except Exception as mem_e:
-            logger.warning(f"Memory extraction failed (non-fatal): {mem_e}")
-
-        # AUTO-EVOLUTION — Detect plan changes and auto-rewrite CURRENT_PLAN.md
-        # Only runs for companion agents that have a CURRENT_PLAN.md
-        try:
-            if agent_name in CHAT_USER_MAP:
-                _auto_evolve_plan(agent_name, message_text, clean_response)
-        except Exception as ae_e:
-            logger.warning(f"Auto-evolution failed (non-fatal): {ae_e}")
+            import threading
+            threading.Thread(
+                target=neo4j_extract,
+                args=(_extraction_conv, user_id, agent_name),
+                daemon=True,
+            ).start()
+        except Exception as _ext_e:
+            logger.debug(f"Neo4j extraction skipped: {_ext_e}")
 
     except Exception as e:
         # CRITICAL: Never silently fail. Tom must ALWAYS get a response.

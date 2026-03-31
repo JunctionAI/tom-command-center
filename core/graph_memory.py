@@ -101,6 +101,11 @@ def _ensure_schema():
         _safe_run(s, "CREATE INDEX fact_category IF NOT EXISTS FOR (f:Fact) ON (f.category)")
         _safe_run(s, "CREATE INDEX supplement_name IF NOT EXISTS FOR (s:Supplement) ON (s.name, s.user_id)")
         _safe_run(s, "CREATE INDEX condition_name IF NOT EXISTS FOR (c:Condition) ON (c.name, c.user_id)")
+        # Constraint and Event nodes (added for neo4j_memory.py single-source architecture)
+        _safe_run(s, "CREATE CONSTRAINT constraint_id IF NOT EXISTS FOR (c:Constraint) REQUIRE c.constraint_id IS UNIQUE")
+        _safe_run(s, "CREATE CONSTRAINT event_id IF NOT EXISTS FOR (e:Event) REQUIRE e.event_id IS UNIQUE")
+        _safe_run(s, "CREATE INDEX constraint_user IF NOT EXISTS FOR (c:Constraint) ON (c.user_id)")
+        _safe_run(s, "CREATE INDEX event_user IF NOT EXISTS FOR (e:Event) ON (e.user_id)")
     logger.info("Neo4j schema ensured")
 
 
@@ -438,6 +443,24 @@ def format_graph_context_for_prompt(user_id: str, agent_id: str,
             lines.append(f"  - '{c['fact_a']}' vs '{c['fact_b']}' ({c['reason']})")
 
     return "\n".join(lines)
+
+
+def get_constraints(user_id: str, agent_id: str) -> list[str]:
+    """Return active constraints for a user. Zero API calls."""
+    driver = _get_driver()
+    if not driver:
+        return []
+    try:
+        with driver.session() as s:
+            result = s.run(
+                "MATCH (u:User {user_id: $uid})-[:HAS_CONSTRAINT]->(c:Constraint {active: true}) "
+                "RETURN c.text AS text",
+                uid=user_id
+            )
+            return [r["text"] for r in result if r["text"]]
+    except Exception as e:
+        logger.debug(f"get_constraints failed (non-fatal): {e}")
+        return []
 
 
 # ---------------------------------------------------------------------------

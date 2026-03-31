@@ -159,7 +159,7 @@ def run_scheduler(telegram_config, schedule_config):
     job_defaults = {
         'coalesce': True,
         'max_instances': 1,
-        'misfire_grace_time': 14400,  # 4 hour grace — catch morning tasks after late restart
+        'misfire_grace_time': 60,  # 60s grace — tasks that miss their window are skipped, not replayed
     }
     scheduler = BackgroundScheduler(
         timezone=timezone,
@@ -196,9 +196,6 @@ def run_scheduler(telegram_config, schedule_config):
 
     scheduler.start()
     logger.info(f"Scheduler running with {len(schedule_config['schedules'])} tasks (tz: {timezone})")
-
-    # --- CATCH-UP: run any tasks that should have fired today but were missed ---
-    _run_missed_tasks(schedule_config, telegram_config, _tracked_task, timezone)
 
     return scheduler
 

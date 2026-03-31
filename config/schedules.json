@@ -9,12 +9,6 @@
     },
     {
       "agent": "apex",
-      "task": "midday_pulse",
-      "cron": "0 13 * * *",
-      "description": "Apex midday pulse — quick accountability touchpoint (1pm)"
-    },
-    {
-      "agent": "apex",
       "task": "evening_debrief",
       "cron": "0 19 * * *",
       "description": "Apex evening debrief — primary data collection, pattern analysis (7pm)"
@@ -57,12 +51,6 @@
     },
     {
       "agent": "forge",
-      "task": "midday_checkin",
-      "cron": "30 12 * * *",
-      "description": "Forge midday accountability pulse for Tyler (12:30pm daily)"
-    },
-    {
-      "agent": "forge",
       "task": "evening_checkin",
       "cron": "30 18 * * *",
       "description": "Forge evening debrief + data collection for Tyler (6:30pm daily)"
@@ -75,12 +63,6 @@
     },
     {
       "agent": "aether",
-      "task": "midday_checkin",
-      "cron": "30 12 * * *",
-      "description": "Aether midday check-in for Jackson (12:30pm daily)"
-    },
-    {
-      "agent": "aether",
       "task": "evening_checkin",
       "cron": "30 18 * * *",
       "description": "Aether evening check-in for Jackson (6:30pm daily)"
@@ -90,12 +72,6 @@
       "task": "morning_checkin",
       "cron": "0 8 * * *",
       "description": "Nova morning check-in for Tane (8am daily)"
-    },
-    {
-      "agent": "nova",
-      "task": "midday_checkin",
-      "cron": "0 12 * * *",
-      "description": "Nova midday accountability pulse for Tane (12pm daily)"
     },
     {
       "agent": "nova",
