@@ -5062,6 +5062,63 @@ def handle_command(command: str, telegram_config: dict):
         except Exception as e:
             route_notification(chat_id, f"Graph status error: {e}", bot_token, severity="IMPORTANT", agent="command-center")
 
+    elif cmd.startswith("seed-memory") or cmd.startswith("/seed-memory"):
+        # Pre-load agent intake/research files into SQLite + Neo4j as facts
+        # Usage: /seed-memory nova   or   /seed-memory aether
+        from core.notification_router import route_notification
+        parts = cmd.replace("/seed-memory", "").replace("seed-memory", "").strip().split()
+        target_agent = parts[0] if parts else ""
+
+        if not target_agent:
+            route_notification(chat_id, "Usage: /seed-memory <agent-name>\nExample: /seed-memory nova", bot_token, severity="IMPORTANT", agent="command-center")
+        elif target_agent not in CHAT_USER_MAP:
+            route_notification(chat_id, f"Agent '{target_agent}' not in companion map. Valid: {', '.join(CHAT_USER_MAP.keys())}", bot_token, severity="IMPORTANT", agent="command-center")
+        else:
+            user_id = CHAT_USER_MAP[target_agent]
+            agent_dir = AGENTS_DIR / target_agent
+            route_notification(chat_id, f"Seeding memory for {target_agent} ({user_id}) from intake files...", bot_token, severity="IMPORTANT", agent="command-center")
+            try:
+                # Collect all intake content from agent files
+                intake_sections = []
+                for fname in ["AGENT.md", "knowledge.md", "onboarding/QUESTIONNAIRE.md"]:
+                    fpath = agent_dir / fname
+                    if fpath.exists():
+                        intake_sections.append(f"=== {fname} ===\n{fpath.read_text()[:3000]}")
+                state_ctx = agent_dir / "state" / "CONTEXT.md"
+                if state_ctx.exists():
+                    intake_sections.append(f"=== state/CONTEXT.md ===\n{state_ctx.read_text()[:3000]}")
+
+                if not intake_sections:
+                    route_notification(chat_id, f"No intake files found for {target_agent}", bot_token, severity="IMPORTANT", agent="command-center")
+                else:
+                    full_intake = "\n\n".join(intake_sections)
+
+                    # Feed into extraction pipeline as a synthetic "user statement"
+                    # Wrap as a conversation so extract_and_store_memories accepts it
+                    synthetic_conversation = [
+                        {"role": "user", "content": f"Here is everything I want you to know about me:\n\n{full_intake}"},
+                        {"role": "assistant", "content": "Thank you — I've read through your full intake. I have a clear picture of your history, current situation, goals, and what you need from me."}
+                    ]
+
+                    from core.user_memory import extract_and_store_memories, get_user_facts
+                    api_key = os.environ.get(f"ANTHROPIC_API_KEY_{user_id.upper()}") or os.environ.get("ANTHROPIC_API_KEY", "")
+                    extract_and_store_memories(user_id, target_agent, synthetic_conversation, agent_display_name=target_agent, api_key=api_key)
+
+                    # Sync to Neo4j
+                    try:
+                        from core.graph_memory import sync_facts_to_graph
+                        new_facts = get_user_facts(user_id, target_agent)
+                        sync_facts_to_graph(user_id, target_agent, [{"fact_id": str(f.get("id","")), "fact": f["fact"], "category": f["category"], "confidence": f["confidence"]} for f in new_facts])
+                    except Exception as _ge:
+                        logger.warning(f"Neo4j sync after seed failed: {_ge}")
+
+                    fact_count = len(get_user_facts(user_id, target_agent))
+                    route_notification(chat_id,
+                        f"Memory seeded for {target_agent} ({user_id})\n{fact_count} facts now in SQLite + Neo4j\nAgent will know this person from the first message.",
+                        bot_token, severity="IMPORTANT", agent="command-center")
+            except Exception as e:
+                route_notification(chat_id, f"Seed failed for {target_agent}: {e}", bot_token, severity="IMPORTANT", agent="command-center")
+
     else:
         # Unknown command -- show available commands instead of hallucinating
         help_text = """NEXUS -- Available Commands
