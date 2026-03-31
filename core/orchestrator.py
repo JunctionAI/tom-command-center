@@ -5119,6 +5119,94 @@ def handle_command(command: str, telegram_config: dict):
             except Exception as e:
                 route_notification(chat_id, f"Seed failed for {target_agent}: {e}", bot_token, severity="IMPORTANT", agent="command-center")
 
+    elif cmd.startswith("clean-memory") or cmd.startswith("/clean-memory"):
+        # Remove junk facts (transient questions, timestamps, prompts) from SQLite + Neo4j
+        # Usage: /clean-memory forge
+        from core.notification_router import route_notification
+        parts = cmd.replace("/clean-memory", "").replace("clean-memory", "").strip().split()
+        target_agent = parts[0] if parts else ""
+
+        if not target_agent or target_agent not in CHAT_USER_MAP:
+            route_notification(chat_id, f"Usage: /clean-memory <agent>\nValid: {', '.join(CHAT_USER_MAP.keys())}", bot_token, severity="IMPORTANT", agent="command-center")
+        else:
+            user_id = CHAT_USER_MAP[target_agent]
+            route_notification(chat_id, f"Cleaning junk facts for {target_agent} ({user_id})...", bot_token, severity="IMPORTANT", agent="command-center")
+            try:
+                import sqlite3 as _cm_sql
+                db_path = BASE_DIR / "data" / "user_memory.db"
+                conn = _cm_sql.connect(str(db_path))
+
+                # Patterns that indicate junk facts
+                junk_patterns = [
+                    "User is asking about",
+                    "User was prompted",
+                    "User is being asked",
+                    "Current time is",
+                    "Agent said",
+                    "Agent recommended",
+                    "User reports no ",
+                    "User is cleared to",
+                    "User is not cleared",
+                    "User is feeling",
+                    "User is considering whether",
+                    "User attributes ",
+                    "User slept poorly",
+                    "User is tracking metrics",
+                    "User was asked",
+                ]
+
+                deleted = 0
+                for pattern in junk_patterns:
+                    cur = conn.execute(
+                        "UPDATE user_facts SET is_active = 0 WHERE user_id = ? AND agent_id = ? AND fact LIKE ? AND is_active = 1",
+                        (user_id, target_agent, f"%{pattern}%")
+                    )
+                    deleted += cur.rowcount
+                conn.commit()
+
+                # Also clean goal category facts that look like transient questions
+                cur = conn.execute(
+                    """UPDATE user_facts SET is_active = 0
+                       WHERE user_id = ? AND agent_id = ? AND category = 'goal'
+                       AND (fact LIKE '%is asking%' OR fact LIKE '%wants to know%'
+                            OR fact LIKE '%morning%' OR fact LIKE '%tonight%'
+                            OR fact LIKE '%today%' OR fact LIKE '%Saturday%'
+                            OR fact LIKE '%Monday%' OR fact LIKE '%Tuesday%'
+                            OR fact LIKE '%Wednesday%' OR fact LIKE '%Thursday%'
+                            OR fact LIKE '%Friday%' OR fact LIKE '%Sunday%')
+                       AND is_active = 1""",
+                    (user_id, target_agent)
+                )
+                deleted += cur.rowcount
+                conn.commit()
+                conn.close()
+
+                # Re-sync cleaned facts to Neo4j
+                try:
+                    from core.graph_memory import sync_facts_to_graph
+                    from core.user_memory import get_user_facts
+                    clean_facts = get_user_facts(user_id, target_agent)
+                    # Wipe user's nodes and re-sync clean
+                    from core.graph_memory import _get_driver
+                    drv = _get_driver()
+                    if drv:
+                        with drv.session() as _s:
+                            _s.run("MATCH (f:Fact {user_id: $uid, agent_id: $aid}) DETACH DELETE f",
+                                   uid=user_id, aid=target_agent)
+                        sync_facts_to_graph(user_id, target_agent,
+                            [{"fact_id": str(f.get("id","")), "fact": f["fact"],
+                              "category": f["category"], "confidence": f["confidence"]} for f in clean_facts])
+                except Exception as _ge:
+                    logger.warning(f"Neo4j re-sync after clean failed: {_ge}")
+
+                from core.user_memory import get_user_facts as _guf
+                remaining = len(_guf(user_id, target_agent))
+                route_notification(chat_id,
+                    f"Memory cleaned for {target_agent} ({user_id})\nRemoved: {deleted} junk facts\nRemaining: {remaining} quality facts\nNeo4j re-synced.",
+                    bot_token, severity="IMPORTANT", agent="command-center")
+            except Exception as e:
+                route_notification(chat_id, f"Clean failed for {target_agent}: {e}", bot_token, severity="IMPORTANT", agent="command-center")
+
     else:
         # Unknown command -- show available commands instead of hallucinating
         help_text = """NEXUS -- Available Commands

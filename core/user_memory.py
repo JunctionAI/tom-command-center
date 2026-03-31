@@ -400,15 +400,34 @@ def extract_and_store_memories(user_id: str, agent_id: str,
             speaker = "User" if msg["role"] == "user" else "Agent"
             conv_text += f"{speaker}: {msg['content'][:500]}\n\n"
 
-        extraction_prompt = f"""You are a memory extraction system. Analyse this conversation and extract key facts about the USER (not the agent).
+        extraction_prompt = f"""You are a memory extraction system. Extract PERMANENT facts about the USER that will still be relevant in future conversations.
 
 RULES:
 - Only extract facts the user EXPLICITLY stated or clearly implied
 - Never infer or assume anything not directly supported by the text
 - If the user corrects something, extract the CORRECTED version
-- Categorise each fact: preference, biographical, goal, decision, constraint, pattern, opinion, relationship, context, learning
 - Rate confidence: 1.0 = explicitly stated, 0.8 = strongly implied, 0.5 = loosely implied
 - Compare against existing facts. For each new fact, decide: ADD (new info), UPDATE (modifies existing), SKIP (already known)
+
+CATEGORIES (use exactly one):
+- biographical: permanent facts about who they are (name, age, location, medical history, diagnoses)
+- goal: enduring goals and aspirations (not what they asked about in this message)
+- constraint: hard limits (medical restrictions, intolerances, can't-do-list)
+- pattern: recurring behaviours, triggers, responses observed across multiple instances
+- preference: stable likes/dislikes/ways of working
+- decision: significant choices they've made (stopped a medication, started a protocol)
+- relationship: people in their life and dynamics
+- opinion: their views and beliefs
+- learning: insights they've had or things they've understood
+- context: current life situation (job, living situation, phase of recovery) — only if durable, not momentary
+
+DO NOT EXTRACT:
+- What the user asked about in this specific conversation ("User asked about X")
+- What the agent said or recommended
+- Timestamps, dates, or time references ("Current time is...", "Monday morning...")
+- Scheduled tasks or check-in prompts ("User was prompted to report...")
+- Transient states that won't matter next week ("User is feeling groggy this morning")
+- Anything that is already captured in the existing facts
 
 EXISTING FACTS ABOUT THIS USER:
 {existing_text if existing_text else "(No existing facts yet — this is a new user)"}
