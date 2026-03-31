@@ -5003,17 +5003,24 @@ def handle_command(command: str, telegram_config: dict):
                 ).fetchall()
                 conn.close()
 
+                # Build agent_id -> friendly user_id map from CHAT_USER_MAP
+                # This ensures facts synced via backfill use the same user_id
+                # as facts synced live (e.g. "tom" not "825333001")
+                agent_to_user = CHAT_USER_MAP  # e.g. {"apex": "tom", "aether": "jackson", ...}
+
                 # Group by user/agent
                 from itertools import groupby as _grp
                 sorted_rows = sorted(rows, key=lambda r: (r["user_id"], r["agent_id"]))
                 total = 0
                 users_done = set()
                 for (uid, aid), grp in _grp(sorted_rows, key=lambda r: (r["user_id"], r["agent_id"])):
+                    # Remap numeric Telegram IDs to friendly names using agent_id
+                    friendly_uid = agent_to_user.get(aid, uid)
                     facts = [{"fact_id": str(r["id"]), "fact": r["fact"],
                                "category": r["category"], "confidence": float(r["confidence"])} for r in grp]
-                    sync_facts_to_graph(uid, aid, facts)
+                    sync_facts_to_graph(friendly_uid, aid, facts)
                     total += len(facts)
-                    users_done.add(uid)
+                    users_done.add(friendly_uid)
 
                 route_notification(chat_id,
                     f"Graph sync complete.\n{total} facts synced across {len(users_done)} users.\nNeo4j now active — conversations will use targeted retrieval (top-50 facts instead of all {total}).",
