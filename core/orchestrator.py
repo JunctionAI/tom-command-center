@@ -4660,6 +4660,22 @@ def handle_command(command: str, telegram_config: dict):
     chat_id = telegram_config["chat_ids"].get("command-center")
     bot_token = telegram_config["bot_token"]
 
+    # Commands are user-initiated — always bypass DND regardless of time.
+    # Monkey-patch route_notification locally so every call in this function
+    # sends immediately (force=True), without changing every call site.
+    import core.notification_router as _nr
+    _orig_route = _nr.route_notification
+    def _force_route(c, t, b, severity=None, agent=None, force=False):
+        return _orig_route(c, t, b, severity=severity, agent=agent, force=True)
+    _nr.route_notification = _force_route
+    try:
+        _handle_command_inner(command, telegram_config, cmd, chat_id, bot_token)
+    finally:
+        _nr.route_notification = _orig_route
+
+
+def _handle_command_inner(command: str, telegram_config: dict, cmd: str, chat_id: str, bot_token: str):
+
     if cmd == "status":
         # Show all agent statuses
         status_lines = ["NEXUS -- System Status\n"]

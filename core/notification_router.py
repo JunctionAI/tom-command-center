@@ -685,15 +685,17 @@ def get_router(bot_token: str = None, default_chat_id: str = None) -> Notificati
 
 
 def route_notification(chat_id: str, text: str, bot_token: str,
-                       severity: str = None, agent: str = None) -> dict:
+                       severity: str = None, agent: str = None,
+                       force: bool = False) -> dict:
     """
     Drop-in replacement for send_telegram() with severity routing.
 
     Signature mirrors send_telegram(chat_id, text, bot_token) for easy migration.
     Add severity= and agent= for full routing control.
+    force=True bypasses DND regardless of severity (use for user-initiated commands).
     """
     router = get_router(bot_token=bot_token)
-    return router.send(text, severity=severity, chat_id=chat_id, agent=agent)
+    return router.send(text, severity=severity, chat_id=chat_id, agent=agent, force=force)
 
 
 # --- CLI ---
