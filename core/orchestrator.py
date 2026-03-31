@@ -4984,7 +4984,7 @@ def handle_command(command: str, telegram_config: dict):
     elif cmd in ("sync-graph", "/sync-graph", "sync graph"):
         # Backfill all SQLite facts into Neo4j graph
         from core.notification_router import route_notification
-        route_notification(chat_id, "Starting Neo4j graph sync from SQLite...", bot_token, severity="INFO", agent="command-center")
+        route_notification(chat_id, "Starting Neo4j graph sync from SQLite...", bot_token, severity="IMPORTANT", agent="command-center")
         try:
             from core.graph_memory import is_available, sync_facts_to_graph
             from core.user_memory import get_user_facts
@@ -5017,7 +5017,7 @@ def handle_command(command: str, telegram_config: dict):
 
                 route_notification(chat_id,
                     f"Graph sync complete.\n{total} facts synced across {len(users_done)} users.\nNeo4j now active — conversations will use targeted retrieval (top-50 facts instead of all {total}).",
-                    bot_token, severity="INFO", agent="command-center")
+                    bot_token, severity="IMPORTANT", agent="command-center")
         except Exception as e:
             route_notification(chat_id, f"Graph sync failed: {e}", bot_token, severity="IMPORTANT", agent="command-center")
 
@@ -5027,7 +5027,7 @@ def handle_command(command: str, telegram_config: dict):
         try:
             from core.graph_memory import is_available, _get_driver
             if not is_available():
-                route_notification(chat_id, "Neo4j not connected. Set NEO4J_URI, NEO4J_USERNAME, NEO4J_PASSWORD in Railway.", bot_token, severity="INFO", agent="command-center")
+                route_notification(chat_id, "Neo4j not connected. Set NEO4J_URI, NEO4J_USERNAME, NEO4J_PASSWORD in Railway.", bot_token, severity="IMPORTANT", agent="command-center")
             else:
                 driver = _get_driver()
                 with driver.session() as s:
@@ -5044,9 +5044,9 @@ def handle_command(command: str, telegram_config: dict):
                     f"Conditions: {conds}",
                     f"Goals: {goals}",
                 ]
-                route_notification(chat_id, "\n".join(lines), bot_token, severity="INFO", agent="command-center")
+                route_notification(chat_id, "\n".join(lines), bot_token, severity="IMPORTANT", agent="command-center")
         except Exception as e:
-            route_notification(chat_id, f"Graph status error: {e}", bot_token, severity="INFO", agent="command-center")
+            route_notification(chat_id, f"Graph status error: {e}", bot_token, severity="IMPORTANT", agent="command-center")
 
     else:
         # Unknown command -- show available commands instead of hallucinating
