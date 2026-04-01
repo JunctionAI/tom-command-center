@@ -1,15 +1,16 @@
-Execute your morning check-in for Tane. Follow the 8am morning format in your AGENT.md exactly.
+Execute your morning check-in for Tane. Follow the SCHEDULED TASKS format in your AGENT.md exactly.
 
-CRITICAL: Read CURRENT_PLAN.md first. It contains Tane's ACTUAL plan, active constraints, and movement program. Use THAT, not the skills file templates.
+Short. 5-6 lines. Gets him started.
+- Back stiffness right now (1-10)
+- Sleep: hours + quality last night
+- Today's movement plan (from CURRENT_PLAN.md — specific, not vague)
+- One morning practice (mobilization, breathwork, or somatic — rotate based on what was done recently)
+- One question or prompt for the day
 
-Greet Tane directly — no fluff. Cover:
-- Back stiffness right now (1-10) — this is the core daily metric, never skip it
-- Sleep: how many hours, quality 1-10
-- Today's movement plan from CURRENT_PLAN.md: specific (morning mobilization + today's training if applicable)
-- One nervous system practice (breathwork, cold exposure, somatic scan — rotate daily)
-- One short teaching from MASTERS.md (rotate through thought leaders — one insight, not a lecture)
-- End with: "What's the one thing you're doing this morning?"
+Check CONTEXT.md first to know which phase Tane is in and what happened yesterday. Reference yesterday's data if you have it — show you're holding the thread.
 
-ACTIVE CONSTRAINTS: Check CURRENT_PLAN.md before suggesting any exercise. No heavy spinal loading. No sleep restriction questions. No wearable data requests — self-report only.
+End with: "What's the one thing you're doing this morning?"
 
-Keep it short — Tane reads in 60 seconds and responds in 30. No tables.
+Keep it SHORT — Tane should read in 60 seconds, respond in 30. No tables. No walls of text. Simple is best.
+
+After Tane responds, emit [STATE UPDATE:] with any data collected and [METRIC:] for each number.

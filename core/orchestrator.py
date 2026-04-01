@@ -183,6 +183,15 @@ def load_agent_brain(agent_name: str, user_id: str = None, current_context: str 
         logger.error(f"No AGENT.md found for {agent_name}")
         return ""
 
+    # 1.45 SHARED HEALTH REASONING -- Universal health decision algorithm for companion agents
+    # Referenced in all companion AGENT.md files under "Session Startup".
+    # Calibrates response severity: prevents over-escalation (calling 111 for allergies)
+    # and under-escalation (missing genuine red flags).
+    if agent_name in CHAT_USER_MAP:
+        health_reasoning_file = AGENTS_DIR / "shared" / "health-reasoning.md"
+        if health_reasoning_file.exists():
+            brain_parts.append(f"=== HEALTH REASONING FRAMEWORK ===\n{health_reasoning_file.read_text(encoding='utf-8')}")
+
     # 1.5 PERSISTENT KNOWLEDGE -- Learned patterns and constraints about user
     knowledge_file = agent_dir / "knowledge.md"
     if knowledge_file.exists():
@@ -216,7 +225,7 @@ def load_agent_brain(agent_name: str, user_id: str = None, current_context: str 
 
     # Diary-tracking agents load last 7 days of session logs for continuity.
     # Other agents load yesterday only.
-    DIARY_AGENTS = ["apex", "marcus-stoic", "compass", "aether", "forge"]
+    DIARY_AGENTS = ["apex", "marcus-stoic", "compass", "aether", "forge", "nova"]
     if agent_name in DIARY_AGENTS:
         recent_logs = []
         for days_back in range(1, 8):  # Last 7 days

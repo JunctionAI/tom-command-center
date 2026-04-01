@@ -59,7 +59,7 @@ TIER1_PATTERNS = [
     # Stroke (FAST)
     (r"(face\s+(drooping|drooping|numb|falling)|arm\s+(weak|numb|tingling|falling)|speech\s+(slurred|garbled|lost)|sudden\s+(confusion|vision\s+loss|severe\s+headache))",
      "stroke symptoms"),
-    (r"(stroke|tia|transient\s+ischemic)",
+    (r"(having\s+a\s+stroke|think\s+(it'?s|i'?m\s+having)\s+a?\s*stroke|tia|transient\s+ischemic)",
      "stroke keyword"),
 
     # Suicidal with plan
@@ -73,7 +73,7 @@ TIER1_PATTERNS = [
      "active seizure"),
 
     # Unconscious / unresponsive
-    (r"(passed\s+out|unconscious|unresponsive|won'?t\s+wake\s+up|collapsed)",
+    (r"(unconscious|unresponsive|won'?t\s+wake\s+up|collapsed\s+(and|not)\s+moving)",
      "unconscious / collapsed"),
 
     # Severe allergic
