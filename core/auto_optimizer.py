@@ -59,9 +59,22 @@ ROAS_SCALE_THRESHOLD = 3.0          # 3-day ROAS > 3x -> scale up
 ROAS_HOLD_FLOOR = 2.0              # 2x-3x -> hold
 ROAS_CUT_THRESHOLD = 2.0           # < 2x for 2 days -> cut
 ROAS_PAUSE_THRESHOLD = 1.5         # < 1.5x for 3 days -> skip (handled by roas_tracker)
-AB_MIN_SAMPLE_SIZE = 1000           # Minimum recipients before declaring winner
+AB_MIN_SAMPLE_SIZE = 200            # Minimum recipients before declaring winner (lowered for small segments)
 AB_MIN_HOURS = 4                    # Minimum hours test must run
 AB_CONFIDENCE_LEVEL = 0.95         # 95% statistical confidence
+
+# Tracked A/B campaigns — add campaign IDs here for monitoring
+# These are checked regardless of naming convention or send strategy
+TRACKED_AB_CAMPAIGNS = {
+    "01KN8PYMD998T7CPNC6QW1XNX4": {
+        "name": "Colostrum EC1 — Education A/B (April 2026)",
+        "hypothesis": "Curiosity vs Validation for existing buyers",
+        "variant_a": "Curiosity: 'Why colostrum actually works'",
+        "variant_b": "Validation: 'The science behind your choice'",
+        "segment": "Colostrum Buyers (299 profiles)",
+        "playbook_section": "SUBJECT LINE FORMULAS",
+    },
+}
 CAMPAIGN_DRAFT_LOOKAHEAD_DAYS = 3   # Draft campaigns due within 3 days
 
 
@@ -731,8 +744,208 @@ class AutoOptimizer:
             logger.error(f"A/B test selection error: {e}")
             return f"[PRIORITY: INFO]\nA/B test check error: {e}"
 
+        # Also check tracked campaigns (regardless of naming/strategy)
+        tracked_results = self._check_tracked_ab_campaigns()
+        if tracked_results:
+            lines.append("\n*Tracked Campaign Results:*")
+            lines.extend(tracked_results)
+
         lines.append(f"\nSummary: {winners_selected} winner(s) selected")
         return "\n".join(lines)
+
+    def _check_tracked_ab_campaigns(self) -> list:
+        """Check manually tracked A/B campaigns via Klaviyo campaign reports API."""
+        results = []
+        if not TRACKED_AB_CAMPAIGNS:
+            return results
+
+        try:
+            from core.klaviyo_writer import KlaviyoWriter
+            writer = KlaviyoWriter()
+            if not writer.available:
+                return results
+
+            for campaign_id, meta in TRACKED_AB_CAMPAIGNS.items():
+                try:
+                    # Get campaign report with variant-level breakdown
+                    report = writer._post("campaign-values-reports", json_body={
+                        "data": {
+                            "type": "campaign-values-report",
+                            "attributes": {
+                                "statistics": ["recipients", "opens_unique", "clicks_unique",
+                                              "open_rate", "click_rate", "conversions",
+                                              "conversion_value"],
+                                "timeframe": {"key": "last_30_days"},
+                                "filter": f"equals(campaign_id,\"{campaign_id}\")",
+                                "group_by": ["campaign_id", "campaign_message_id",
+                                           "send_channel", "variation", "variation_name"],
+                            }
+                        }
+                    })
+
+                    rows = report.get("data", {}).get("attributes", {}).get("results", [])
+                    if len(rows) < 2:
+                        # Try simpler approach — just get campaign messages
+                        msg_result = writer._get(
+                            f"campaigns/{campaign_id}/campaign-messages",
+                            params={"fields[campaign-message]": "label,statistics"}
+                        )
+                        messages = msg_result.get("data", [])
+                        if len(messages) < 2:
+                            results.append(f"- {meta['name']}: WAITING for data (only {len(messages)} variant(s) found)")
+                            continue
+
+                    # Extract variant stats from report rows
+                    variants = []
+                    for row in rows:
+                        stats = row.get("statistics", {})
+                        groupings = row.get("groupings", {})
+                        recipients = stats.get("recipients", 0)
+                        if recipients == 0:
+                            continue
+                        variants.append({
+                            "name": groupings.get("variation_name", groupings.get("campaign_message_id", "?")),
+                            "recipients": recipients,
+                            "opens": stats.get("opens_unique", 0),
+                            "clicks": stats.get("clicks_unique", 0),
+                            "open_rate": stats.get("open_rate", 0),
+                            "click_rate": stats.get("click_rate", 0),
+                            "revenue": stats.get("conversion_value", 0),
+                        })
+
+                    if len(variants) < 2:
+                        results.append(f"- {meta['name']}: WAITING for both variants to send")
+                        continue
+
+                    total_sample = sum(v["recipients"] for v in variants)
+                    v_a, v_b = variants[0], variants[1]
+                    p_a = v_a["open_rate"] if isinstance(v_a["open_rate"], (int, float)) else 0
+                    p_b = v_b["open_rate"] if isinstance(v_b["open_rate"], (int, float)) else 0
+                    n_a = v_a["recipients"]
+                    n_b = v_b["recipients"]
+
+                    if total_sample < AB_MIN_SAMPLE_SIZE:
+                        results.append(
+                            f"- {meta['name']}: WAITING (sample {total_sample}/{AB_MIN_SAMPLE_SIZE})")
+                        continue
+
+                    p_value = _z_test_proportions(p_a, n_a, p_b, n_b)
+                    is_significant = p_value < (1 - AB_CONFIDENCE_LEVEL)
+
+                    if p_a > p_b:
+                        winner, loser = v_a, v_b
+                    else:
+                        winner, loser = v_b, v_a
+
+                    confidence = (1 - p_value) * 100
+
+                    # Log to learning.db regardless of significance
+                    try:
+                        ldb = _get_learning_db()
+                        ldb.execute("""
+                            INSERT OR REPLACE INTO ab_test_winners
+                            (test_name, winning_variant, metric, winner_rate,
+                             loser_rate, sample_size, confidence, details_json)
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                        """, (
+                            meta["name"],
+                            winner["name"],
+                            "open_rate",
+                            winner["open_rate"],
+                            loser["open_rate"],
+                            total_sample,
+                            confidence,
+                            json.dumps({
+                                "campaign_id": campaign_id,
+                                "hypothesis": meta["hypothesis"],
+                                "variant_a": meta["variant_a"],
+                                "variant_b": meta["variant_b"],
+                                "p_value": p_value,
+                                "is_significant": is_significant,
+                                "variants": variants,
+                                "checked_at": datetime.now(NZ_TZ).isoformat(),
+                            }),
+                        ))
+                        ldb.commit()
+                        ldb.close()
+                    except Exception as e:
+                        logger.error(f"Failed to log tracked A/B to learning.db: {e}")
+
+                    if is_significant:
+                        results.append(
+                            f"- {meta['name']}: WINNER = '{winner['name']}' "
+                            f"(open rate {winner['open_rate']:.1%} vs {loser['open_rate']:.1%}, "
+                            f"{confidence:.0f}% confidence)")
+
+                        # Auto-update email playbook
+                        self._update_email_playbook(meta, winner, loser, confidence, total_sample)
+
+                        # Notify Tom
+                        self._notify(
+                            f"*A/B Test Result — {meta['name']}*\n\n"
+                            f"Hypothesis: {meta['hypothesis']}\n"
+                            f"Winner: {winner['name']}\n"
+                            f"Open rate: {winner['open_rate']:.1%} vs {loser['open_rate']:.1%}\n"
+                            f"Confidence: {confidence:.0f}%\n"
+                            f"Sample: {total_sample} recipients\n\n"
+                            f"Result logged to learning DB + email playbook.",
+                            severity="IMPORTANT"
+                        )
+                    else:
+                        results.append(
+                            f"- {meta['name']}: NO WINNER YET "
+                            f"(A: {p_a:.1%} vs B: {p_b:.1%}, "
+                            f"p={p_value:.3f}, confidence {confidence:.0f}%)")
+
+                except Exception as e:
+                    logger.warning(f"Failed to check tracked campaign {campaign_id}: {e}")
+                    results.append(f"- {meta['name']}: CHECK FAILED ({e})")
+
+        except ImportError:
+            logger.error("KlaviyoWriter not available for tracked campaigns")
+        except Exception as e:
+            logger.error(f"Tracked A/B campaign check error: {e}")
+
+        return results
+
+    def _update_email_playbook(self, meta: dict, winner: dict, loser: dict,
+                                confidence: float, sample_size: int):
+        """Append A/B test result to email playbook CHANGELOG."""
+        import os
+        playbook_path = os.path.expanduser("~/dbh-aios/playbooks/email-playbook.md")
+        today = datetime.now(NZ_TZ).strftime("%Y-%m-%d")
+
+        entry = (
+            f"\n**{today}** | A/B TEST RESULT: {meta['name']} | "
+            f"Hypothesis: {meta['hypothesis']} | "
+            f"Winner: {winner['name']} ({winner['open_rate']:.1%} open rate) vs "
+            f"Loser: {loser['name']} ({loser['open_rate']:.1%}) | "
+            f"Confidence: {confidence:.0f}% | Sample: {sample_size} | "
+            f"Playbook section: {meta.get('playbook_section', 'N/A')} | "
+            f"Source: auto_optimizer tracked campaign"
+        )
+
+        try:
+            with open(playbook_path, "r", encoding="utf-8") as f:
+                content = f.read()
+
+            # Find CHANGELOG section and append
+            changelog_marker = "## CHANGELOG"
+            if changelog_marker in content:
+                idx = content.index(changelog_marker) + len(changelog_marker)
+                # Find end of the header line
+                next_newline = content.index("\n", idx)
+                content = content[:next_newline + 1] + entry + content[next_newline + 1:]
+            else:
+                # No CHANGELOG section — append at end
+                content += f"\n\n## CHANGELOG\n{entry}\n"
+
+            with open(playbook_path, "w", encoding="utf-8") as f:
+                f.write(content)
+
+            logger.info(f"Updated email playbook with A/B result: {meta['name']}")
+        except Exception as e:
+            logger.error(f"Failed to update email playbook: {e}")
 
     # ===================================================================
     # 3. KLAVIYO CAMPAIGN AUTO-DRAFT
