@@ -51,8 +51,10 @@ TIER1_PATTERNS = [
      "cardiac emergency keywords"),
 
     # Breathing
-    (r"(can'?t\s+breathe|can'?t\s+catch\s+(my\s+)?breath|not\s+breathing|stopped\s+breathing|struggling\s+to\s+breathe)",
+    (r"(can'?t\s+breathe|can'?t\s+catch\s+(my\s+)?breath|not\s+breathing|stopped\s+breathing|struggling\s+to\s+breathe).{0,60}(right\s+now|help|emergency|call|please|still|can'?t\s+stop)",
      "breathing emergency"),
+    (r"(i\s+)?(am|'?m)\s+(struggling\s+to\s+breathe|not\s+breathing|can'?t\s+breathe)",
+     "breathing emergency present tense"),
     (r"(severe|extreme|sudden)\s+(shortness\s+of\s+breath|difficulty\s+breathing)",
      "severe breathing difficulty"),
 
@@ -81,7 +83,7 @@ TIER1_PATTERNS = [
      "anaphylaxis"),
 
     # Overdose
-    (r"(overdos(e|ed|ing)|took\s+too\s+many\s+(pills?|tablets?)|swallowed.{0,30}(whole\s+bottle|all\s+of))",
+    (r"(overdos(e|ed|ing)|took\s+too\s+many\s+(pills?|tablets?)|swallowed.{0,30}whole\s+bottle|swallowed.{0,30}all\s+of.{0,20}(pill|tablet|capsule|medication|drug))",
      "overdose"),
 ]
 

@@ -228,7 +228,16 @@ def load_agent_brain(agent_name: str, user_id: str = None, current_context: str 
     DIARY_AGENTS = ["apex", "marcus-stoic", "compass", "aether", "forge", "nova"]
     if agent_name in DIARY_AGENTS:
         recent_logs = []
-        for days_back in range(1, 8):  # Last 7 days
+        # Load TODAY's session log first (so earlier same-day conversations are always in context)
+        today_log_file = agent_dir / "state" / f"session-log-{today}.md"
+        if today_log_file.exists():
+            try:
+                today_content = today_log_file.read_text(encoding='utf-8')
+                today_summary = today_content[:2000] if len(today_content) > 2000 else today_content
+                recent_logs.append(f"--- TODAY ({today}) ---\n{today_summary}")
+            except Exception:
+                pass
+        for days_back in range(1, 8):  # Yesterday through 7 days ago
             log_date = (datetime.now(NZ_TZ).date() - timedelta(days=days_back)).isoformat()
             log_file = agent_dir / "state" / f"session-log-{log_date}.md"
             if log_file.exists():
