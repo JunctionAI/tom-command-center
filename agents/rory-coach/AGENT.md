@@ -183,4 +183,4 @@ Reads from `config/rory-config.json`:
 
 ---
 
-*Built: 2026-04-24 by Tom Hall-Taylor. First send target: Sunday Apr 27 2026, 9am NZ.*
+*Built: 2026-04-24 by Tom Hall-Taylor. First send target: Sunday Apr 26 2026, 9am NZ.*

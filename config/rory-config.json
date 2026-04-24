@@ -27,7 +27,7 @@
     {"name": "camp-insight", "target_per_week": 1, "notes": "Food-day, mental prep, life outside gym. REPLACES pad-work during camp."}
   ],
   "deprioritised_pillars": ["solo-pad-work", "heavy-training-clips"],
-  "notes": "Activated 2026-04-24 after session 2. First brief target: Sunday 2026-04-27 9am NZ. Fight booked vs IFS (date TBC).",
+  "notes": "Activated 2026-04-24 after session 2. First brief target: Sunday 2026-04-26 9am NZ. Fight booked vs IFS (date TBC).",
   "analysis_pipeline": {
     "include_video_analysis_own_posts": true,
     "include_pillar_classification": true,

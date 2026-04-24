@@ -338,9 +338,12 @@ def synthesise(
         raise RuntimeError("anthropic SDK not installed — add to requirements.txt")
 
     now = datetime.now(NZ_TZ)
-    last_sunday = now - timedelta(days=(now.weekday() + 1) % 7 or 7)
-    last_monday = last_sunday - timedelta(days=6)
-    week_range = f"{last_monday.strftime('%b %-d')}-{last_sunday.strftime('%-d')}"
+    # Week = most-recently-completed Mon-Sun. If today is Sunday, today IS the end.
+    # isoweekday: Mon=1, Tue=2, ..., Sun=7
+    iso_wd = now.isoweekday()
+    end_of_week = now if iso_wd == 7 else now - timedelta(days=iso_wd)
+    start_of_week = end_of_week - timedelta(days=6)
+    week_range = f"{start_of_week.strftime('%b %-d')}-{end_of_week.strftime('%-d')}"
 
     system_prompt = _load_text(PROMPTS_DIR / "weekly-brief.md")
     if not system_prompt:
