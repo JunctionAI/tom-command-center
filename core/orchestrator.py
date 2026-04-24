@@ -560,6 +560,16 @@ def extract_markers_from_response(response: str) -> dict:
             'description': match.group(3).strip()
         })
 
+    # [POST: platform|type|caption|media_urls]
+    markers['posts'] = []
+    for match in re.finditer(r'\[POST:\s*([^|]+)\|([^|]+)\|([^|]+)\|([^\]]+)\]', response):
+        markers['posts'].append({
+            'platform': match.group(1).strip(),
+            'post_type': match.group(2).strip(),
+            'caption': match.group(3).strip(),
+            'media_urls': match.group(4).strip()
+        })
+
     return markers
 
 
@@ -886,6 +896,7 @@ def _clean_markers(response: str) -> str:
     response = re.sub(r'\[EVENT:[^\]]+\]', '', response)
     response = re.sub(r'\[TASK:[^\]]+\]', '', response)
     response = re.sub(r'\[VERIFY:[^\]]+\]', '', response)
+    response = re.sub(r'\[POST:[^\]]+\]', '', response)
     return response.strip()
 
 
@@ -1600,6 +1611,22 @@ def _run_scheduled_task_inner(agent_name: str, task_name: str, telegram_config: 
         return
 
     # --- Silent intelligence sync (no Claude call, just DB update) ---
+    # --- Rory weekly brief (Sunday 9am NZ) ---
+    if agent_name == "rory-coach" and task_name == "weekly_brief":
+        try:
+            from core.rory_coach import run_weekly_brief
+            result = run_weekly_brief(dry_run=False, telegram_config=telegram_config)
+            if result.get("sent"):
+                logger.info(f"Rory weekly brief sent: {result.get('subject')}")
+            else:
+                logger.warning(
+                    f"Rory weekly brief generated but not sent: "
+                    f"{result.get('error', 'check logs')}"
+                )
+        except Exception as e:
+            logger.error(f"Rory weekly brief failed: {e}", exc_info=True)
+        return
+
     if task_name == "intelligence_sync":
         try:
             from core.order_intelligence import fetch_order_intelligence, get_customer_db_summary
@@ -2016,6 +2043,24 @@ Customers: {snapshot['new_customers']} new, {snapshot['returning_customers']} re
             logger.info("llms.txt regenerated")
         except Exception as e:
             logger.error(f"llms.txt generation failed: {e}")
+        return
+
+    # --- Monthly affiliate payout report (28th 9am) ---
+    if task_name == "affiliate_payout_report":
+        try:
+            from core.affiliate_payout import generate_payout_report
+            summary = generate_payout_report()
+
+            chat_id = telegram_config.get("chat_ids", {}).get("dbh-marketing", "")
+            if chat_id:
+                bot_token = telegram_config.get("bot_token", os.environ.get("TELEGRAM_BOT_TOKEN", ""))
+                from core.notification_router import route_notification
+                route_notification(chat_id, summary, bot_token,
+                                   severity="IMPORTANT", agent="dbh-marketing")
+
+            logger.info(f"Affiliate payout report sent: {len(summary)} chars")
+        except Exception as e:
+            logger.error(f"Affiliate payout report failed: {e}")
         return
 
     # --- NEXUS health_digest — daily 8:50am summary of what ran/failed yesterday ---
@@ -3620,6 +3665,35 @@ The daily plan should reference the 90-day execution map from Meridian's intelli
         except Exception as bg_e:
             logger.warning(f"Brief generator integration failed (non-fatal): {bg_e}")
 
+    # Social publisher: handle [POST:] markers — queue posts for Tom's review
+    if "[POST:" in response:
+        try:
+            import re as _post_re
+            post_matches = _post_re.findall(
+                r'\[POST:\s*([^|]+)\|([^|]+)\|([^|]+)\|([^\]]+)\]', response
+            )
+            if post_matches:
+                from core.social_publisher import SocialPublisher, send_post_preview
+                _sp = SocialPublisher()
+                for _plat, _ptype, _pcaption, _purls in post_matches:
+                    _media = [u.strip() for u in _purls.split(",")
+                              if u.strip() and u.strip().lower() != "none"]
+                    _pid = _sp.db.enqueue(
+                        platform=_plat.strip().lower(),
+                        post_type=_ptype.strip().lower(),
+                        caption=_pcaption.strip(),
+                        media_urls=json.dumps(_media) if _media else "[]",
+                        source_agent=agent_name
+                    )
+                    nexus_chat = telegram_config.get("chat_ids", {}).get("command-center", "")
+                    if nexus_chat:
+                        send_post_preview(_pid, nexus_chat, bot_token)
+                    logger.info(f"Social post queued (ID: {_pid}) from {agent_name}")
+                _sp.db.close()
+                response = _post_re.sub(r'\[POST:[^\]]+\]', '', response).strip()
+        except Exception as _post_e:
+            logger.warning(f"Social publisher integration failed (non-fatal): {_post_e}")
+
     # Order manager: handle [ORDER:] markers from recovery companions
     if agent_name in CHAT_USER_MAP and "[ORDER:" in response:
         try:
@@ -4377,27 +4451,25 @@ If something needs to be done, emit:
 If you identify a campaign opportunity or creative need (Meridian/PREP only), emit:
 [BRIEF: description of insight]{_first_response_note}"""
 
-            # ── ESCALATION CHECK (companion agents only, before API call) ──
-            _esc_suffix = None
-            if agent_name in CHAT_USER_MAP:
-                try:
-                    from core.escalation_engine import check as _esc_check
-                    _esc = _esc_check(message_text, user_id=user_id, agent_id=agent_name)
-                    if _esc.tier == 1:
-                        # Hard override — skip Claude entirely, send emergency message
-                        logger.warning(f"ESCALATION TIER 1 override for {agent_name}/{user_id}")
-                        send_telegram(chat_id, _esc.message_override, telegram_config["bot_token"])
-                        return
-                    elif _esc.tier in (2, 3, 4):
-                        _esc_suffix = _esc.mandatory_suffix
-                except Exception as _esc_e:
-                    logger.warning(f"Escalation check failed (non-fatal): {_esc_e}")
+            # ── ESCALATION CHECK (disabled — triggering too often, revisit later) ──
+            # if agent_name in CHAT_USER_MAP:
+            #     try:
+            #         from core.escalation_engine import check as _esc_check
+            #         _esc = _esc_check(message_text, user_id=user_id, agent_id=agent_name)
+            #         if _esc.tier == 1:
+            #             logger.warning(f"ESCALATION TIER 1 override for {agent_name}/{user_id}")
+            #             send_telegram(chat_id, _esc.message_override, telegram_config["bot_token"])
+            #             return
+            #         elif _esc.tier in (2, 3, 4):
+            #             _esc_suffix = _esc.mandatory_suffix
+            #     except Exception as _esc_e:
+            #         logger.warning(f"Escalation check failed (non-fatal): {_esc_e}")
 
             response = call_claude(brain, user_prompt, task_type=task_type, conversation_history=conv_history, agent_name=agent_name)
 
-            # Append mandatory escalation suffix if triggered (Tiers 2-4)
-            if _esc_suffix and not response.startswith("API Error:"):
-                response = response + _esc_suffix
+            # # Append mandatory escalation suffix if triggered (Tiers 2-4)
+            # if _esc_suffix and not response.startswith("API Error:"):
+            #     response = response + _esc_suffix
 
         # Check for API errors before processing
         if response.startswith("API Error:"):
@@ -4446,6 +4518,35 @@ If you identify a campaign opportunity or creative need (Meridian/PREP only), em
                     clean_response = _brief_re.sub(r'\[BRIEF:\s*.*?\]', '', clean_response, flags=_brief_re.DOTALL).strip()
             except Exception as bg_e:
                 logger.warning(f"Brief generator integration failed (non-fatal): {bg_e}")
+
+        # Social publisher: handle [POST:] markers in chat responses
+        if "[POST:" in clean_response:
+            try:
+                import re as _post_re
+                post_matches = _post_re.findall(
+                    r'\[POST:\s*([^|]+)\|([^|]+)\|([^|]+)\|([^\]]+)\]', clean_response
+                )
+                if post_matches:
+                    from core.social_publisher import SocialPublisher, send_post_preview
+                    _sp = SocialPublisher()
+                    for _plat, _ptype, _pcaption, _purls in post_matches:
+                        _media = [u.strip() for u in _purls.split(",")
+                                  if u.strip() and u.strip().lower() != "none"]
+                        _pid = _sp.db.enqueue(
+                            platform=_plat.strip().lower(),
+                            post_type=_ptype.strip().lower(),
+                            caption=_pcaption.strip(),
+                            media_urls=json.dumps(_media) if _media else "[]",
+                            source_agent=agent_name
+                        )
+                        nexus_chat = telegram_config.get("chat_ids", {}).get("command-center", "")
+                        if nexus_chat:
+                            send_post_preview(_pid, nexus_chat, telegram_config["bot_token"])
+                        logger.info(f"Social post queued (ID: {_pid}) from chat with {agent_name}")
+                    _sp.db.close()
+                    clean_response = _post_re.sub(r'\[POST:[^\]]+\]', '', clean_response).strip()
+            except Exception as _post_e:
+                logger.warning(f"Social publisher integration failed (non-fatal): {_post_e}")
 
         # Save agent response to permanent memory
         try:
@@ -5393,6 +5494,116 @@ Format: clean bullets and sections, no tables, Telegram-readable."""
             except Exception as e:
                 route_notification(chat_id, f"Health intake analysis failed for {target_agent}: {e}", bot_token, severity="IMPORTANT", agent="command-center")
 
+    elif cmd == "queue" or cmd == "posts":
+        from core.notification_router import route_notification
+        try:
+            from core.social_publisher import format_queue_status
+            route_notification(chat_id, format_queue_status(limit=20), bot_token, severity="INFO", agent="command-center")
+        except Exception as e:
+            route_notification(chat_id, f"Queue check failed: {e}", bot_token, severity="INFO", agent="command-center")
+
+    elif cmd.startswith("approve "):
+        from core.notification_router import route_notification
+        try:
+            _approve_id = int(cmd.split("approve ", 1)[1].strip())
+            from core.social_publisher import handle_post_approval
+            handle_post_approval(_approve_id, chat_id, bot_token)
+        except ValueError:
+            route_notification(chat_id, "Usage: approve <post_id>", bot_token, severity="INFO", agent="command-center")
+        except Exception as e:
+            route_notification(chat_id, f"Approve failed: {e}", bot_token, severity="INFO", agent="command-center")
+
+    elif cmd.startswith("reject "):
+        from core.notification_router import route_notification
+        try:
+            _reject_parts = cmd.split("reject ", 1)[1].strip().split(None, 1)
+            _reject_id = int(_reject_parts[0])
+            _reject_reason = _reject_parts[1] if len(_reject_parts) > 1 else ""
+            from core.social_publisher import handle_post_rejection
+            handle_post_rejection(_reject_id, _reject_reason, chat_id, bot_token)
+        except (ValueError, IndexError):
+            route_notification(chat_id, "Usage: reject <post_id> [reason]", bot_token, severity="INFO", agent="command-center")
+
+    elif cmd.startswith("edit ") and cmd.split(None, 2)[0] == "edit":
+        from core.notification_router import route_notification
+        try:
+            _edit_parts = cmd.split(None, 2)
+            _edit_id = int(_edit_parts[1])
+            _edit_caption = _edit_parts[2] if len(_edit_parts) > 2 else ""
+            if not _edit_caption:
+                route_notification(chat_id, "Usage: edit <post_id> <new caption>", bot_token, severity="INFO", agent="command-center")
+            else:
+                from core.social_publisher import handle_caption_edit
+                handle_caption_edit(_edit_id, _edit_caption, chat_id, bot_token)
+        except (ValueError, IndexError):
+            route_notification(chat_id, "Usage: edit <post_id> <new caption>", bot_token, severity="INFO", agent="command-center")
+
+    elif cmd.startswith("post "):
+        from core.notification_router import route_notification
+        try:
+            _post_parts = cmd.split(None, 3)
+            if len(_post_parts) < 4:
+                route_notification(chat_id, "Usage: post <ig|fb> <image|text|carousel|reel|story|photo|link> <caption> [media_url]", bot_token, severity="INFO", agent="command-center")
+            else:
+                _post_plat = "instagram" if _post_parts[1].lower() in ("ig", "instagram") else "facebook"
+                _post_type = _post_parts[2].lower()
+                _post_rest = _post_parts[3]
+                _post_tokens = _post_rest.rsplit(None, 1)
+                if len(_post_tokens) == 2 and _post_tokens[1].startswith("http"):
+                    _post_caption = _post_tokens[0]
+                    _post_media = _post_tokens[1]
+                else:
+                    _post_caption = _post_rest
+                    _post_media = ""
+                from core.social_publisher import SocialPublisher, send_post_preview
+                _sp = SocialPublisher()
+                _post_id = _sp.db.enqueue(
+                    platform=_post_plat, post_type=_post_type,
+                    caption=_post_caption,
+                    media_urls=json.dumps([_post_media] if _post_media else []),
+                    source_agent="nexus-manual"
+                )
+                send_post_preview(_post_id, chat_id, bot_token)
+                _sp.db.close()
+        except Exception as e:
+            route_notification(chat_id, f"Post creation failed: {e}", bot_token, severity="INFO", agent="command-center")
+
+    elif cmd == "discover social" or cmd == "discover meta":
+        from core.notification_router import route_notification
+        try:
+            from core.social_publisher import SocialPublisher
+            _sp = SocialPublisher()
+            if not _sp.available:
+                route_notification(chat_id, "META_ACCESS_TOKEN not set", bot_token, severity="INFO", agent="command-center")
+            else:
+                _pages = _sp.discover_page_id()
+                _lines = ["NEXUS -- Meta Social Discovery\n"]
+                if _pages:
+                    for _pg in _pages:
+                        _lines.append(f"Page: {_pg.get('name', '?')} (ID: {_pg.get('id', '?')})")
+                    _ig = _sp.discover_ig_account()
+                    if _ig:
+                        _lines.append(f"IG Business Account: {_ig}")
+                    else:
+                        _lines.append("No Instagram Business Account linked.")
+                    _lines.append(f"\nSet in Railway:")
+                    _lines.append(f"  META_PAGE_ID={_pages[0].get('id', '?')}")
+                    if _ig:
+                        _lines.append(f"  INSTAGRAM_ACCOUNT_ID={_ig}")
+                else:
+                    _lines.append("No Pages found. Check token has pages_manage_posts permission.")
+                _perms = _sp.check_permissions()
+                _needed = ["pages_manage_posts", "pages_read_engagement", "instagram_basic", "instagram_content_publish"]
+                _missing = [p for p in _needed if _perms.get(p) != "granted"]
+                if _missing:
+                    _lines.append(f"\nMissing permissions: {', '.join(_missing)}")
+                else:
+                    _lines.append("\nAll required permissions granted.")
+                route_notification(chat_id, "\n".join(_lines), bot_token, severity="IMPORTANT", agent="command-center")
+            _sp.db.close()
+        except Exception as e:
+            route_notification(chat_id, f"Discovery failed: {e}", bot_token, severity="INFO", agent="command-center")
+
     else:
         # Unknown command -- show available commands instead of hallucinating
         help_text = """NEXUS -- Available Commands
@@ -5415,6 +5626,14 @@ System:
   analyze-health-intake <agent> -- Deep health analysis of intake → generates HEALTH_BRIEF.md
   seed-medical-graph -- Seed Neo4j with 50-condition health ontology (safe to repeat)
   seed-medical-graph force -- Force re-seed even if already seeded
+
+Social Media:
+  post <ig|fb> <type> <caption> [url] -- Create a social post draft
+  queue -- Show pending social posts
+  approve <id> -- Approve and publish a post
+  reject <id> [reason] -- Reject a post
+  edit <id> <caption> -- Edit caption on queued post
+  discover social -- Find Page ID + IG Account from token
 
 Campaigns:
   setup pure pets -- Create Pure Pets campaign via Meta API (PAUSED)

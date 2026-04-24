@@ -2,6 +2,12 @@
   "timezone": "Pacific/Auckland",
   "schedules": [
     {
+      "agent": "rory-coach",
+      "task": "weekly_brief",
+      "cron": "0 9 * * 0",
+      "description": "Rory Coach — weekly content intelligence brief (Sunday 9am NZ, emailed direct to Rory)"
+    },
+    {
       "agent": "apex",
       "task": "morning_protocol",
       "cron": "0 8 * * *",
@@ -78,6 +84,12 @@
       "task": "evening_checkin",
       "cron": "0 18 * * *",
       "description": "Nova evening debrief + data collection for Tane (6pm daily)"
+    },
+    {
+      "agent": "dbh-marketing",
+      "task": "affiliate_payout_report",
+      "cron": "0 9 28 * *",
+      "description": "Monthly affiliate payout report — calculates commissions, emails summary to marketing@ (28th 9am)"
     }
   ]
 }

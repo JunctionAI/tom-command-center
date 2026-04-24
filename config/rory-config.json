@@ -1,0 +1,42 @@
+{
+  "rory_email": "roryjj24@gmail.com",
+  "rory_email_secondary": "roryjj@outlook.com",
+  "recipients": ["roryjj24@gmail.com", "roryjj@outlook.com"],
+  "rory_ig_handle": "rory247okeeffe",
+  "rory_ig_user_id": "FILL_ME__get_from_rory_when_ig_business_acct_confirmed",
+  "rory_ig_access_token": "FILL_ME__generate_from_meta_app_after_adding_rory_as_tester",
+  "competitors": [
+    {"handle": "samrascals_", "name": "Sam Bentham", "pillar": "lifestyle-aesthetic"},
+    {"handle": "lukehoward_mma", "name": "Luke Howard", "pillar": "technique-education"},
+    {"handle": "benwoolliss", "name": "Ben Woolliss", "pillar": "champion-authority"},
+    {"handle": "tommyday01", "name": "Tommy Day", "pillar": "entertainer-fighter"},
+    {"handle": "jdtlab", "name": "Jorden Souriyavong", "pillar": "transformation-results"}
+  ],
+  "smtp_email": "FILL_ME__tom_gmail_for_sending",
+  "smtp_app_password": "FILL_ME__gmail_app_password_in_env_var_only",
+  "sender_name": "Tom",
+  "sender_address": "",
+  "fight_date": "FILL_ME__ask_rory_when_the_IFS_fight_is",
+  "send_time_nz": "09:00",
+  "send_day": "Sunday",
+  "pillars": [
+    {"name": "meme-skit", "target_per_week": 2, "notes": "Borrowed formats with his twist. High engagement."},
+    {"name": "class-coaching", "target_per_week": 1, "notes": "Walking class, correcting form."},
+    {"name": "class-candid", "target_per_week": 1, "notes": "Personality + humanising. e.g. class girls post."},
+    {"name": "transformation-josh", "target_per_week": 1, "notes": "Josh series continuation. Social proof."},
+    {"name": "camp-insight", "target_per_week": 1, "notes": "Food-day, mental prep, life outside gym. REPLACES pad-work during camp."}
+  ],
+  "deprioritised_pillars": ["solo-pad-work", "heavy-training-clips"],
+  "notes": "Activated 2026-04-24 after session 2. First brief target: Sunday 2026-04-27 9am NZ. Fight booked vs IFS (date TBC).",
+  "analysis_pipeline": {
+    "include_video_analysis_own_posts": true,
+    "include_pillar_classification": true,
+    "include_competitor_video_analysis": true,
+    "max_competitor_videos_per_week": 10,
+    "gemini_model": "gemini-2.5-flash",
+    "pillar_classifier_model": "claude-haiku-4-5-20251001",
+    "synthesis_model": "claude-opus-4-7"
+  },
+  "competitor_post_urls_this_week": [],
+  "_comment_competitor_urls": "Manual v1: Tom drops 3-10 top-performing IG post URLs per week from the 5 benchmark accounts (any pillar). System downloads + Gemini-analyses + feeds ideas into the brief. v2 wires auto-scraping."
+}
